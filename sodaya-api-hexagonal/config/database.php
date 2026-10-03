@@ -20,6 +20,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
+            'timezone' => env('APP_TIMEZONE', 'America/Costa_Rica'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
         'pgsql_admin' => [
@@ -33,6 +34,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
+            'timezone' => env('APP_TIMEZONE', 'America/Costa_Rica'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
     ],
