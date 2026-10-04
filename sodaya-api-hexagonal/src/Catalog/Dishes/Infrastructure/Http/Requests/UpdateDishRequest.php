@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Catalog\Dishes\Infrastructure\Http\Requests;
 
+use Dedoc\Scramble\Attributes\SchemaName;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Src\Catalog\Dishes\Application\DTOs\UpdateDishCommand;
@@ -15,6 +16,7 @@ use Src\Catalog\Dishes\Domain\ValueObjects\Price;
 use Src\Shared\Domain\Contracts\SodaContext;
 use Stringable;
 
+#[SchemaName('ActualizarPlato')]
 final class UpdateDishRequest extends FormRequest
 {
     /**

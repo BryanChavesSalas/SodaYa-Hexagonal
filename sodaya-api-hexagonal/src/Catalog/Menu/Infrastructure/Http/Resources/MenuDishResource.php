@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace Src\Catalog\Menu\Infrastructure\Http\Resources;
 
 use DateTimeInterface;
+use Dedoc\Scramble\Attributes\SchemaName;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Src\Catalog\Menu\Application\DTOs\MenuDish;
 
+/**
+ * @property-read MenuDish $resource
+ */
+#[SchemaName('PlatoDelMenu')]
 final class MenuDishResource extends JsonResource
 {
     /** Wrap the visitor view of a dish. */
