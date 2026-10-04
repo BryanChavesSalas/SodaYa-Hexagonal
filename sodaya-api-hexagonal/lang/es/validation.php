@@ -164,6 +164,11 @@ return [
         ],
     ],
 
-    'attributes' => [],
+    'attributes' => [
+        'categoria_id' => 'categoría',
+        'descripcion' => 'descripción',
+        'minutos_preparacion' => 'minutos de preparación',
+        'porciones_disponibles' => 'porciones disponibles',
+    ],
 
 ];

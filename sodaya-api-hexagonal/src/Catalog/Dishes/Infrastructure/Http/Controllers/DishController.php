@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Src\Catalog\Dishes\Infrastructure\Http\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Src\Catalog\Dishes\Application\UseCases\CreateDish;
+use Src\Catalog\Dishes\Infrastructure\Http\Requests\StoreDishRequest;
+use Src\Catalog\Dishes\Infrastructure\Http\Resources\DishResource;
+use Src\Shared\Domain\Contracts\SodaContext;
+use Symfony\Component\HttpFoundation\Response;
+
+final readonly class DishController
+{
+    /** Receive the port that identifies the current soda. */
+    public function __construct(private SodaContext $sodaContext) {}
+
+    /** Register a dish for the current soda. */
+    public function store(StoreDishRequest $request, CreateDish $createDish): JsonResponse
+    {
+        $dish = $createDish->execute($request->toCommand($this->sodaContext));
+
+        return new DishResource($dish)
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED)
+            ->header('Location', $request->url().'/'.$dish->id->value);
+    }
+}
