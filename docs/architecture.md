@@ -76,6 +76,23 @@ El dominio de un módulo solo puede depender de su propio módulo, del `Shared` 
 
 El dominio lanza excepciones que extienden `Src\Shared\Domain\Exceptions\DomainException`. Cada excepción lleva una clave de traducción, no un texto: el mensaje en español se resuelve en la infraestructura desde `lang/es`.
 
+Toda respuesta de error sigue RFC 9457 (`application/problem+json`). `ProblemDetailsRenderer` convierte cada excepción en un documento con `type`, `title`, `status`, `detail` e `instance`:
+
+| Excepción | Tipo de problema | HTTP |
+| --- | --- | --- |
+| Validación de un Form Request | `datos-invalidos`, con `errores` por campo | 422 |
+| `InvalidValueException` | `datos-invalidos` | 422 |
+| `NotFoundException` | `no-encontrado` | 404 |
+| Otra excepción del dominio | `conflicto` | 409 |
+| Excepción HTTP del framework | El tipo de su código de estado | 4xx o 5xx |
+| Cualquier otra | `error-interno`, sin detalles técnicos | 500 |
+
+El campo `instance` repite el identificador de la solicitud, que también viaja en el encabezado `X-Request-Id` y en cada línea de log.
+
+## Contrato de la API
+
+Scramble genera el contrato OpenAPI 3.1 desde el código. La documentación interactiva está en `/docs/api` y el contrato se versiona en `sodaya-api-hexagonal/openapi/v1.json`. Tras cambiar un endpoint hay que regenerarlo con `composer openapi`: una prueba falla si el archivo versionado difiere del código.
+
 ## Rutas
 
 `routes/api.php` incluye el archivo de rutas de cada módulo. Todas se sirven bajo `/api/v1`, prefijo que se configura una sola vez en `bootstrap/app.php`. Un cambio incompatible se publica como `/api/v2`.
