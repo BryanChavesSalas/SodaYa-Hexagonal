@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Src\Catalog\Dishes\Infrastructure\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Src\Catalog\Dishes\Application\UseCases\CreateDish;
+use Src\Catalog\Dishes\Application\UseCases\ListDishes;
 use Src\Catalog\Dishes\Application\UseCases\UpdateDish;
 use Src\Catalog\Dishes\Infrastructure\Http\Requests\StoreDishRequest;
 use Src\Catalog\Dishes\Infrastructure\Http\Requests\UpdateDishRequest;
@@ -17,6 +19,12 @@ final readonly class DishController
 {
     /** Receive the port that identifies the current soda. */
     public function __construct(private SodaContext $sodaContext) {}
+
+    /** List every dish of the current soda. */
+    public function index(ListDishes $listDishes): AnonymousResourceCollection
+    {
+        return DishResource::collection($listDishes->execute($this->sodaContext->current()->value));
+    }
 
     /** Register a dish for the current soda. */
     public function store(StoreDishRequest $request, CreateDish $createDish): JsonResponse
