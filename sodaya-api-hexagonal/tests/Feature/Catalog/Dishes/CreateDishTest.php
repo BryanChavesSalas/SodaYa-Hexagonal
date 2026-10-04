@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Catalog\Dishes;
 
+use Illuminate\Support\Arr;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
@@ -70,7 +71,7 @@ final class CreateDishTest extends TestCase
     {
         $this->postJson(self::ENDPOINT, $this->payload([$field => $value]))
             ->assertUnprocessable()
-            ->assertJsonPath("errors.{$field}.0", $message);
+            ->assertJsonPath("errores.{$field}.0", $message);
 
         $this->assertDatabaseCount('dishes', 0);
     }
@@ -108,7 +109,7 @@ final class CreateDishTest extends TestCase
 
         $this->postJson(self::ENDPOINT, $this->payload())
             ->assertUnprocessable()
-            ->assertJsonPath('errors.nombre.0', 'El valor del campo nombre ya está en uso.');
+            ->assertJsonPath('errores.nombre.0', 'El valor del campo nombre ya está en uso.');
     }
 
     /** The same name is accepted when another soda uses it. */
@@ -129,7 +130,10 @@ final class CreateDishTest extends TestCase
         $missingResponse = $this->postJson(self::ENDPOINT, $this->payload(['categoria_id' => $missing]));
 
         $foreignResponse->assertUnprocessable();
-        $this->assertSame($missingResponse->json(), $foreignResponse->json());
+        $this->assertSame(
+            Arr::except($missingResponse->json(), 'instance'),
+            Arr::except($foreignResponse->json(), 'instance'),
+        );
     }
 
     /**
