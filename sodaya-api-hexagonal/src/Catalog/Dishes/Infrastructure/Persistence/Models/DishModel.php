@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Catalog\Dishes\Infrastructure\Persistence\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\DishFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 
 /**
  * @property string $id
@@ -22,6 +25,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $preparation_minutes
  * @property int $available_portions
  * @property bool $is_active
+ * @property CarbonImmutable $updated_at
+ * @property-read CategoryModel|null $category
  */
 #[Table('dishes')]
 #[Fillable([
@@ -40,6 +45,16 @@ final class DishModel extends Model
 {
     /** @use HasFactory<DishFactory> */
     use HasFactory, HasUuids;
+
+    /**
+     * Category the dish is listed under, if any.
+     *
+     * @return BelongsTo<CategoryModel, $this>
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(CategoryModel::class, 'category_id');
+    }
 
     /**
      * Cast the numeric and boolean columns to native types.
