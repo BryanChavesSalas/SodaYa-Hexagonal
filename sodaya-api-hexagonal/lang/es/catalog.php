@@ -9,5 +9,7 @@ return [
     'portions_out_of_range' => 'Las porciones disponibles deben estar entre :min y :max.',
     'preparation_time_out_of_range' => 'El tiempo de preparación debe estar entre :min y :max minutos.',
     'price_out_of_range' => 'El precio debe estar entre ₡:min y ₡:max.',
+    'soda_not_found' => 'La soda no existe.',
+    'uncategorized' => 'Otros',
 
 ];
