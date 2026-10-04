@@ -91,3 +91,7 @@ El dominio lanza excepciones que extienden `Src\Shared\Domain\Exceptions\DomainE
 ## Convenciones
 
 Las convenciones de idioma y de nombres están en [ubiquitous-language.md](ubiquitous-language.md).
+
+## Base de datos y decisiones
+
+Los roles, las migraciones y las convenciones del esquema están en [database.md](database.md); el modelo de datos, en [data-model.md](data-model.md). El motivo de cada decisión de arquitectura está en [adr/](adr/) y los patrones usados, en [patterns.md](patterns.md).
