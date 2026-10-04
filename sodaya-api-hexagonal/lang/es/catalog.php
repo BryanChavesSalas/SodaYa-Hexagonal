@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
 
     'description_invalid' => 'La descripción del plato no puede estar vacía ni superar los :max caracteres.',

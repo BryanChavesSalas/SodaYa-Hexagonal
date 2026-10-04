@@ -11,17 +11,18 @@ use Tests\TestCase;
 
 class LocalizationTest extends TestCase
 {
-
     public function test_default_locale_is_spanish(): void
     {
         $this->assertSame('es', app()->getLocale());
         $this->assertSame('en', app()->getFallbackLocale());
     }
+
     public function test_validation_messages_are_in_spanish(): void
     {
         $validator = Validator::make(['precio' => null], ['precio' => 'required']);
         $this->assertSame('El campo precio es obligatorio.', $validator->errors()->first('precio'));
     }
+
     #[DataProvider('languageFiles')]
     public function test_spanish_translations_cover_every_framework_line(string $file): void
     {
