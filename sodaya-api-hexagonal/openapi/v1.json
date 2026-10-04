@@ -1,0 +1,608 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "SodaYa API",
+        "version": "1.0.0",
+        "description": "API de SodaYa: men\u00fa del d\u00eda y pedidos para llevar de varias sodas."
+    },
+    "servers": [
+        {
+            "url": "/api/v1"
+        }
+    ],
+    "tags": [
+        {
+            "name": "General"
+        },
+        {
+            "name": "Platos de la soda",
+            "description": "Administraci\u00f3n de los platos por el personal de la soda."
+        },
+        {
+            "name": "Men\u00fa p\u00fablico",
+            "description": "Consulta del men\u00fa de una soda sin iniciar sesi\u00f3n."
+        }
+    ],
+    "paths": {
+        "/": {
+            "get": {
+                "operationId": "index",
+                "summary": "Identificar la API y su versi\u00f3n",
+                "tags": [
+                    "General"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "nombre": {
+                                            "type": "string"
+                                        },
+                                        "version": {
+                                            "type": "string",
+                                            "const": "v1"
+                                        }
+                                    },
+                                    "required": [
+                                        "nombre",
+                                        "version"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sodas/{soda}/platos": {
+            "get": {
+                "operationId": "catalog.menu.index",
+                "summary": "Consultar el men\u00fa de una soda",
+                "tags": [
+                    "Men\u00fa p\u00fablico"
+                ],
+                "parameters": [
+                    {
+                        "name": "soda",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`MenuPublico`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/MenuPublico"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                }
+            }
+        },
+        "/sodas/{soda}/platos/{plato}": {
+            "get": {
+                "operationId": "catalog.menu.show",
+                "summary": "Consultar un plato del men\u00fa",
+                "tags": [
+                    "Men\u00fa p\u00fablico"
+                ],
+                "parameters": [
+                    {
+                        "name": "soda",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "plato",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PlatoDelMenu`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlatoDelMenu"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                }
+            }
+        },
+        "/cocina/platos": {
+            "get": {
+                "operationId": "catalog.dishes.index",
+                "summary": "Listar los platos de la soda",
+                "tags": [
+                    "Platos de la soda"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `Plato`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Plato"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog.dishes.store",
+                "summary": "Crear un plato",
+                "tags": [
+                    "Platos de la soda"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrearPlato"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`Plato`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Plato"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                }
+            }
+        },
+        "/cocina/platos/{plato}": {
+            "patch": {
+                "operationId": "catalog.dishes.update",
+                "summary": "Editar o desactivar un plato",
+                "tags": [
+                    "Platos de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "plato",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ActualizarPlato"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Plato`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Plato"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ActualizarPlato": {
+                "type": "object",
+                "properties": {
+                    "nombre": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "descripcion": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "precio": {
+                        "type": "integer",
+                        "minimum": 100,
+                        "maximum": 100000
+                    },
+                    "minutos_preparacion": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 120
+                    },
+                    "porciones_disponibles": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 500
+                    },
+                    "categoria_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "activo": {
+                        "type": "boolean"
+                    }
+                },
+                "title": "ActualizarPlato"
+            },
+            "CategoriaDelMenu": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "nombre": {
+                        "type": "string"
+                    },
+                    "platos": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PlatoDelMenu"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "nombre",
+                    "platos"
+                ],
+                "title": "CategoriaDelMenu"
+            },
+            "CrearPlato": {
+                "type": "object",
+                "properties": {
+                    "nombre": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "descripcion": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "precio": {
+                        "type": "integer",
+                        "minimum": 100,
+                        "maximum": 100000
+                    },
+                    "minutos_preparacion": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 120
+                    },
+                    "porciones_disponibles": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 500
+                    },
+                    "categoria_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "nombre",
+                    "precio",
+                    "minutos_preparacion",
+                    "porciones_disponibles"
+                ],
+                "title": "CrearPlato"
+            },
+            "MenuPublico": {
+                "type": "object",
+                "properties": {
+                    "soda": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "nombre": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "nombre"
+                        ]
+                    },
+                    "categorias": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CategoriaDelMenu"
+                        }
+                    }
+                },
+                "required": [
+                    "soda",
+                    "categorias"
+                ],
+                "title": "MenuPublico"
+            },
+            "Plato": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "nombre": {
+                        "type": "string"
+                    },
+                    "descripcion": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "precio": {
+                        "type": "integer"
+                    },
+                    "minutos_preparacion": {
+                        "type": "integer"
+                    },
+                    "porciones_disponibles": {
+                        "type": "integer"
+                    },
+                    "categoria_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "activo": {
+                        "type": "boolean"
+                    },
+                    "agotado": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "id",
+                    "nombre",
+                    "descripcion",
+                    "precio",
+                    "minutos_preparacion",
+                    "porciones_disponibles",
+                    "categoria_id",
+                    "activo",
+                    "agotado"
+                ],
+                "title": "Plato"
+            },
+            "PlatoDelMenu": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "nombre": {
+                        "type": "string"
+                    },
+                    "descripcion": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "precio": {
+                        "type": "integer"
+                    },
+                    "minutos_preparacion": {
+                        "type": "integer"
+                    },
+                    "porciones_disponibles": {
+                        "type": "integer"
+                    },
+                    "agotado": {
+                        "type": "boolean"
+                    },
+                    "actualizado_en": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "nombre",
+                    "descripcion",
+                    "precio",
+                    "minutos_preparacion",
+                    "porciones_disponibles",
+                    "agotado",
+                    "actualizado_en"
+                ],
+                "title": "PlatoDelMenu"
+            }
+        },
+        "responses": {
+            "NotFound": {
+                "description": "Recurso no encontrado",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "title": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string",
+                                    "format": "uri"
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance"
+                            ]
+                        }
+                    }
+                }
+            },
+            "InvalidData": {
+                "description": "Datos inv\u00e1lidos",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "title": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "errores": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
