@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-
 return new class extends Migration
 {
     /**
@@ -31,6 +30,7 @@ return new class extends Migration
     private function applicationRole(): string
     {
         $name = config('database.connections.pgsql.username');
-        return '"' . str_replace('""', '""', is_string($name) ? $name : '') . '"';
+
+        return '"'.str_replace('""', '""', is_string($name) ? $name : '').'"';
     }
 };

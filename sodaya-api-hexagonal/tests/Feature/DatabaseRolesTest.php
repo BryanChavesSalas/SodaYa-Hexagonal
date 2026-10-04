@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature;
 
 use Illuminate\Database\QueryException;
@@ -9,7 +11,7 @@ use Tests\TestCase;
 
 final class DatabaseRolesTest extends TestCase
 {
-    use  RefreshDatabaseAsOwner;
+    use RefreshDatabaseAsOwner;
 
     public function test_application_role_has_no_elevated_attributes(): void
     {
@@ -23,11 +25,13 @@ final class DatabaseRolesTest extends TestCase
         $owned = DB::scalar("select count(*) from pg_tables where schemaname = 'public' and tableowner = current_user");
         $this->assertSame(0, $owned);
     }
+
     public function test_application_role_reads_and_writes_the_tables(): void
     {
         DB::table('cache')->insert(['key' => 'role-check', 'value' => 'ok', 'expiration' => 0]);
         $this->assertSame('ok', DB::table('cache')->where('key', 'role-check')->value('value'));
     }
+
     public function test_application_role_cannot_change_the_schema(): void
     {
         $this->expectException(QueryException::class);

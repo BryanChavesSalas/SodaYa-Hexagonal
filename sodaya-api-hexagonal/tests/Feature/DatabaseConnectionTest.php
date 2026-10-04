@@ -14,6 +14,7 @@ class DatabaseConnectionTest extends TestCase
     {
         $this->assertSame('pgsql', DB::connection()->getDriverName());
     }
+
     public function test_database_accepts_queries(): void
     {
         $this->assertSame(1, DB::scalar('select 1'));

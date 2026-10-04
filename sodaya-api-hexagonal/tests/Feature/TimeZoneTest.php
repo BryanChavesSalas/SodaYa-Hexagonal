@@ -17,6 +17,7 @@ class TimeZoneTest extends TestCase
         $this->assertSame(self::TIMEZONE, date_default_timezone_get());
         $this->assertSame(self::TIMEZONE, now()->timezoneName);
     }
+
     public function test_database_session_uses_costa_rica_time(): void
     {
         $this->assertSame(self::TIMEZONE, DB::scalar('show timezone'));
