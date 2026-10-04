@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace Src\Catalog\Dishes\Infrastructure\Http\Resources;
 
+use Dedoc\Scramble\Attributes\SchemaName;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Src\Catalog\Dishes\Domain\Entities\Dish;
 
+/**
+ * @property-read Dish $resource
+ */
+#[SchemaName('Plato')]
 final class DishResource extends JsonResource
 {
     /** Wrap a dish aggregate. */
