@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Catalog\Dishes;
 
+use Illuminate\Support\Arr;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\Catalog\ActsOnSoda;
@@ -64,7 +65,7 @@ final class UpdateDishTest extends TestCase
 
         $this->patchJson($this->endpoint(), ['nombre' => 'Casado de pescado'])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.nombre.0', 'El valor del campo nombre ya está en uso.');
+            ->assertJsonPath('errores.nombre.0', 'El valor del campo nombre ya está en uso.');
     }
 
     /** Invalid values are reported per field in Spanish. */
@@ -72,8 +73,8 @@ final class UpdateDishTest extends TestCase
     {
         $this->patchJson($this->endpoint(), ['precio' => 50, 'activo' => 'tal vez'])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.precio.0', 'El campo precio debe estar entre 100 y 100000.')
-            ->assertJsonPath('errors.activo.0', 'El campo activo debe ser verdadero o falso.');
+            ->assertJsonPath('errores.precio.0', 'El campo precio debe estar entre 100 y 100000.')
+            ->assertJsonPath('errores.activo.0', 'El campo activo debe ser verdadero o falso.');
     }
 
     /** Identity and ownership cannot be changed through the payload. */
@@ -97,8 +98,11 @@ final class UpdateDishTest extends TestCase
         $foreignResponse = $this->patchJson($this->endpoint($foreign->id), $payload);
         $missingResponse = $this->patchJson($this->endpoint('0192f0c4-7b1e-7c3a-9f1d-2b6a4e8c0d99'), $payload);
 
-        $foreignResponse->assertNotFound()->assertExactJson(['message' => 'El plato no existe.']);
-        $this->assertSame($missingResponse->json(), $foreignResponse->json());
+        $foreignResponse->assertNotFound()->assertJsonPath('detail', 'El plato no existe.');
+        $this->assertSame(
+            Arr::except($missingResponse->json(), 'instance'),
+            Arr::except($foreignResponse->json(), 'instance'),
+        );
         $this->assertDatabaseMissing('dishes', ['id' => $foreign->id, 'price' => 3000]);
     }
 
