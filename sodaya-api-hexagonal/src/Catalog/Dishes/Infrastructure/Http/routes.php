@@ -10,4 +10,5 @@ Route::prefix('cocina/platos')
     ->controller(DishController::class)
     ->group(function (): void {
         Route::post('/', 'store')->name('store');
+        Route::patch('{plato}', 'update')->name('update')->whereUuid('plato');
     });

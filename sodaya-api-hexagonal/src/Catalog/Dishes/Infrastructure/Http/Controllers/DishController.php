@@ -6,7 +6,9 @@ namespace Src\Catalog\Dishes\Infrastructure\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Src\Catalog\Dishes\Application\UseCases\CreateDish;
+use Src\Catalog\Dishes\Application\UseCases\UpdateDish;
 use Src\Catalog\Dishes\Infrastructure\Http\Requests\StoreDishRequest;
+use Src\Catalog\Dishes\Infrastructure\Http\Requests\UpdateDishRequest;
 use Src\Catalog\Dishes\Infrastructure\Http\Resources\DishResource;
 use Src\Shared\Domain\Contracts\SodaContext;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,5 +27,11 @@ final readonly class DishController
             ->response()
             ->setStatusCode(Response::HTTP_CREATED)
             ->header('Location', $request->url().'/'.$dish->id->value);
+    }
+
+    /** Change or deactivate a dish of the current soda. */
+    public function update(UpdateDishRequest $request, UpdateDish $updateDish): DishResource
+    {
+        return new DishResource($updateDish->execute($request->toCommand($this->sodaContext)));
     }
 }
