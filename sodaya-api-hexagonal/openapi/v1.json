@@ -279,6 +279,143 @@
                     }
                 }
             }
+        },
+        "/cocina/cierres": {
+            "get": {
+                "operationId": "closure.index",
+                "tags": [
+                    "Closure"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `ClosureResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ClosureResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "closure.store",
+                "tags": [
+                    "Closure"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreClosureRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`ClosureResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClosureResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                }
+            }
+        },
+        "/cocina/cierres/hoy": {
+            "post": {
+                "operationId": "closure.closeToday",
+                "tags": [
+                    "Closure"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CloseForTodayRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`ClosureResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClosureResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                }
+            }
+        },
+        "/cocina/cierres/{cierre}": {
+            "delete": {
+                "operationId": "closure.destroy",
+                "tags": [
+                    "Closure"
+                ],
+                "parameters": [
+                    {
+                        "name": "cierre",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -350,6 +487,42 @@
                     "platos"
                 ],
                 "title": "CategoriaDelMenu"
+            },
+            "CloseForTodayRequest": {
+                "type": "object",
+                "properties": {
+                    "motivo": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 200
+                    }
+                },
+                "title": "CloseForTodayRequest"
+            },
+            "ClosureResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "fecha": {
+                        "type": "string"
+                    },
+                    "motivo": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "fecha",
+                    "motivo"
+                ],
+                "title": "ClosureResource"
             },
             "CrearPlato": {
                 "type": "object",
@@ -519,6 +692,26 @@
                     "actualizado_en"
                 ],
                 "title": "PlatoDelMenu"
+            },
+            "StoreClosureRequest": {
+                "type": "object",
+                "properties": {
+                    "fecha": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "motivo": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 200
+                    }
+                },
+                "required": [
+                    "fecha"
+                ],
+                "title": "StoreClosureRequest"
             }
         },
         "responses": {

@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-use Carbon\CarbonImmutable;
+namespace Tests\Unit\Sodas\Closures\Domain;
+
 use Illuminate\Support\Str;
+use PHPUnit\Framework\TestCase;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Closures\Domain\Closure;
@@ -11,23 +13,35 @@ use Src\Sodas\Closures\Domain\ValueObjects\ClosureDate;
 use Src\Sodas\Closures\Domain\ValueObjects\ClosureId;
 use Src\Sodas\Closures\Domain\ValueObjects\ClosureReason;
 
-test('models an exceptional closure', function () {
-    $today = CarbonImmutable::now('America/Costa_Rica')->format('Y-m-d');
-    $closure = Closure::create(
-        new ClosureId((string) Str::uuid7()),
-        new SodaId((string) Str::uuid7()),
-        new ClosureDate($today),
-        new ClosureReason('Mantenimiento')
-    );
+final class ClosureTest extends TestCase
+{
+    public function test_models_an_exceptional_closure(): void
+    {
+        $today = ClosureDate::today();
+        $closure = Closure::create(
+            new ClosureId((string) Str::uuid7()),
+            new SodaId((string) Str::uuid7()),
+            $today,
+            new ClosureReason('Mantenimiento')
+        );
 
-    expect($closure->date()->value())->toBe($today)
-        ->and($closure->reason()->value())->toBe('Mantenimiento');
-});
+        $this->assertSame($today->value(), $closure->date()->value());
+        $this->assertSame('Mantenimiento', $closure->reason()->value());
+    }
 
-test('rejects a past closure date', function () {
-    new ClosureDate('2020-01-01');
-})->throws(InvalidValueException::class, 'closure_date_past');
+    public function test_rejects_a_past_closure_date(): void
+    {
+        $this->expectException(InvalidValueException::class);
+        $this->expectExceptionMessage('closure_date_past');
 
-test('rejects a reason longer than 200 characters', function () {
-    new ClosureReason(str_repeat('a', 201));
-})->throws(InvalidValueException::class, 'closure_reason_too_long');
+        new ClosureDate('2020-01-01');
+    }
+
+    public function test_rejects_a_reason_longer_than_200_characters(): void
+    {
+        $this->expectException(InvalidValueException::class);
+        $this->expectExceptionMessage('closure_reason_too_long');
+
+        new ClosureReason(str_repeat('a', 201));
+    }
+}

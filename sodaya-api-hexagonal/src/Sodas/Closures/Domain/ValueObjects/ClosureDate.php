@@ -15,7 +15,7 @@ final readonly class ClosureDate
     public function __construct(string $date)
     {
         try {
-            $parsed = CarbonImmutable::parse($date);
+            $parsed = CarbonImmutable::parse($date, 'America/Costa_Rica');
         } catch (Throwable) {
             throw new InvalidValueException('closure_date_invalid');
         }
@@ -24,9 +24,9 @@ final readonly class ClosureDate
             throw new InvalidValueException('closure_date_invalid');
         }
 
-        $today = CarbonImmutable::now('America/Costa_Rica')->startOfDay();
+        $todayStr = CarbonImmutable::now('America/Costa_Rica')->format('Y-m-d');
 
-        if ($parsed->startOfDay()->isBefore($today)) {
+        if ($date < $todayStr) {
             throw new InvalidValueException('closure_date_past');
         }
 

@@ -6,4 +6,4 @@ namespace Src\Sodas\Closures\Domain\ValueObjects;
 
 use Src\Shared\Domain\ValueObjects\Identifier;
 
-final class ClosureId extends Identifier {}
+final readonly class ClosureId extends Identifier {}
