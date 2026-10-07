@@ -22,8 +22,8 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | --- | --- | --- | --- |
 | Soda | `Soda` | `sodas` | `sodas` |
 | Plato | `Dish` | `dishes` | `platos` |
-| Categoría | `Category` | `categories` | `categoria` |
-| Nombre | `DishName` | `name` | `nombre` |
+| Categoría | `Category` | `categories` | `categorias` |
+| Nombre | `DishName`, `CategoryName` | `name` | `nombre` |
 | Descripción | `description` | `description` | `descripcion` |
 | Precio | `Price` | `price` | `precio` |
 | Tiempo de preparación | `PreparationTime` | `preparation_minutes` | `minutos_preparacion` |
