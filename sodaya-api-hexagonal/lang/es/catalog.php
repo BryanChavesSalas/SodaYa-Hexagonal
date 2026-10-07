@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 return [
 
+    'category_name_in_use' => 'Ya existe una categoría con ese nombre en la soda.',
+    'category_name_invalid' => 'El nombre de la categoría es obligatorio y no puede superar los :max caracteres.',
+    'category_not_found' => 'La categoría no existe.',
     'description_invalid' => 'La descripción del plato no puede estar vacía ni superar los :max caracteres.',
     'dish_name_in_use' => 'Ya existe un plato con ese nombre en la soda.',
     'dish_not_found' => 'El plato no existe.',

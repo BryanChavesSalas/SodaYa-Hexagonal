@@ -15,6 +15,10 @@
             "name": "General"
         },
         {
+            "name": "Categor\u00edas de la soda",
+            "description": "Administraci\u00f3n de las categor\u00edas del men\u00fa por el personal de la soda."
+        },
+        {
             "name": "Platos de la soda",
             "description": "Administraci\u00f3n de los platos por el personal de la soda."
         },
@@ -24,6 +28,160 @@
         }
     ],
     "paths": {
+        "/cocina/categorias": {
+            "get": {
+                "operationId": "catalog.categories.index",
+                "summary": "Listar las categor\u00edas de la soda",
+                "tags": [
+                    "Categor\u00edas de la soda"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `Categoria`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Categoria"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog.categories.store",
+                "summary": "Crear una categor\u00eda",
+                "tags": [
+                    "Categor\u00edas de la soda"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrearCategoria"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`Categoria`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Categoria"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                }
+            }
+        },
+        "/cocina/categorias/{categoria}": {
+            "patch": {
+                "operationId": "catalog.categories.update",
+                "summary": "Renombrar una categor\u00eda",
+                "tags": [
+                    "Categor\u00edas de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "categoria",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RenombrarCategoria"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Categoria`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Categoria"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "catalog.categories.destroy",
+                "summary": "Eliminar una categor\u00eda",
+                "tags": [
+                    "Categor\u00edas de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "categoria",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                }
+            }
+        },
         "/": {
             "get": {
                 "operationId": "index",
@@ -325,6 +483,22 @@
                 },
                 "title": "ActualizarPlato"
             },
+            "Categoria": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "nombre": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "nombre"
+                ],
+                "title": "Categoria"
+            },
             "CategoriaDelMenu": {
                 "type": "object",
                 "properties": {
@@ -350,6 +524,19 @@
                     "platos"
                 ],
                 "title": "CategoriaDelMenu"
+            },
+            "CrearCategoria": {
+                "type": "object",
+                "properties": {
+                    "nombre": {
+                        "type": "string",
+                        "maxLength": 60
+                    }
+                },
+                "required": [
+                    "nombre"
+                ],
+                "title": "CrearCategoria"
             },
             "CrearPlato": {
                 "type": "object",
@@ -519,6 +706,19 @@
                     "actualizado_en"
                 ],
                 "title": "PlatoDelMenu"
+            },
+            "RenombrarCategoria": {
+                "type": "object",
+                "properties": {
+                    "nombre": {
+                        "type": "string",
+                        "maxLength": 60
+                    }
+                },
+                "required": [
+                    "nombre"
+                ],
+                "title": "RenombrarCategoria"
             }
         },
         "responses": {
