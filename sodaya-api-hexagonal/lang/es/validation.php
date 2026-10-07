@@ -164,6 +164,9 @@ return [
         'attribute-name' => [
             'rule-name' => 'mensaje-personalizado',
         ],
+        'fecha' => [
+            'after_or_equal' => 'La fecha no puede ser anterior a hoy.',
+        ],
     ],
 
     'attributes' => [
