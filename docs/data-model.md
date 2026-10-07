@@ -12,6 +12,7 @@ erDiagram
     sodas ||--o{ dishes : "ofrece"
     categories |o--o{ dishes : "agrupa"
     sodas ||--o{ schedules : "atiende en"
+    sodas ||--o{ closures : "cierra en"
     sodas ||--o{ staff_members : "emplea"
     sodas ||--o{ orders : "recibe"
     customers ||--o{ orders : "hace"
@@ -36,6 +37,12 @@ erDiagram
         uuid category_id FK
         varchar name
         integer price
+    }
+    closures {
+        uuid id PK
+        uuid soda_id FK
+        date closed_on
+        varchar reason
     }
 ```
 
@@ -78,6 +85,22 @@ Llaves candidatas: `id`, `(soda_id, name)` y `(id, soda_id)`. La última existe 
 | `created_at`, `updated_at` | `timestamptz` | |
 
 Al borrar una categoría, `category_id` de sus platos queda en nulo y el plato se conserva.
+
+## Tablas de la soda
+
+### closures
+
+Días en que la soda no abre, aunque su horario diga lo contrario.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `closed_on` | `date` | Fecha del cierre, en la zona horaria de Costa Rica; única dentro de la soda |
+| `reason` | `varchar(200)` | Opcional |
+| `created_at`, `updated_at` | `timestamptz` | |
+
+Llaves candidatas: `id` y `(soda_id, closed_on)`. La segunda garantiza un solo cierre por soda y fecha. «Cerrar por el resto del día» no se guarda aparte: es un cierre con la fecha de hoy.
 
 ## Verificación de las formas normales
 
