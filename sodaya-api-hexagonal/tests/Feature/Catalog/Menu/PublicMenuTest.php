@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Catalog\Menu;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
@@ -46,7 +47,7 @@ final class PublicMenuTest extends TestCase
         $this->getJson($this->endpoint())
             ->assertOk()
             ->assertExactJson(['data' => [
-                'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina'],
+                'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina'], 'abierta' => false,
                 'categorias' => [[
                     'id' => $category->id,
                     'nombre' => 'Casados',
@@ -98,7 +99,7 @@ final class PublicMenuTest extends TestCase
         DishModel::factory()->create();
 
         $this->getJson($this->endpoint())->assertOk()->assertExactJson(['data' => [
-            'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina'],
+            'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina'], 'abierta' => false,
             'categorias' => [],
         ]]);
     }
@@ -116,7 +117,56 @@ final class PublicMenuTest extends TestCase
         $response = $this->getJson($this->endpoint())->assertOk();
 
         $this->assertCount(30, $response->json('data.categorias.*.platos.*'));
-        $this->assertCount(3, DB::getQueryLog());
+        $this->assertCount(5, DB::getQueryLog());
+    }
+
+    /** The soda opens at the opening minute and closes at the closing minute, on every request. */
+    public function test_menu_reports_open_only_inside_the_slot(): void
+    {
+        $this->openWeekdays();
+
+        foreach ([
+            '2026-10-05 07:59:00' => false,
+            '2026-10-05 08:00:00' => true,
+            '2026-10-05 16:59:00' => true,
+            '2026-10-05 17:00:00' => false,
+            '2026-10-10 10:00:00' => false,
+        ] as $moment => $expected) {
+            $this->travelTo(CarbonImmutable::parse($moment, 'America/Costa_Rica'));
+
+            $this->getJson($this->endpoint())->assertOk()->assertJsonPath('data.abierta', $expected);
+        }
+    }
+
+    /** An exceptional closure keeps the soda closed whatever its schedule says. */
+    public function test_exceptional_closure_closes_the_soda(): void
+    {
+        $this->openWeekdays();
+        DB::table('exceptional_closures')->insert([
+            'soda_id' => $this->soda->id,
+            'starts_at' => '2026-10-05 00:00:00-06',
+            'ends_at' => '2026-10-06 00:00:00-06',
+            'reason' => 'Feriado',
+        ]);
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 10:00:00', 'America/Costa_Rica'));
+        $this->getJson($this->endpoint())->assertOk()->assertJsonPath('data.abierta', false);
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-06 10:00:00', 'America/Costa_Rica'));
+        $this->getJson($this->endpoint())->assertOk()->assertJsonPath('data.abierta', true);
+    }
+
+    /** Give the soda a Monday to Friday slot from 08:00 to 17:00. */
+    private function openWeekdays(): void
+    {
+        foreach (range(1, 5) as $day) {
+            DB::table('opening_slots')->insert([
+                'soda_id' => $this->soda->id,
+                'day_of_week' => $day,
+                'opens_at' => 8 * 60,
+                'closes_at' => 17 * 60,
+            ]);
+        }
     }
 
     /** An unknown soda answers a not-found problem. */
