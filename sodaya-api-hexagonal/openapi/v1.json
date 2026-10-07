@@ -414,6 +414,9 @@
                             "nombre"
                         ]
                     },
+                    "abierta": {
+                        "type": "boolean"
+                    },
                     "categorias": {
                         "type": "array",
                         "items": {
@@ -423,6 +426,7 @@
                 },
                 "required": [
                     "soda",
+                    "abierta",
                     "categorias"
                 ],
                 "title": "MenuPublico"

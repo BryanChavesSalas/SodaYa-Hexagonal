@@ -22,7 +22,7 @@ final class PublicMenuResource extends JsonResource
     }
 
     /**
-     * Expose the soda and its dishes grouped by category.
+     * Expose the soda, whether it is open now and its dishes grouped by category.
      *
      * @return array<string, mixed>
      */
@@ -33,6 +33,7 @@ final class PublicMenuResource extends JsonResource
                 'id' => $this->menu->sodaId,
                 'nombre' => $this->menu->sodaName,
             ],
+            'abierta' => $this->menu->abierta,
             'categorias' => MenuCategoryResource::collection($this->menu->categories),
         ];
     }
