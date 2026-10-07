@@ -6,8 +6,10 @@ use App\Providers\AppServiceProvider;
 use Src\Catalog\Dishes\Infrastructure\DishesServiceProvider;
 use Src\Catalog\Menu\Infrastructure\MenuServiceProvider;
 use Src\Shared\Infrastructure\SharedServiceProvider;
+use Src\Sodas\Closures\Infrastructure\Providers\ClosuresServiceProvider;
 
 return [
+    ClosuresServiceProvider::class,
     AppServiceProvider::class,
     SharedServiceProvider::class,
     DishesServiceProvider::class,
