@@ -167,6 +167,9 @@ return [
     ],
 
     'attributes' => [
+        'apertura' => 'apertura',
+        'cierre' => 'cierre',
+        'dia_semana' => 'día de la semana',
         'categoria_id' => 'categoría',
         'descripcion' => 'descripción',
         'minutos_preparacion' => 'minutos de preparación',

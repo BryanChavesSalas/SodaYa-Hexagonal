@@ -21,6 +21,10 @@
         {
             "name": "Men\u00fa p\u00fablico",
             "description": "Consulta del men\u00fa de una soda sin iniciar sesi\u00f3n."
+        },
+        {
+            "name": "Horario de atenci\u00f3n",
+            "description": "Franjas en las que la soda atiende cada d\u00eda, en la hora de America/Costa_Rica."
         }
     ],
     "paths": {
@@ -54,6 +58,78 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/horarios": {
+            "get": {
+                "operationId": "sodas.schedules.index",
+                "summary": "Listar el horario de atenci\u00f3n",
+                "tags": [
+                    "Horario de atenci\u00f3n"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `Horario`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Horario"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "sodas.schedules.store",
+                "summary": "Agregar una franja de atenci\u00f3n",
+                "tags": [
+                    "Horario de atenci\u00f3n"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrearHorario"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`Horario`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Horario"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
                     }
                 }
             }
@@ -351,6 +427,30 @@
                 ],
                 "title": "CategoriaDelMenu"
             },
+            "CrearHorario": {
+                "type": "object",
+                "properties": {
+                    "dia_semana": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 7
+                    },
+                    "apertura": {
+                        "type": "string",
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                    },
+                    "cierre": {
+                        "type": "string",
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                    }
+                },
+                "required": [
+                    "dia_semana",
+                    "apertura",
+                    "cierre"
+                ],
+                "title": "CrearHorario"
+            },
             "CrearPlato": {
                 "type": "object",
                 "properties": {
@@ -395,6 +495,30 @@
                     "porciones_disponibles"
                 ],
                 "title": "CrearPlato"
+            },
+            "Horario": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "dia_semana": {
+                        "type": "integer"
+                    },
+                    "apertura": {
+                        "type": "string"
+                    },
+                    "cierre": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "dia_semana",
+                    "apertura",
+                    "cierre"
+                ],
+                "title": "Horario"
             },
             "MenuPublico": {
                 "type": "object",
