@@ -69,6 +69,11 @@ final class ListCategoriesTest extends TestCase
             ->assertOk()
             ->assertJsonCount(25, 'data');
 
-        $this->assertCount(1, DB::getQueryLog());
+        $queries = array_filter(
+            DB::getQueryLog(),
+            fn (array $query): bool => ! str_contains($query['query'], 'set_config'),
+        );
+
+        $this->assertCount(1, $queries);
     }
 }

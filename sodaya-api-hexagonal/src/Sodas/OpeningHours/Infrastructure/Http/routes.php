@@ -5,7 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Src\Sodas\OpeningHours\Infrastructure\Http\Controllers\TimeSlotController;
 
-Route::prefix('cocina/horario')
+Route::middleware('auth:sanctum')
+    ->prefix('cocina/horario')
     ->name('sodas.opening-hours.')
     ->controller(TimeSlotController::class)
     ->whereUuid('franja')

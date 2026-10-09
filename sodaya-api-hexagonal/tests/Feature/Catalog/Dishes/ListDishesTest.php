@@ -53,6 +53,11 @@ final class ListDishesTest extends TestCase
         DB::enableQueryLog();
         $this->getJson(self::ENDPOINT)->assertOk()->assertJsonCount(25, 'data');
 
-        $this->assertCount(1, DB::getQueryLog());
+        $queries = array_filter(
+            DB::getQueryLog(),
+            fn (array $query): bool => ! str_contains($query['query'], 'set_config'),
+        );
+
+        $this->assertCount(1, $queries);
     }
 }

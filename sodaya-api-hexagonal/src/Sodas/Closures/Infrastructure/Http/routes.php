@@ -5,7 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Src\Sodas\Closures\Infrastructure\Http\Controllers\ClosureController;
 
-Route::prefix('cocina/cierres')
+Route::middleware('auth:sanctum')
+    ->prefix('cocina/cierres')
     ->name('sodas.closures.')
     ->controller(ClosureController::class)
     ->group(function (): void {
