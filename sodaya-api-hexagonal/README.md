@@ -93,7 +93,7 @@ Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 curl http://localhost:8000/api/v1/sodas/0192f0c4-0000-7000-8000-000000000001/platos
 ```
 
-Los endpoints del personal todavía no piden autenticación: trabajan sobre la soda indicada en `SODAYA_DEFAULT_SODA_ID`. La autenticación y la soda del usuario llegan en la clase 8.
+Los endpoints del personal piden un token (`POST /api/v1/tokens`) y trabajan siempre sobre la soda del usuario autenticado: la soda nunca se toma de la URL, de los parámetros ni del cuerpo.
 
 ## Variables de entorno
 
@@ -102,7 +102,6 @@ Los endpoints del personal todavía no piden autenticación: trabajan sobre la s
 | Variable | Uso |
 | --- | --- |
 | `APP_TIMEZONE` | Zona horaria de la aplicación y de la sesión de PostgreSQL. Por defecto, `America/Costa_Rica`. |
-| `SODAYA_DEFAULT_SODA_ID` | Soda sobre la que operan los endpoints del personal hasta que exista la autenticación. |
 
 El código nunca lee variables de entorno directamente: lo hacen los archivos de `config/`. Una prueba lo verifica.
 
