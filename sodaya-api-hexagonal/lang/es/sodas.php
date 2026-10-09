@@ -10,6 +10,8 @@ return [
     'closure_not_found' => 'El cierre no existe.',
     'closure_reason_invalid' => 'El motivo del cierre no puede estar vacío ni superar los :max caracteres.',
     'day_of_week_out_of_range' => 'El día debe estar entre :min (lunes) y :max (domingo).',
+    'name_invalid' => 'El nombre de la soda es obligatorio y no puede superar los :max caracteres.',
+    'payment_account_id_invalid' => 'El identificador de la cuenta de pago no puede estar vacío ni superar los :max caracteres.',
     'time_of_day_invalid' => 'La hora debe tener el formato HH:MM, entre 00:00 y 23:59.',
     'time_slot_inverted' => 'La hora de apertura debe ser anterior a la de cierre.',
     'time_slot_not_found' => 'La franja no existe.',
