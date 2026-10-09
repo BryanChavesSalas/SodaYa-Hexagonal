@@ -37,6 +37,10 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Pago | `Payment` | `payments` | `pago` |
 | Usuario | `User` | `users` | — |
 | Correo | `Email` | `email` | `correo` |
+| Contraseña | `password`, `PasswordHasher` | `password` | `contrasena` |
+| Token de acceso | `IssuedToken`, `TokenIssuer` | `personal_access_tokens` | `token` |
+| Dispositivo | `deviceName` | `personal_access_tokens.name` | `dispositivo` |
+| Ability | `abilities` | `personal_access_tokens.abilities` | `abilities` |
 | Rol | `Role` | `role` | — |
 | Personal | `Role::isStaff()` | `kitchen`, `owner` | — |
 | Cocina | `Role::Kitchen` | `kitchen` | `cocina` |

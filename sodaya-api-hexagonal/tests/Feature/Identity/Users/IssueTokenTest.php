@@ -10,7 +10,7 @@ use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 use Tests\Support\RefreshDatabaseAsOwner;
 use Tests\TestCase;
 
-final class CreateTokenTest extends TestCase
+final class IssueTokenTest extends TestCase
 {
     use RefreshDatabaseAsOwner;
 
@@ -22,14 +22,24 @@ final class CreateTokenTest extends TestCase
         ]);
 
         $response = $this->postJson('/api/v1/tokens', [
-            'email' => 'duena@sodaya.test',
-            'password' => UserFactory::PASSWORD,
-            'device_name' => 'Chrome en Windows',
+            'correo' => 'duena@sodaya.test',
+            'contrasena' => UserFactory::PASSWORD,
+            'dispositivo' => 'Chrome en Windows',
         ]);
 
         $response
             ->assertCreated()
-            ->assertJsonStructure(['token']);
+            ->assertJsonPath('data.tipo', 'Bearer')
+            ->assertJsonPath('data.abilities', Role::Owner->abilities())
+            ->assertJsonStructure([
+                'data' => [
+                    'token',
+                    'tipo',
+                    'abilities',
+                ],
+            ]);
+
+        $this->assertNotSame('', $response->json('data.token'));
 
         $token = $user->tokens()->sole();
 
@@ -44,11 +54,16 @@ final class CreateTokenTest extends TestCase
             'email' => 'cocina@sodaya.test',
         ]);
 
-        $this->postJson('/api/v1/tokens', [
-            'email' => 'cocina@sodaya.test',
-            'password' => UserFactory::PASSWORD,
-            'device_name' => 'Tablet cocina',
-        ])->assertCreated();
+        $response = $this->postJson('/api/v1/tokens', [
+            'correo' => 'cocina@sodaya.test',
+            'contrasena' => UserFactory::PASSWORD,
+            'dispositivo' => 'Tablet cocina',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.tipo', 'Bearer')
+            ->assertJsonPath('data.abilities', Role::Kitchen->abilities());
 
         $this->assertSame(
             Role::Kitchen->abilities(),
@@ -64,9 +79,9 @@ final class CreateTokenTest extends TestCase
         ]);
 
         $response = $this->postJson('/api/v1/tokens', [
-            'email' => 'duena@sodaya.test',
-            'password' => 'incorrecta',
-            'device_name' => 'Chrome',
+            'correo' => 'duena@sodaya.test',
+            'contrasena' => 'incorrecta',
+            'dispositivo' => 'Chrome',
         ]);
 
         $response
@@ -84,9 +99,9 @@ final class CreateTokenTest extends TestCase
     public function test_unknown_email_returns_invalid_credentials(): void
     {
         $response = $this->postJson('/api/v1/tokens', [
-            'email' => 'nadie@sodaya.test',
-            'password' => UserFactory::PASSWORD,
-            'device_name' => 'Chrome',
+            'correo' => 'nadie@sodaya.test',
+            'contrasena' => UserFactory::PASSWORD,
+            'dispositivo' => 'Chrome',
         ]);
 
         $response
@@ -96,6 +111,8 @@ final class CreateTokenTest extends TestCase
                 'type',
                 rtrim((string) config('app.url'), '/').'/problemas/credenciales-invalidas',
             );
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
     /** A disabled account cannot receive a token. */
@@ -106,9 +123,9 @@ final class CreateTokenTest extends TestCase
         ]);
 
         $response = $this->postJson('/api/v1/tokens', [
-            'email' => 'duena@sodaya.test',
-            'password' => UserFactory::PASSWORD,
-            'device_name' => 'Chrome',
+            'correo' => 'duena@sodaya.test',
+            'contrasena' => UserFactory::PASSWORD,
+            'dispositivo' => 'Chrome',
         ]);
 
         $response
@@ -126,9 +143,9 @@ final class CreateTokenTest extends TestCase
     public function test_invalid_payload_returns_unprocessable_entity(): void
     {
         $response = $this->postJson('/api/v1/tokens', [
-            'email' => 'correo-invalido',
-            'password' => '',
-            'device_name' => '',
+            'correo' => 'correo-invalido',
+            'contrasena' => '',
+            'dispositivo' => '',
         ]);
 
         $response
@@ -136,9 +153,9 @@ final class CreateTokenTest extends TestCase
             ->assertJsonPath('status', 422)
             ->assertJsonStructure([
                 'errores' => [
-                    'email',
-                    'password',
-                    'device_name',
+                    'correo',
+                    'contrasena',
+                    'dispositivo',
                 ],
             ]);
     }

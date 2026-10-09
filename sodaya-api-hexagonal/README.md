@@ -70,6 +70,7 @@ Antes de abrir un pull request deben pasar `composer lint`, `composer analyse` y
 | Método | Ruta | Quién | Descripción |
 | --- | --- | --- | --- |
 | GET | `/api/v1` | Cualquiera | Nombre y versión de la API. |
+| POST | `/api/v1/tokens` | Personal | Ingresa con correo, contraseña y dispositivo y devuelve un token de acceso con las abilities del rol. |
 | GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda. |
 | GET | `/api/v1/sodas/{soda}/platos/{plato}` | Visitante | Detalle de un plato del menú. |
 | GET | `/api/v1/cocina/platos` | Personal | Platos de la soda, activos e inactivos. |
@@ -93,7 +94,7 @@ Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 curl http://localhost:8000/api/v1/sodas/0192f0c4-0000-7000-8000-000000000001/platos
 ```
 
-Los endpoints del personal todavía no piden autenticación: trabajan sobre la soda indicada en `SODAYA_DEFAULT_SODA_ID`. La autenticación y la soda del usuario llegan en la clase 8.
+El personal obtiene un token de acceso mediante `POST /api/v1/tokens`, enviando `correo`, `contrasena` y `dispositivo`. La respuesta incluye el token, el tipo `Bearer` y las abilities correspondientes al rol. Cuando una ruta requiera autenticación, el token se envía en el encabezado `Authorization: Bearer <token>`.
 
 ## Variables de entorno
 

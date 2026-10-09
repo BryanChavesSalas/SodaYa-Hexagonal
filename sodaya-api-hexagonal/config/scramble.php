@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy;
 
 return [
 
@@ -18,5 +19,7 @@ return [
     ],
 
     'middleware' => [],
+
+    'security_strategy' => MiddlewareAuthSecurityStrategy::class,
 
 ];

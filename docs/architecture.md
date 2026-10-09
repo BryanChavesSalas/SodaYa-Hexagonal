@@ -74,7 +74,7 @@ El dominio de un módulo solo puede depender de su propio módulo, del `Shared` 
 
 ### Cuentas y autenticación
 
-El contexto `Identity` guarda las cuentas en el módulo `Identity/Users`. El agregado `User` es PHP puro: sabe que el personal pertenece a una soda y que el cliente no, pero no conoce Eloquent ni Sanctum. Dos puertos lo separan del framework: `UserRepository`, con su adaptador Eloquent, y `PasswordHasher`, cuyo adaptador `BcryptPasswordHasher` usa la fachada `Hash` de Laravel con bcrypt.
+El contexto `Identity` guarda las cuentas en el módulo `Identity/Users`. El agregado `User` es PHP puro: sabe que el personal pertenece a una soda y que el cliente no, pero no conoce Eloquent ni Sanctum. Los puertos `UserRepository`, `PasswordHasher` y `TokenIssuer` separan la lógica de aplicación del framework. Sus adaptadores son `EloquentUserRepository`, `BcryptPasswordHasher` y `SanctumTokenIssuer`.
 
 El modelo `UserModel` vive en la infraestructura del módulo, extiende el usuario autenticable de Laravel y usa `HasApiTokens` de Sanctum. `config/auth.php` lo declara como proveedor del guard `sanctum`, que es el guard por defecto de la aplicación.
 
@@ -83,16 +83,16 @@ El modelo `UserModel` vive en la infraestructura del módulo, extiende el usuari
 El dominio lanza excepciones que extienden `Src\Shared\Domain\Exceptions\DomainException`. Cada excepción lleva una clave de traducción, no un texto: el mensaje en español se resuelve en la infraestructura desde `lang/es`.
 
 Toda respuesta de error sigue RFC 9457 (`application/problem+json`). `ProblemDetailsRenderer` convierte cada excepción en un documento con `type`, `title`, `status`, `detail` e `instance`:
-
 | Excepción | Tipo de problema | HTTP |
 | --- | --- | --- |
 | Validación de un Form Request | `datos-invalidos`, con `errores` por campo | 422 |
+| `AuthenticationFailedException` | `credenciales-invalidas` | 401 |
+| `AuthenticationException` | `no-autenticado` | 401 |
 | `InvalidValueException` | `datos-invalidos` | 422 |
 | `NotFoundException` | `no-encontrado` | 404 |
 | Otra excepción del dominio | `conflicto` | 409 |
 | Excepción HTTP del framework | El tipo de su código de estado | 4xx o 5xx |
 | Cualquier otra | `error-interno`, sin detalles técnicos | 500 |
-
 El campo `instance` repite el identificador de la solicitud, que también viaja en el encabezado `X-Request-Id` y en cada línea de log.
 
 ## Contrato de la API

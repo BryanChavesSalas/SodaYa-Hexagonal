@@ -52,25 +52,25 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/CrearToken"
+                                "$ref": "#/components/schemas/Credenciales"
                             }
                         }
                     }
                 },
                 "responses": {
                     "201": {
-                        "description": "",
+                        "description": "`TokenDeAcceso`",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "token": {
-                                            "type": "string"
+                                        "data": {
+                                            "$ref": "#/components/schemas/TokenDeAcceso"
                                         }
                                     },
                                     "required": [
-                                        "token"
+                                        "data"
                                     ]
                                 }
                             }
@@ -938,28 +938,28 @@
                 ],
                 "title": "CrearPlato"
             },
-            "CrearToken": {
+            "Credenciales": {
                 "type": "object",
                 "properties": {
-                    "email": {
+                    "correo": {
                         "type": "string",
                         "format": "email",
                         "maxLength": 255
                     },
-                    "password": {
+                    "contrasena": {
                         "type": "string"
                     },
-                    "device_name": {
+                    "dispositivo": {
                         "type": "string",
                         "maxLength": 255
                     }
                 },
                 "required": [
-                    "email",
-                    "password",
-                    "device_name"
+                    "correo",
+                    "contrasena",
+                    "dispositivo"
                 ],
-                "title": "CrearToken"
+                "title": "Credenciales"
             },
             "Franja": {
                 "type": "object",
@@ -1141,6 +1141,30 @@
                     "nombre"
                 ],
                 "title": "RenombrarCategoria"
+            },
+            "TokenDeAcceso": {
+                "type": "object",
+                "properties": {
+                    "token": {
+                        "type": "string"
+                    },
+                    "tipo": {
+                        "type": "string",
+                        "const": "Bearer"
+                    },
+                    "abilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "token",
+                    "tipo",
+                    "abilities"
+                ],
+                "title": "TokenDeAcceso"
             }
         },
         "responses": {
