@@ -13,14 +13,15 @@ erDiagram
     categories |o--o{ dishes : "agrupa"
     sodas ||--o{ schedules : "atiende en"
     sodas ||--o{ closures : "cierra en"
-    sodas ||--o{ staff_members : "emplea"
+    sodas |o--o{ users : "emplea"
+    users ||--o{ personal_access_tokens : "ingresa con"
     sodas ||--o{ orders : "recibe"
-    customers ||--o{ orders : "hace"
+    users ||--o{ orders : "hace"
     orders ||--|{ order_lines : "contiene"
     dishes ||--o{ order_lines : "se vende en"
     orders ||--o{ order_status_history : "pasa por"
     orders ||--o| payments : "se paga con"
-    customers ||--o{ point_movements : "acumula"
+    users ||--o{ point_movements : "acumula"
 
     sodas {
         uuid id PK
@@ -50,6 +51,17 @@ erDiagram
         uuid soda_id FK
         date closed_on
         varchar reason
+    }
+    users {
+        uuid id PK
+        uuid soda_id FK
+        varchar email
+        varchar role
+    }
+    personal_access_tokens {
+        bigint id PK
+        uuid tokenable_id
+        varchar token
     }
 ```
 
@@ -126,6 +138,45 @@ Días en que la soda no abre, aunque su horario diga lo contrario.
 
 Llaves candidatas: `id` y `(soda_id, closed_on)`. La segunda garantiza un solo cierre por soda y fecha. «Cerrar por el resto del día» no se guarda aparte: es un cierre con la fecha de hoy.
 
+## Tablas de identidad
+
+### users
+
+Cada fila es una cuenta: un cliente o una persona del personal de una soda.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `name` | `varchar(120)` | Obligatoria |
+| `email` | `varchar(255)` | Única; se guarda recortada y en minúsculas |
+| `password` | `varchar(255)` | Hash bcrypt de la contraseña, nunca la contraseña |
+| `phone` | `text` | Opcional; se cifrará en la clase 13 |
+| `role` | `varchar(20)` | `CHECK` entre `customer`, `kitchen` y `owner` |
+| `soda_id` | `uuid` | Opcional; llave foránea a `sodas`, borrado en cascada |
+| `is_active` | `boolean` | Por defecto `true`; una cuenta inactiva no puede ingresar |
+| `terms_accepted_at` | `timestamptz` | Opcional |
+| `whatsapp_consent_at` | `timestamptz` | Opcional |
+| `created_at`, `updated_at` | `timestamptz` | |
+
+Llaves candidatas: `id` y `email`. La restricción `users_soda_id_check` exige que el personal (`kitchen`, `owner`) tenga soda y que el cliente no la tenga.
+
+El correo es único en todo el sistema y no dentro de cada soda: la persona ingresa con su correo antes de que se sepa a qué soda pertenece.
+
+### personal_access_tokens
+
+La crea Laravel Sanctum. Cada fila es un token de acceso emitido para un dispositivo.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `bigint` | Llave primaria autoincremental |
+| `tokenable_type`, `tokenable_id` | `varchar`, `uuid` | Dueño del token: la clase del modelo y su identificador |
+| `name` | `text` | Nombre del dispositivo |
+| `token` | `varchar(64)` | Único; hash SHA-256 del token, nunca el token |
+| `abilities` | `text` | Lista de abilities en JSON |
+| `last_used_at` | `timestamptz` | Opcional; último uso |
+| `expires_at` | `timestamptz` | Opcional, con índice |
+| `created_at`, `updated_at` | `timestamptz` | |
+
 ## Verificación de las formas normales
 
 | Forma | Qué exige | Cómo se cumple |
@@ -140,6 +191,8 @@ Llaves candidatas: `id` y `(soda_id, closed_on)`. La segunda garantiza un solo c
 | --- | --- |
 | `soda_id` se repite en `dishes` aunque la categoría ya lo implica | El plato pertenece a la soda aunque no tenga categoría. La llave foránea compuesta `(category_id, soda_id)` impide que los dos valores discrepen |
 | La línea del pedido guardará el nombre y el precio del plato | No es un dato derivado: es el hecho histórico de a cuánto se vendió. Cambiar el precio del plato no debe alterar pedidos pasados |
+| `personal_access_tokens.id` es `bigint` y no `uuid` | La tabla pertenece a Sanctum: el token que recibe el cliente tiene la forma `<id>\|<secreto>` y Sanctum busca la fila por ese número. No es un identificador del negocio |
+| `personal_access_tokens` no tiene llave foránea a `users` | Sanctum define una relación polimórfica (`tokenable_type`, `tokenable_id`). Un token cuya cuenta ya no existe no autentica a nadie, porque Sanctum no encuentra a su dueño |
 
 ## Regla para cada migración nueva
 

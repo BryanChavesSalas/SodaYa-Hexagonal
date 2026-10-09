@@ -35,13 +35,28 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Línea del pedido | `OrderLine` | `order_lines` | `lineas` |
 | Estado del pedido | `OrderStatus` | `status` | `estado` |
 | Pago | `Payment` | `payments` | `pago` |
-| Personal | `Staff` | — | — |
-| Cocina | `Kitchen` | — | `cocina` |
-| Dueño | `Owner` | — | — |
-| Cliente | `Customer` | — | — |
+| Usuario | `User` | `users` | — |
+| Correo | `Email` | `email` | `correo` |
+| Rol | `Role` | `role` | — |
+| Personal | `Role::isStaff()` | `kitchen`, `owner` | — |
+| Cocina | `Role::Kitchen` | `kitchen` | `cocina` |
+| Dueño | `Role::Owner` | `owner` | — |
+| Cliente | `Role::Customer` | `customer` | — |
 | Visitante | `Visitor` | — | — |
 
 Los términos de los contextos que aún no existen (pedidos, pagos, horario) quedan reservados para que se usen así cuando se construyan.
+
+## Roles
+
+La lista de roles es cerrada. Cada rol define a qué soda pertenece la cuenta y qué abilities llevan sus tokens.
+
+| Rol | Valor en la base | Soda | Abilities del token |
+| --- | --- | --- | --- |
+| Cliente | `customer` | Ninguna | `pedidos` |
+| Cocina | `kitchen` | Exactamente una | `cocina` |
+| Dueño | `owner` | Exactamente una | `cocina`, `administrar` |
+
+El **personal** es la cocina y el dueño: siempre pertenece a una soda. Un cliente nunca pertenece a una.
 
 ## Dinero y fechas
 
