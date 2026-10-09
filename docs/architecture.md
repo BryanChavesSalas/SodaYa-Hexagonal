@@ -11,7 +11,7 @@ src/
 ├── Shared/                      Núcleo compartido entre contextos
 │   ├── Domain/
 │   └── Infrastructure/
-└── <Contexto>/                  Por ejemplo, Catalog
+└── <Contexto>/                  Catalog (platos, categorías, menú), Sodas (horario, cierres) e Identity (cuentas)
     ├── Shared/                  Lo común a los módulos del contexto
     └── <Módulo>/                Un agregado; por ejemplo, Dishes
         ├── Domain/
@@ -71,6 +71,12 @@ Convenciones de nombres: las interfaces, los objetos de valor, los DTO y los cas
 Un puerto es una interfaz definida en `Domain/Contracts`. Su adaptador vive en `Infrastructure` y se enlaza en el service provider del módulo, que se registra en `bootstrap/providers.php`. Cambiar de proveedor afecta a un solo adaptador.
 
 El dominio de un módulo solo puede depender de su propio módulo, del `Shared` de su contexto y de `Src\Shared`. Cuando dos contextos necesitan colaborar lo hacen por un puerto o por un evento de dominio, nunca importando el dominio del otro.
+
+### Cuentas y autenticación
+
+El contexto `Identity` guarda las cuentas en el módulo `Identity/Users`. El agregado `User` es PHP puro: sabe que el personal pertenece a una soda y que el cliente no, pero no conoce Eloquent ni Sanctum. Dos puertos lo separan del framework: `UserRepository`, con su adaptador Eloquent, y `PasswordHasher`, cuyo adaptador `BcryptPasswordHasher` usa la fachada `Hash` de Laravel con bcrypt.
+
+El modelo `UserModel` vive en la infraestructura del módulo, extiende el usuario autenticable de Laravel y usa `HasApiTokens` de Sanctum. `config/auth.php` lo declara como proveedor del guard `sanctum`, que es el guard por defecto de la aplicación.
 
 ## Errores
 

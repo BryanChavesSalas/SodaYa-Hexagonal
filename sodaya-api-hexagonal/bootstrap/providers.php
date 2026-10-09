@@ -6,6 +6,7 @@ use App\Providers\AppServiceProvider;
 use Src\Catalog\Categories\Infrastructure\CategoriesServiceProvider;
 use Src\Catalog\Dishes\Infrastructure\DishesServiceProvider;
 use Src\Catalog\Menu\Infrastructure\MenuServiceProvider;
+use Src\Identity\Users\Infrastructure\UsersServiceProvider;
 use Src\Shared\Infrastructure\SharedServiceProvider;
 use Src\Sodas\Closures\Infrastructure\ClosuresServiceProvider;
 use Src\Sodas\OpeningHours\Infrastructure\OpeningHoursServiceProvider;
@@ -18,4 +19,5 @@ return [
     MenuServiceProvider::class,
     ClosuresServiceProvider::class,
     OpeningHoursServiceProvider::class,
+    UsersServiceProvider::class,
 ];
