@@ -8,7 +8,7 @@ API REST de SodaYa. Laravel 13, PHP 8.4 y PostgreSQL.
 | --- | --- |
 | PHP | 8.4 o superior, con las extensiones `pdo_pgsql`, `intl` y `mbstring` |
 | Composer | 2.x |
-| PostgreSQL | 18 o superior |
+| PostgreSQL | 18 o superior, con la extensión `btree_gist` del paquete `contrib` |
 
 ## Instalación
 
@@ -79,6 +79,9 @@ Antes de abrir un pull request deben pasar `composer lint`, `composer analyse` y
 | POST | `/api/v1/cocina/categorias` | Dueño | Crea una categoría. |
 | PATCH | `/api/v1/cocina/categorias/{categoria}` | Dueño | Renombra una categoría. |
 | DELETE | `/api/v1/cocina/categorias/{categoria}` | Dueño | Elimina una categoría. |
+| GET | `/api/v1/cocina/horario` | Personal | Franjas del horario, ordenadas por día y hora de apertura. |
+| POST | `/api/v1/cocina/horario` | Dueño | Agrega una franja; el día 1 es lunes y el 7 es domingo. |
+| DELETE | `/api/v1/cocina/horario/{franja}` | Dueño | Elimina una franja del horario. |
 | GET | `/api/v1/cocina/cierres` | Personal | Cierres excepcionales de hoy en adelante. |
 | POST | `/api/v1/cocina/cierres` | Dueño | Registra un cierre para una fecha. |
 | POST | `/api/v1/cocina/cierres/hoy` | Dueño | Cierra la soda por el resto del día. |
