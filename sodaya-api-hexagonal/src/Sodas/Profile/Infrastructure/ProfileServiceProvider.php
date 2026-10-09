@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Src\Sodas\Profile\Infrastructure;
 
 use Illuminate\Support\ServiceProvider;
+use Src\Sodas\Profile\Application\Contracts\OwnerAccounts;
 use Src\Sodas\Profile\Domain\Contracts\SodaRepository;
+use Src\Sodas\Profile\Infrastructure\Identity\IdentityOwnerAccounts;
 use Src\Sodas\Profile\Infrastructure\Persistence\Repositories\EloquentSodaRepository;
 
 final class ProfileServiceProvider extends ServiceProvider
@@ -16,6 +18,7 @@ final class ProfileServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     public array $bindings = [
+        OwnerAccounts::class => IdentityOwnerAccounts::class,
         SodaRepository::class => EloquentSodaRepository::class,
     ];
 }

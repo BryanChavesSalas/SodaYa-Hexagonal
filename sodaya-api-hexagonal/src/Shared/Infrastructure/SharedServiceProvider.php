@@ -7,8 +7,10 @@ namespace Src\Shared\Infrastructure;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Support\ServiceProvider;
 use Src\Shared\Domain\Contracts\SodaContext;
+use Src\Shared\Domain\Contracts\TransactionRunner;
 use Src\Shared\Infrastructure\OpenApi\ProblemResponsesTransformer;
 use Src\Shared\Infrastructure\OpenApi\RelativeServerTransformer;
+use Src\Shared\Infrastructure\Persistence\DatabaseTransactionRunner;
 use Src\Shared\Infrastructure\Tenancy\ConfiguredSodaContext;
 
 final class SharedServiceProvider extends ServiceProvider
@@ -20,6 +22,8 @@ final class SharedServiceProvider extends ServiceProvider
             SodaContext::class,
             fn (): SodaContext => new ConfiguredSodaContext(config('sodaya.default_soda_id')),
         );
+
+        $this->app->bind(TransactionRunner::class, DatabaseTransactionRunner::class);
     }
 
     /** Adjust the generated API contract. */
