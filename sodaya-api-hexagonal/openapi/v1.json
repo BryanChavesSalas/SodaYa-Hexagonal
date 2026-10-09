@@ -29,6 +29,10 @@
         {
             "name": "Cierres excepcionales",
             "description": "D\u00edas en que la soda no abre aunque su horario diga lo contrario."
+        },
+        {
+            "name": "Horario de la soda",
+            "description": "Franjas de atenci\u00f3n por d\u00eda de la semana; el d\u00eda 1 es lunes y el 7 es domingo."
         }
     ],
     "paths": {
@@ -357,6 +361,107 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/cocina/horario": {
+            "get": {
+                "operationId": "sodas.opening-hours.index",
+                "summary": "Consultar el horario de la soda",
+                "tags": [
+                    "Horario de la soda"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `Franja`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Franja"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "sodas.opening-hours.store",
+                "description": "La apertura est\u00e1 incluida en la franja y el cierre excluido. Responde 409 si se traslapa con otra franja del mismo d\u00eda.",
+                "summary": "Agregar una franja al horario",
+                "tags": [
+                    "Horario de la soda"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrearFranja"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`Franja`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Franja"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                }
+            }
+        },
+        "/cocina/horario/{franja}": {
+            "delete": {
+                "operationId": "sodas.opening-hours.destroy",
+                "summary": "Eliminar una franja del horario",
+                "tags": [
+                    "Horario de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "franja",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
                     }
                 }
             }
@@ -720,6 +825,28 @@
                 ],
                 "title": "CrearCategoria"
             },
+            "CrearFranja": {
+                "type": "object",
+                "properties": {
+                    "dia": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 7
+                    },
+                    "abre": {
+                        "type": "string"
+                    },
+                    "cierra": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "dia",
+                    "abre",
+                    "cierra"
+                ],
+                "title": "CrearFranja"
+            },
             "CrearPlato": {
                 "type": "object",
                 "properties": {
@@ -764,6 +891,30 @@
                     "porciones_disponibles"
                 ],
                 "title": "CrearPlato"
+            },
+            "Franja": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "dia": {
+                        "type": "integer"
+                    },
+                    "abre": {
+                        "type": "string"
+                    },
+                    "cierra": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "dia",
+                    "abre",
+                    "cierra"
+                ],
+                "title": "Franja"
             },
             "MenuPublico": {
                 "type": "object",

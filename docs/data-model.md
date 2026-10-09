@@ -38,6 +38,13 @@ erDiagram
         varchar name
         integer price
     }
+    schedules {
+        uuid id PK
+        uuid soda_id FK
+        smallint day_of_week
+        time opens_at
+        time closes_at
+    }
     closures {
         uuid id PK
         uuid soda_id FK
@@ -87,6 +94,23 @@ Llaves candidatas: `id`, `(soda_id, name)` y `(id, soda_id)`. La última existe 
 Al borrar una categoría, `category_id` de sus platos queda en nulo y el plato se conserva.
 
 ## Tablas de la soda
+
+### schedules
+
+Cada fila es una franja del horario de atención: un día de la semana y un intervalo de horas. Un día puede tener varias franjas.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `day_of_week` | `smallint` | `CHECK` entre 1 (lunes) y 7 (domingo), según ISO 8601 |
+| `opens_at` | `time` | Hora de apertura, incluida en la franja |
+| `closes_at` | `time` | Hora de cierre, excluida de la franja; `CHECK (opens_at < closes_at)` |
+| `created_at`, `updated_at` | `timestamptz` | |
+
+La restricción de exclusión `schedules_no_overlap_excl` impide que dos franjas de la misma soda y del mismo día se traslapen. Dos franjas que se tocan (`08:00–12:00` y `12:00–15:00`) son válidas, porque el cierre no pertenece a la franja.
+
+Las horas no llevan zona horaria: son horas de pared de la soda, que opera en `America/Costa_Rica`.
 
 ### closures
 

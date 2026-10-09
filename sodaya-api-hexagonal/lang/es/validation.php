@@ -164,6 +164,9 @@ return [
         'attribute-name' => [
             'rule-name' => 'mensaje-personalizado',
         ],
+        'cierra' => [
+            'after' => 'La hora de cierre debe ser posterior a la de apertura.',
+        ],
         'fecha' => [
             'after_or_equal' => 'La fecha no puede ser anterior a hoy.',
         ],
@@ -172,6 +175,7 @@ return [
     'attributes' => [
         'categoria_id' => 'categoría',
         'descripcion' => 'descripción',
+        'dia' => 'día',
         'minutos_preparacion' => 'minutos de preparación',
         'porciones_disponibles' => 'porciones disponibles',
     ],
