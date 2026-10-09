@@ -75,6 +75,10 @@ Antes de abrir un pull request deben pasar `composer lint`, `composer analyse` y
 | GET | `/api/v1/cocina/platos` | Personal | Platos de la soda, activos e inactivos. |
 | POST | `/api/v1/cocina/platos` | Dueño | Crea un plato. |
 | PATCH | `/api/v1/cocina/platos/{plato}` | Dueño | Edita o desactiva un plato. |
+| GET | `/api/v1/cocina/categorias` | Personal | Categorías de la soda. |
+| POST | `/api/v1/cocina/categorias` | Dueño | Crea una categoría. |
+| PATCH | `/api/v1/cocina/categorias/{categoria}` | Dueño | Renombra una categoría. |
+| DELETE | `/api/v1/cocina/categorias/{categoria}` | Dueño | Elimina una categoría. |
 
 Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 
