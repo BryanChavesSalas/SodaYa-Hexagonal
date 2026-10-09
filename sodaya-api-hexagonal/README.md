@@ -79,6 +79,10 @@ Antes de abrir un pull request deben pasar `composer lint`, `composer analyse` y
 | POST | `/api/v1/cocina/categorias` | Dueño | Crea una categoría. |
 | PATCH | `/api/v1/cocina/categorias/{categoria}` | Dueño | Renombra una categoría. |
 | DELETE | `/api/v1/cocina/categorias/{categoria}` | Dueño | Elimina una categoría. |
+| GET | `/api/v1/cocina/cierres` | Personal | Cierres excepcionales de hoy en adelante. |
+| POST | `/api/v1/cocina/cierres` | Dueño | Registra un cierre para una fecha. |
+| POST | `/api/v1/cocina/cierres/hoy` | Dueño | Cierra la soda por el resto del día. |
+| DELETE | `/api/v1/cocina/cierres/{cierre}` | Dueño | Elimina un cierre. |
 
 Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 

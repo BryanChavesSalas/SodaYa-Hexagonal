@@ -25,6 +25,10 @@
         {
             "name": "Men\u00fa p\u00fablico",
             "description": "Consulta del men\u00fa de una soda sin iniciar sesi\u00f3n."
+        },
+        {
+            "name": "Cierres excepcionales",
+            "description": "D\u00edas en que la soda no abre aunque su horario diga lo contrario."
         }
     ],
     "paths": {
@@ -164,6 +168,147 @@
                 "parameters": [
                     {
                         "name": "categoria",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                }
+            }
+        },
+        "/cocina/cierres": {
+            "get": {
+                "operationId": "sodas.closures.index",
+                "summary": "Listar los cierres de la soda",
+                "tags": [
+                    "Cierres excepcionales"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `Cierre`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Cierre"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "sodas.closures.store",
+                "summary": "Registrar un cierre",
+                "tags": [
+                    "Cierres excepcionales"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegistrarCierre"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`Cierre`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Cierre"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                }
+            }
+        },
+        "/cocina/cierres/hoy": {
+            "post": {
+                "operationId": "sodas.closures.close-for-today",
+                "summary": "Cerrar por el resto del d\u00eda",
+                "tags": [
+                    "Cierres excepcionales"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CerrarPorHoy"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`Cierre`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Cierre"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                }
+            }
+        },
+        "/cocina/cierres/{cierre}": {
+            "delete": {
+                "operationId": "sodas.closures.destroy",
+                "summary": "Eliminar un cierre",
+                "tags": [
+                    "Cierres excepcionales"
+                ],
+                "parameters": [
+                    {
+                        "name": "cierre",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -525,6 +670,43 @@
                 ],
                 "title": "CategoriaDelMenu"
             },
+            "CerrarPorHoy": {
+                "type": "object",
+                "properties": {
+                    "motivo": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 200
+                    }
+                },
+                "title": "CerrarPorHoy"
+            },
+            "Cierre": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "fecha": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "motivo": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "fecha",
+                    "motivo"
+                ],
+                "title": "Cierre"
+            },
             "CrearCategoria": {
                 "type": "object",
                 "properties": {
@@ -706,6 +888,26 @@
                     "actualizado_en"
                 ],
                 "title": "PlatoDelMenu"
+            },
+            "RegistrarCierre": {
+                "type": "object",
+                "properties": {
+                    "fecha": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "motivo": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 200
+                    }
+                },
+                "required": [
+                    "fecha"
+                ],
+                "title": "RegistrarCierre"
             },
             "RenombrarCategoria": {
                 "type": "object",
