@@ -30,4 +30,12 @@ final class BcryptPasswordHasherTest extends TestCase
         $this->assertTrue($hasher->check('secreto123', $hash));
         $this->assertFalse($hasher->check('Secreto123', $hash));
     }
+
+    /** A missing stored hash still performs the check and never authenticates. */
+    public function test_check_returns_false_when_hash_is_missing(): void
+    {
+        $hasher = new BcryptPasswordHasher;
+
+        $this->assertFalse($hasher->check('secreto123', null));
+    }
 }

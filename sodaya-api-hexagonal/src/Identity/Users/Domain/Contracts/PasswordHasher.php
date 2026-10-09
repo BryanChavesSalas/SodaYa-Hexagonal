@@ -10,5 +10,5 @@ interface PasswordHasher
     public function hash(string $plainPassword): string;
 
     /** Tell whether a plain password matches a stored hash. */
-    public function check(string $plainPassword, string $hash): bool;
+    public function check(string $plainPassword, ?string $hash): bool;
 }
