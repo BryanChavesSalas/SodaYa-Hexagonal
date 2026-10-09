@@ -62,8 +62,27 @@ La aplicación se conecta con `sodaya_app`, que no puede cambiar el esquema; las
 | `composer analyse` | Análisis estático con Larastan en nivel 8. |
 | `composer openapi` | Regenera el contrato `openapi/v1.json`. |
 | `composer audit` | Revisa vulnerabilidades conocidas en las dependencias. |
+| `php artisan sodaya:register-soda` | Registra una soda y la cuenta de su dueño. Ver [Registrar una soda](#registrar-una-soda). |
 
 Antes de abrir un pull request deben pasar `composer lint`, `composer analyse` y `php artisan test`. Si cambió un endpoint, hay que regenerar el contrato con `composer openapi` y versionarlo.
+
+## Registrar una soda
+
+La API no ofrece rutas para crear sodas ni cuentas: se registran desde la consola. Un solo comando crea la soda y la cuenta de su dueño; si alguno de los dos pasos falla, no queda ninguno.
+
+```bash
+php artisan sodaya:register-soda "Soda La Esquina" "Ana Mora" ana@sodaya.test --payment-account=ID_DE_LA_CUENTA
+```
+
+| Parámetro | Qué es |
+| --- | --- |
+| `name` | Nombre de la soda, de 120 caracteres como máximo. |
+| `owner-name` | Nombre del dueño. |
+| `owner-email` | Correo del dueño, con el que ingresa. |
+| `--payment-account=` | Identificador de la cuenta de pago de la soda. Es opcional. |
+| `--password=` | Contraseña del dueño, de 8 caracteres como mínimo. Si se omite, el comando la pide sin mostrarla; si el terminal no puede ocultar la entrada, el comando falla y debe usarse `--password`. |
+
+El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el motivo en pantalla. Sin `--password` y sin terminal interactiva rechaza la contraseña. Una contraseña escrita en `--password` queda en el historial del terminal; para uso manual conviene dejar que el comando la pida.
 
 ## Endpoints
 
