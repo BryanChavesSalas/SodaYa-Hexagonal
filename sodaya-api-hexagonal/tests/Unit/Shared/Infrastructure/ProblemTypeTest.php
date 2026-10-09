@@ -10,18 +10,33 @@ use Src\Shared\Infrastructure\Http\Problem\ProblemType;
 
 final class ProblemTypeTest extends TestCase
 {
-    /** Each type resolves back from its own status. */
-    public function test_every_type_resolves_from_its_status(): void
+    /** Each HTTP status resolves to its default problem type. */
+    public function test_http_status_resolves_to_the_default_problem_type(): void
     {
-        foreach (ProblemType::cases() as $type) {
-            $this->assertSame($type, ProblemType::fromStatus($type->status()));
-        }
+        $this->assertSame(ProblemType::BadRequest, ProblemType::fromStatus(400));
+        $this->assertSame(ProblemType::Unauthenticated, ProblemType::fromStatus(401));
+        $this->assertSame(ProblemType::Forbidden, ProblemType::fromStatus(403));
+        $this->assertSame(ProblemType::NotFound, ProblemType::fromStatus(404));
+        $this->assertSame(ProblemType::MethodNotAllowed, ProblemType::fromStatus(405));
+        $this->assertSame(ProblemType::Conflict, ProblemType::fromStatus(409));
+        $this->assertSame(ProblemType::InvalidData, ProblemType::fromStatus(422));
+        $this->assertSame(ProblemType::TooManyRequests, ProblemType::fromStatus(429));
+        $this->assertSame(ProblemType::InternalError, ProblemType::fromStatus(500));
+        $this->assertSame(ProblemType::ServiceUnavailable, ProblemType::fromStatus(503));
+    }
+
+    /** Invalid credentials shares the 401 status without replacing the default unauthenticated type. */
+    public function test_invalid_credentials_uses_unauthorized_status(): void
+    {
+        $this->assertSame(401, ProblemType::InvalidCredentials->status());
     }
 
     /** Statuses outside the catalog fall back by error class. */
     #[DataProvider('uncataloguedStatuses')]
-    public function test_uncatalogued_status_falls_back_by_error_class(int $status, ProblemType $expected): void
-    {
+    public function test_uncatalogued_status_falls_back_by_error_class(
+        int $status,
+        ProblemType $expected,
+    ): void {
         $this->assertSame($expected, ProblemType::fromStatus($status));
     }
 

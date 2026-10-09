@@ -8,7 +8,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Validation\ValidationException;
-use Src\Identity\Users\Domain\Exceptions\InvalidCredentialsException;
+use Src\Shared\Domain\Exceptions\AuthenticationFailedException;
 use Src\Shared\Domain\Exceptions\DomainException;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Src\Shared\Domain\Exceptions\NotFoundException;
@@ -28,9 +28,6 @@ final readonly class ProblemDetailsRenderer
                 ProblemType::InvalidData,
                 extensions: ['errores' => $exception->errors()],
             ),
-            $exception instanceof InvalidCredentialsException => $this->respondInvalidCredentials(
-                __($exception->translationKey(), $exception->parameters()),
-            ),
             $exception instanceof DomainException => $this->respond(
                 $this->typeOfDomainException($exception),
                 __($exception->translationKey(), $exception->parameters()),
@@ -48,6 +45,7 @@ final readonly class ProblemDetailsRenderer
     private function typeOfDomainException(DomainException $exception): ProblemType
     {
         return match (true) {
+            $exception instanceof AuthenticationFailedException => ProblemType::InvalidCredentials,
             $exception instanceof NotFoundException => ProblemType::NotFound,
             $exception instanceof InvalidValueException => ProblemType::InvalidData,
             default => ProblemType::Conflict,
@@ -77,21 +75,6 @@ final readonly class ProblemDetailsRenderer
             ],
             $type->status(),
             [...$headers, 'Content-Type' => self::CONTENT_TYPE],
-        );
-    }
-
-    private function respondInvalidCredentials(string $detail): JsonResponse
-    {
-        return new JsonResponse(
-            [
-                'type' => rtrim((string) config('app.url'), '/').'/problemas/credenciales-invalidas',
-                'title' => __('problems.credenciales-invalidas.title'),
-                'status' => 401,
-                'detail' => $detail,
-                'instance' => 'urn:uuid:'.Context::get(AssignRequestId::CONTEXT_KEY),
-            ],
-            401,
-            ['Content-Type' => self::CONTENT_TYPE],
         );
     }
 }

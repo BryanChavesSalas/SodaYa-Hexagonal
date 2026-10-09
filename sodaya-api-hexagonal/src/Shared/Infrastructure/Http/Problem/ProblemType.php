@@ -8,6 +8,7 @@ enum ProblemType: string
 {
     case BadRequest = 'solicitud-invalida';
     case Unauthenticated = 'no-autenticado';
+    case InvalidCredentials = 'credenciales-invalidas';
     case Forbidden = 'prohibido';
     case NotFound = 'no-encontrado';
     case MethodNotAllowed = 'metodo-no-permitido';
@@ -22,7 +23,8 @@ enum ProblemType: string
     {
         return match ($this) {
             self::BadRequest => 400,
-            self::Unauthenticated => 401,
+            self::Unauthenticated,
+            self::InvalidCredentials => 401,
             self::Forbidden => 403,
             self::NotFound => 404,
             self::MethodNotAllowed => 405,
@@ -37,7 +39,18 @@ enum ProblemType: string
     /** Resolve the type of an HTTP status, defaulting by error class. */
     public static function fromStatus(int $status): self
     {
-        return array_find(self::cases(), fn (self $type): bool => $type->status() === $status)
-            ?? ($status >= 500 ? self::InternalError : self::BadRequest);
+        return match ($status) {
+            400 => self::BadRequest,
+            401 => self::Unauthenticated,
+            403 => self::Forbidden,
+            404 => self::NotFound,
+            405 => self::MethodNotAllowed,
+            409 => self::Conflict,
+            422 => self::InvalidData,
+            429 => self::TooManyRequests,
+            500 => self::InternalError,
+            503 => self::ServiceUnavailable,
+            default => $status >= 500 ? self::InternalError : self::BadRequest,
+        };
     }
 }

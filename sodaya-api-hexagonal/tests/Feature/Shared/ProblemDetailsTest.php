@@ -7,6 +7,7 @@ namespace Tests\Feature\Shared;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Route;
 use RuntimeException;
+use Src\Shared\Domain\Exceptions\AuthenticationFailedException;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Tests\TestCase;
 
@@ -20,9 +21,35 @@ final class ProblemDetailsTest extends TestCase
         parent::setUp();
 
         Route::prefix('api/v1/pruebas')->middleware('api')->group(function (): void {
-            Route::get('fallo', fn () => throw new RuntimeException('SQLSTATE[42P01] at /var/www/secret.php'));
-            Route::get('dominio', fn () => throw new InvalidValueException('catalog.price_out_of_range', ['min' => 100, 'max' => 100_000]));
-            Route::post('validacion', fn (FormRequest $request) => $request->validate(['precio' => 'required|integer']));
+            Route::get(
+                'fallo',
+                fn () => throw new RuntimeException('SQLSTATE[42P01] at /var/www/secret.php'),
+            );
+
+            Route::get(
+                'dominio',
+                fn () => throw new InvalidValueException(
+                    'catalog.price_out_of_range',
+                    ['min' => 100, 'max' => 100_000],
+                ),
+            );
+
+            Route::post(
+                'validacion',
+                fn (FormRequest $request) => $request->validate([
+                    'precio' => 'required|integer',
+                ]),
+            );
+
+            Route::get(
+                'credenciales-invalidas',
+                fn () => throw new class('identity.invalid_credentials') extends AuthenticationFailedException {},
+            );
+
+            Route::get(
+                'protegida',
+                fn () => response()->json(['ok' => true]),
+            )->middleware('auth:sanctum');
         });
     }
 
@@ -73,6 +100,28 @@ final class ProblemDetailsTest extends TestCase
             ->assertJsonPath('detail', 'El precio debe estar entre ₡100 y ₡100000.');
     }
 
+    /** Failed authentication answers the invalid-credentials problem. */
+    public function test_failed_authentication_answers_invalid_credentials_problem(): void
+    {
+        $this->getJson('/api/v1/pruebas/credenciales-invalidas')
+            ->assertUnauthorized()
+            ->assertHeader('Content-Type', self::CONTENT_TYPE)
+            ->assertJsonPath('type', 'http://localhost/problemas/credenciales-invalidas')
+            ->assertJsonPath('title', 'Credenciales inválidas')
+            ->assertJsonPath('status', 401);
+    }
+
+    /** A protected route without a token answers the unauthenticated problem. */
+    public function test_protected_route_without_token_answers_unauthenticated_problem(): void
+    {
+        $this->getJson('/api/v1/pruebas/protegida')
+            ->assertUnauthorized()
+            ->assertHeader('Content-Type', self::CONTENT_TYPE)
+            ->assertJsonPath('type', 'http://localhost/problemas/no-autenticado')
+            ->assertJsonPath('title', 'No autenticado')
+            ->assertJsonPath('status', 401);
+    }
+
     /** An unexpected failure never leaks technical details. */
     public function test_unexpected_failure_hides_technical_details(): void
     {
@@ -84,7 +133,14 @@ final class ProblemDetailsTest extends TestCase
             ->assertJsonPath('type', 'http://localhost/problemas/error-interno')
             ->assertJsonPath('detail', 'Ocurrió un error inesperado. Intente de nuevo más tarde.');
 
-        $this->assertSame(['type', 'title', 'status', 'detail', 'instance'], array_keys($response->json()));
-        $this->assertStringNotContainsString('SQLSTATE', (string) $response->getContent());
+        $this->assertSame(
+            ['type', 'title', 'status', 'detail', 'instance'],
+            array_keys($response->json()),
+        );
+
+        $this->assertStringNotContainsString(
+            'SQLSTATE',
+            (string) $response->getContent(),
+        );
     }
 }
