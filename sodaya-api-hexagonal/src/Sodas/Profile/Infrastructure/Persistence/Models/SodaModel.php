@@ -15,9 +15,10 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * @property string $id
  * @property string $name
+ * @property string|null $payment_account_id
  */
 #[Table('sodas')]
-#[Fillable(['id', 'name'])]
+#[Fillable(['id', 'name', 'payment_account_id'])]
 #[UseFactory(SodaFactory::class)]
 final class SodaModel extends Model
 {

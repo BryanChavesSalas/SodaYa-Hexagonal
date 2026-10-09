@@ -10,6 +10,7 @@ use Src\Identity\Users\Infrastructure\UsersServiceProvider;
 use Src\Shared\Infrastructure\SharedServiceProvider;
 use Src\Sodas\Closures\Infrastructure\ClosuresServiceProvider;
 use Src\Sodas\OpeningHours\Infrastructure\OpeningHoursServiceProvider;
+use Src\Sodas\Profile\Infrastructure\ProfileServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -19,5 +20,6 @@ return [
     MenuServiceProvider::class,
     ClosuresServiceProvider::class,
     OpeningHoursServiceProvider::class,
+    ProfileServiceProvider::class,
     UsersServiceProvider::class,
 ];
