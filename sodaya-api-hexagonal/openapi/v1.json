@@ -15,6 +15,10 @@
             "name": "General"
         },
         {
+            "name": "Autenticaci\u00f3n",
+            "description": "Inicio de sesi\u00f3n del personal de una soda."
+        },
+        {
             "name": "Categor\u00edas de la soda",
             "description": "Administraci\u00f3n de las categor\u00edas del men\u00fa por el personal de la soda."
         },
@@ -36,6 +40,48 @@
         }
     ],
     "paths": {
+        "/tokens": {
+            "post": {
+                "operationId": "identity.tokens.store",
+                "summary": "Ingresar con correo y contrase\u00f1a",
+                "tags": [
+                    "Autenticaci\u00f3n"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrearToken"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "token": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "token"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                }
+            }
+        },
         "/cocina/categorias": {
             "get": {
                 "operationId": "catalog.categories.index",
@@ -891,6 +937,29 @@
                     "porciones_disponibles"
                 ],
                 "title": "CrearPlato"
+            },
+            "CrearToken": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "password": {
+                        "type": "string"
+                    },
+                    "device_name": {
+                        "type": "string",
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "email",
+                    "password",
+                    "device_name"
+                ],
+                "title": "CrearToken"
             },
             "Franja": {
                 "type": "object",
