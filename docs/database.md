@@ -31,16 +31,17 @@ Un tercer rol, de mantenimiento, se agrega cuando exista la primera tarea que re
 
 ## Convenciones del esquema
 
-| Tema                     | Convención                                                           |
-| ------------------------ | -------------------------------------------------------------------- |
-| Nombres                  | Inglés, `snake_case`; tablas en plural                               |
-| Llave primaria           | `id` de tipo `uuid`, versión 7, con `DEFAULT uuidv7()`               |
-| Soda                     | Toda tabla que pertenece a una soda lleva `soda_id`                  |
-| Llaves únicas y foráneas | Incluyen `soda_id`, para que el aislamiento no dependa del código    |
-| Fechas                   | `timestamptz`; la sesión trabaja en `America/Costa_Rica`             |
-| Dinero                   | Colones enteros en `integer`; nunca decimales ni punto flotante      |
-| Rangos del negocio       | Restricción `CHECK` con nombre `<tabla>_<columna>_check`             |
-| Normalización            | Tercera forma normal; cada excepción se justifica en `data-model.md` |
+| Tema                           | Convención                                                           |
+| ------------------------------ | -------------------------------------------------------------------- |
+| Nombres                        | Inglés, `snake_case`; tablas en plural                               |
+| Llave primaria                 | `id` de tipo `uuid`, versión 7, con `DEFAULT uuidv7()`               |
+| Soda                           | Toda tabla que pertenece a una soda lleva `soda_id`                  |
+| Llaves únicas y foráneas       | Incluyen `soda_id`, para que el aislamiento no dependa del código    |
+| Fechas                         | `timestamptz`; la sesión trabaja en `America/Costa_Rica`             |
+| Dinero                         | Colones enteros en `integer`; nunca decimales ni punto flotante      |
+| Rangos del negocio             | Restricción `CHECK` con nombre `<tabla>_<columna>_check`             |
+| Intervalos que no se traslapan | Restricción `EXCLUDE` con nombre `<tabla>_no_overlap_excl`           |
+| Normalización                  | Tercera forma normal; cada excepción se justifica en `data-model.md` |
 
 La aplicación genera el identificador antes de guardar, así el agregado tiene identidad desde que nace. El `DEFAULT uuidv7()` es el respaldo para las filas que no pasan por la aplicación.
 
@@ -55,6 +56,33 @@ El constructor de esquemas de Laravel no cubre funciones, procedimientos, trigge
 | Trigger             | `trg_`  | `BEFORE` por fila para validar o completar; `AFTER` por fila para propagar a otras tablas |
 | Vista               | `v_`    | `security_invoker = true`, para que apliquen las políticas de quien consulta              |
 | Vista materializada | `mv_`   | Índice único para refrescar con `CONCURRENTLY`; se consulta a través de una vista         |
+
+## Extensiones y tipos
+
+| Objeto                 | Migración                | Para qué                                                                                                         |
+| ---------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Extensión `btree_gist` | `create_schedules_table` | Permite comparar con `=` columnas escalares (`uuid`, `smallint`) dentro de un índice GiST                        |
+| Tipo `timerange`       | `create_schedules_table` | Rango de `time`, creado con `CREATE TYPE timerange AS RANGE (subtype = time)`; PostgreSQL no lo trae incorporado |
+
+`btree_gist` es una extensión de confianza: el rol dueño de la base la instala sin ser superusuario. Viene en el paquete `contrib` de PostgreSQL.
+
+## Restricciones de exclusión
+
+Una restricción `UNIQUE` solo compara por igualdad. Cuando la regla es «no se traslapan», se usa `EXCLUDE`, que acepta un operador por columna:
+
+```sql
+ALTER TABLE schedules ADD CONSTRAINT schedules_no_overlap_excl EXCLUDE USING gist (
+    soda_id WITH =,
+    day_of_week WITH =,
+    timerange(opens_at, closes_at) WITH &&
+);
+```
+
+Dos filas chocan si tienen la misma soda, el mismo día y rangos con algún minuto en común (`&&`). El rango se construye con los límites por defecto `[)`: la apertura está incluida y el cierre excluido. La violación devuelve el SQLSTATE `23P01`, que el repositorio traduce a la excepción del dominio.
+
+PostgreSQL 18 agrega `WITHOUT OVERLAPS` para llaves primarias y únicas, pero exige que la última columna de la llave sea un rango o multirango. Aquí la franja se guarda como día y dos columnas `time`, así que la herramienta correcta es `EXCLUDE` sobre el rango calculado.
+
+`php artisan migrate:fresh` borra las tablas pero no los tipos. Por eso la migración elimina `timerange` antes de crearlo.
 
 ## Reparto de responsabilidades
 
