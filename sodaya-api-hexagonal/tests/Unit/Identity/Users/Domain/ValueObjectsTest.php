@@ -6,7 +6,10 @@ namespace Tests\Unit\Identity\Users\Domain;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
+use SensitiveParameter;
 use Src\Identity\Users\Domain\ValueObjects\Email;
+use Src\Identity\Users\Domain\ValueObjects\PlainPassword;
 use Src\Identity\Users\Domain\ValueObjects\UserName;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 
@@ -67,5 +70,56 @@ final class ValueObjectsTest extends TestCase
                 $this->assertSame('identity.name_invalid', $exception->translationKey());
             }
         }
+    }
+
+    /** The password keeps the text exactly as typed, spaces and accents included. */
+    public function test_plain_password_is_kept_as_typed(): void
+    {
+        $this->assertSame('  clave 8  ', new PlainPassword('  clave 8  ')->value);
+        $this->assertSame('12345678', new PlainPassword('12345678')->value);
+    }
+
+    /** The minimum counts characters, not bytes. */
+    public function test_plain_password_counts_characters(): void
+    {
+        $this->assertSame('ññññññññ', new PlainPassword('ññññññññ')->value);
+
+        $this->expectException(InvalidValueException::class);
+
+        new PlainPassword('ñññññññ');
+    }
+
+    /** A short or empty password is rejected with a translatable error. */
+    #[DataProvider('shortPasswords')]
+    public function test_plain_password_rejects_short_values(string $password): void
+    {
+        try {
+            new PlainPassword($password);
+            $this->fail('A short password was accepted.');
+        } catch (InvalidValueException $exception) {
+            $this->assertSame('identity.password_too_short', $exception->translationKey());
+            $this->assertSame(['min' => 8], $exception->parameters());
+        }
+    }
+
+    /**
+     * Passwords that break the invariant of the value object.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function shortPasswords(): array
+    {
+        return [
+            'empty' => [''],
+            'seven characters' => ['1234567'],
+        ];
+    }
+
+    /** The password stays out of stack traces. */
+    public function test_plain_password_is_marked_as_sensitive(): void
+    {
+        $parameter = new ReflectionMethod(PlainPassword::class, '__construct')->getParameters()[0];
+
+        $this->assertCount(1, $parameter->getAttributes(SensitiveParameter::class));
     }
 }

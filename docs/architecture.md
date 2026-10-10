@@ -78,6 +78,10 @@ El contexto `Identity` guarda las cuentas en el módulo `Identity/Users`. El agr
 
 El modelo `UserModel` vive en la infraestructura del módulo, extiende el usuario autenticable de Laravel y usa `HasApiTokens` de Sanctum. `config/auth.php` lo declara como proveedor del guard `sanctum`, que es el guard por defecto de la aplicación.
 
+### Alta de una soda con su dueño
+
+El caso de uso `RegisterSoda`, del módulo `Sodas/Profile`, crea la soda y la cuenta de su dueño en una sola transacción. Colabora con otras piezas por dos puertos: `TransactionRunner`, en `Shared/Domain/Contracts`, con el adaptador `DatabaseTransactionRunner`; y `OwnerAccounts`, en `Application/Contracts` del módulo, cuyo adaptador `IdentityOwnerAccounts` ejecuta el caso de uso `RegisterStaffMember` de Identity. El dominio y la aplicación de Sodas no importan clases de Identity: solo las importa ese adaptador. Si cualquiera de los dos pasos falla, la transacción se revierte y no queda ni la soda ni la cuenta.
+
 ## Errores
 
 El dominio lanza excepciones que extienden `Src\Shared\Domain\Exceptions\DomainException`. Cada excepción lleva una clave de traducción, no un texto: el mensaje en español se resuelve en la infraestructura desde `lang/es`.

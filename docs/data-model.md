@@ -26,6 +26,7 @@ erDiagram
     sodas {
         uuid id PK
         varchar name
+        varchar payment_account_id
     }
     categories {
         uuid id PK
@@ -75,6 +76,7 @@ Las tablas sin columnas en el diagrama están previstas y todavía no existen.
 | --- | --- | --- |
 | `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
 | `name` | `varchar(120)` | Obligatoria |
+| `payment_account_id` | `varchar(255)` | Opcional; identificador de la cuenta de pago de la soda |
 | `created_at`, `updated_at` | `timestamptz` | |
 
 ### categories
