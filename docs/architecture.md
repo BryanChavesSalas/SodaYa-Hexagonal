@@ -94,6 +94,8 @@ El contexto `Identity` guarda las cuentas en el módulo `Identity/Users`. El agr
 
 El modelo `UserModel` vive en la infraestructura del módulo, extiende el usuario autenticable de Laravel y usa `HasApiTokens` de Sanctum. `config/auth.php` lo declara como proveedor del guard `sanctum`, que es el guard por defecto de la aplicación.
 
+Las operaciones del personal preguntan su soda al puerto `SodaContext` de `Shared`. Su adaptador, `AuthenticatedSodaContext`, la lee de la persona autenticada: la cocina y el dueño trabajan siempre sobre su propia soda y un cliente, que no tiene soda, recibe 403 `prohibido`. Ningún controlador toma la soda de la URL, de los parámetros ni del cuerpo. Cuando este adaptador reemplazó al que leía la soda de la configuración, ningún caso de uso cambió.
+
 ### Alta de una soda con su dueño
 
 El caso de uso `RegisterSoda`, del módulo `Sodas/Profile`, crea la soda y la cuenta de su dueño en una sola transacción. Colabora con otras piezas por dos puertos: `TransactionRunner`, en `Shared/Domain/Contracts`, con el adaptador `DatabaseTransactionRunner`; y `OwnerAccounts`, en `Application/Contracts` del módulo, cuyo adaptador `IdentityOwnerAccounts` ejecuta el caso de uso `RegisterStaffMember` de Identity. El dominio y la aplicación de Sodas no importan clases de Identity: solo las importa ese adaptador. Si cualquiera de los dos pasos falla, la transacción se revierte y no queda ni la soda ni la cuenta.
@@ -111,6 +113,7 @@ Toda respuesta de error sigue RFC 9457 (`application/problem+json`). `ProblemDet
 | `NotFoundException` | `no-encontrado` | 404 |
 | `AuthenticationFailedException`, como un correo o una contraseña incorrectos | `credenciales-invalidas` | 401 |
 | Ruta protegida sin un token válido (`AuthenticationException` del framework) | `no-autenticado` | 401 |
+| Persona autenticada sin permiso, como un cliente en una ruta del personal (`AuthorizationException` del framework) | `prohibido` | 403 |
 | Otra excepción del dominio, como una franja traslapada o un cierre repetido | `conflicto` | 409 |
 | Excepción HTTP del framework | El tipo de su código de estado | 4xx o 5xx |
 | Cualquier otra | `error-interno`, sin detalles técnicos | 500 |

@@ -11,18 +11,14 @@ use Src\Shared\Domain\Contracts\TransactionRunner;
 use Src\Shared\Infrastructure\OpenApi\ProblemResponsesTransformer;
 use Src\Shared\Infrastructure\OpenApi\RelativeServerTransformer;
 use Src\Shared\Infrastructure\Persistence\DatabaseTransactionRunner;
-use Src\Shared\Infrastructure\Tenancy\ConfiguredSodaContext;
+use Src\Shared\Infrastructure\Tenancy\AuthenticatedSodaContext;
 
 final class SharedServiceProvider extends ServiceProvider
 {
     /** Bind the shared ports to their adapters. */
     public function register(): void
     {
-        $this->app->bind(
-            SodaContext::class,
-            fn (): SodaContext => new ConfiguredSodaContext(config('sodaya.default_soda_id')),
-        );
-
+        $this->app->bind(SodaContext::class, AuthenticatedSodaContext::class);
         $this->app->bind(TransactionRunner::class, DatabaseTransactionRunner::class);
     }
 
