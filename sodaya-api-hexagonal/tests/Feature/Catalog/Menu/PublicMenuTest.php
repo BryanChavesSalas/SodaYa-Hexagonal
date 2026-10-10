@@ -47,6 +47,7 @@ final class PublicMenuTest extends TestCase
             ->assertOk()
             ->assertExactJson(['data' => [
                 'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina'],
+                'abierta' => false,
                 'categorias' => [[
                     'id' => $category->id,
                     'nombre' => 'Casados',
@@ -99,6 +100,7 @@ final class PublicMenuTest extends TestCase
 
         $this->getJson($this->endpoint())->assertOk()->assertExactJson(['data' => [
             'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina'],
+            'abierta' => false,
             'categorias' => [],
         ]]);
     }
@@ -116,7 +118,7 @@ final class PublicMenuTest extends TestCase
         $response = $this->getJson($this->endpoint())->assertOk();
 
         $this->assertCount(30, $response->json('data.categorias.*.platos.*'));
-        $this->assertCount(3, DB::getQueryLog());
+        $this->assertCount(5, DB::getQueryLog());
     }
 
     /** An unknown soda answers a not-found problem. */

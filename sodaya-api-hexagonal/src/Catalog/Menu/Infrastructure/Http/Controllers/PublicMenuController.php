@@ -15,10 +15,13 @@ use Src\Catalog\Menu\Infrastructure\Http\Resources\PublicMenuResource;
 final readonly class PublicMenuController
 {
     /** Show the menu of a soda to any visitor. */
-    #[Endpoint(title: 'Consultar el menú de una soda')]
+    #[Endpoint(
+        title: 'Consultar el menú de una soda',
+        description: 'El atributo `abierta` indica si la soda atiende en el momento de la respuesta, según su horario y sus cierres excepcionales, en hora de Costa Rica.',
+    )]
     public function index(string $soda, GetPublicMenu $getPublicMenu): PublicMenuResource
     {
-        return new PublicMenuResource($getPublicMenu->execute($soda));
+        return new PublicMenuResource($getPublicMenu->execute($soda, now()->toDateTimeImmutable()));
     }
 
     /** Show one dish of the menu to any visitor. */

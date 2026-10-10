@@ -515,6 +515,7 @@
         "/sodas/{soda}/platos": {
             "get": {
                 "operationId": "catalog.menu.index",
+                "description": "El atributo `abierta` indica si la soda atiende en el momento de la respuesta, seg\u00fan su horario y sus cierres excepcionales, en hora de Costa Rica.",
                 "summary": "Consultar el men\u00fa de una soda",
                 "tags": [
                     "Men\u00fa p\u00fablico"
@@ -1003,6 +1004,9 @@
                             "nombre"
                         ]
                     },
+                    "abierta": {
+                        "type": "boolean"
+                    },
                     "categorias": {
                         "type": "array",
                         "items": {
@@ -1012,6 +1016,7 @@
                 },
                 "required": [
                     "soda",
+                    "abierta",
                     "categorias"
                 ],
                 "title": "MenuPublico"

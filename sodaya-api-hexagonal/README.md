@@ -89,7 +89,7 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | Método | Ruta | Quién | Descripción |
 | --- | --- | --- | --- |
 | GET | `/api/v1` | Cualquiera | Nombre y versión de la API. |
-| GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda. |
+| GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda, con el indicador `abierta`. |
 | GET | `/api/v1/sodas/{soda}/platos/{plato}` | Visitante | Detalle de un plato del menú. |
 | GET | `/api/v1/cocina/platos` | Personal | Platos de la soda, activos e inactivos. |
 | POST | `/api/v1/cocina/platos` | Dueño | Crea un plato. |
