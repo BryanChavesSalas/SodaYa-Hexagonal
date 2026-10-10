@@ -112,6 +112,8 @@ Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 curl http://localhost:8000/api/v1/sodas/0192f0c4-0000-7000-8000-000000000001/platos
 ```
 
+La respuesta incluye `abierta`, que se calcula en cada consulta con el horario y los cierres de la soda, en hora de Costa Rica. Los datos de demostración traen un horario de lunes a sábado.
+
 Los endpoints del personal todavía no piden autenticación: trabajan sobre la soda indicada en `SODAYA_DEFAULT_SODA_ID`. La autenticación y la soda del usuario llegan en la clase 8.
 
 ## Variables de entorno

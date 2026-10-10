@@ -72,6 +72,22 @@ Un puerto es una interfaz definida en `Domain/Contracts`. Su adaptador vive en `
 
 El dominio de un módulo solo puede depender de su propio módulo, del `Shared` de su contexto y de `Src\Shared`. Cuando dos contextos necesitan colaborar lo hacen por un puerto o por un evento de dominio, nunca importando el dominio del otro.
 
+### Colaboración entre contextos
+
+El menú público (`Catalog/Menu`) muestra si la soda está abierta, pero la regla pertenece al contexto `Sodas`. El menú no importa ese dominio: declara el puerto `SodaOpenStatus` en su propia capa `Application/Contracts` y lo implementa con un adaptador de infraestructura, `OpeningHoursSodaOpenStatus`, que invoca el caso de uso `CheckSodaIsOpen` de `Sodas/OpeningHours`.
+
+```
+PublicMenuController ──▶ GetPublicMenu ──▶ SodaOpenStatus (puerto de Catalog/Menu)
+                                                 ▲
+                         OpeningHoursSodaOpenStatus (adaptador) ──▶ CheckSodaIsOpen (Sodas/OpeningHours)
+```
+
+Si mañana el horario viviera en otro servicio, solo cambiaría el adaptador.
+
+### El tiempo es un parámetro
+
+El dominio nunca pregunta la hora. El momento actual se crea en el borde HTTP con `now()`, en la zona horaria de la aplicación, y viaja como `DateTimeImmutable` hasta el caso de uso y el dominio (`WeeklySchedule::isOpenAt()`, `Closure::create()`). Así las reglas que dependen del reloj se prueban con momentos fijos, sin arrancar el framework, y el indicador `abierta` se calcula en cada respuesta: no se guarda ni se pone en caché.
+
 ### Cuentas y autenticación
 
 El contexto `Identity` guarda las cuentas en el módulo `Identity/Users`. El agregado `User` es PHP puro: sabe que el personal pertenece a una soda y que el cliente no, pero no conoce Eloquent ni Sanctum. Dos puertos lo separan del framework: `UserRepository`, con su adaptador Eloquent, y `PasswordHasher`, cuyo adaptador `BcryptPasswordHasher` usa la fachada `Hash` de Laravel con bcrypt.
@@ -93,7 +109,7 @@ Toda respuesta de error sigue RFC 9457 (`application/problem+json`). `ProblemDet
 | Validación de un Form Request | `datos-invalidos`, con `errores` por campo | 422 |
 | `InvalidValueException` | `datos-invalidos` | 422 |
 | `NotFoundException` | `no-encontrado` | 404 |
-| Otra excepción del dominio | `conflicto` | 409 |
+| Otra excepción del dominio, como una franja traslapada o un cierre repetido | `conflicto` | 409 |
 | Excepción HTTP del framework | El tipo de su código de estado | 4xx o 5xx |
 | Cualquier otra | `error-interno`, sin detalles técnicos | 500 |
 
