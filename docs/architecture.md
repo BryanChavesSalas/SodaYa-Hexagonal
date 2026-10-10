@@ -113,10 +113,12 @@ Toda respuesta de error sigue RFC 9457 (`application/problem+json`). `ProblemDet
 | `NotFoundException` | `no-encontrado` | 404 |
 | `AuthenticationFailedException`, como un correo o una contraseña incorrectos | `credenciales-invalidas` | 401 |
 | Ruta protegida sin un token válido (`AuthenticationException` del framework) | `no-autenticado` | 401 |
-| Persona autenticada sin permiso, como un cliente en una ruta del personal (`AuthorizationException` del framework) | `prohibido` | 403 |
+| Persona autenticada sin permiso: un token sin la ability que pide la ruta (`MissingAbilityException` de Sanctum) o un cliente en una ruta del personal. Ambas son `AuthorizationException` del framework | `prohibido` | 403 |
 | Otra excepción del dominio, como una franja traslapada o un cierre repetido | `conflicto` | 409 |
 | Excepción HTTP del framework | El tipo de su código de estado | 4xx o 5xx |
 | Cualquier otra | `error-interno`, sin detalles técnicos | 500 |
+
+Laravel convierte toda `AuthorizationException` en una excepción HTTP 403 antes de llamar a `ProblemDetailsRenderer`, que la traduce al tipo de su código de estado. Por eso la excepción de Sanctum no necesita una rama propia en el renderizador.
 
 El campo `instance` repite el identificador de la solicitud, que también viaja en el encabezado `X-Request-Id` y en cada línea de log.
 

@@ -27,6 +27,8 @@ final readonly class ProblemResponsesTransformer implements DocumentTransformer
         $document->components->responses = [];
 
         $notFound = $this->register($document, ProblemType::NotFound, $this->problemSchema());
+        $forbidden = $this->register($document, ProblemType::Forbidden, $this->problemSchema());
+
         $invalidData = $this->register($document, ProblemType::InvalidData, $this->problemSchema()->addProperty(
             'errores',
             new ObjectType()->additionalProperties(new ArrayType()->setItems(new StringType)),
@@ -35,6 +37,10 @@ final readonly class ProblemResponsesTransformer implements DocumentTransformer
         foreach ($document->paths as $path) {
             foreach ($path->operations as $operation) {
                 $operation->responses = array_filter($operation->responses ?? [], $this->isSuccessful(...));
+
+                if ($operation->hasExtensionProperty('abilities')) {
+                    $operation->addResponse($forbidden);
+                }
 
                 if ($operation->requestBodyObject !== null) {
                     $operation->addResponse($invalidData);
