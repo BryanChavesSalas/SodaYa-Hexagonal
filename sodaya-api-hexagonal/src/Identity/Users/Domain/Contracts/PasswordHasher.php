@@ -9,6 +9,6 @@ interface PasswordHasher
     /** Turn a plain password into an adaptive one-way hash. */
     public function hash(string $plainPassword): string;
 
-    /** Tell whether a plain password matches a stored hash. */
-    public function check(string $plainPassword, string $hash): bool;
+    /** Tell whether a plain password matches a stored hash; without a hash, spend the same work and answer false. */
+    public function check(string $plainPassword, ?string $hash): bool;
 }

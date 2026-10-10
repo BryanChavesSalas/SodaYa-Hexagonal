@@ -17,9 +17,15 @@ final readonly class BcryptPasswordHasher implements PasswordHasher
         return Hash::driver(self::DRIVER)->make($plainPassword);
     }
 
-    /** Compare the password with a bcrypt hash in constant time. */
-    public function check(string $plainPassword, string $hash): bool
+    /** Compare the password with a bcrypt hash; without one, hash it anyway so the time is the same. */
+    public function check(string $plainPassword, ?string $hash): bool
     {
+        if ($hash === null) {
+            $this->hash($plainPassword);
+
+            return false;
+        }
+
         return Hash::driver(self::DRIVER)->check($plainPassword, $hash);
     }
 }
