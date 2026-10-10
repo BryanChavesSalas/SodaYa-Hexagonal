@@ -47,6 +47,14 @@ final readonly class TimeSlot
         return new self($id, $sodaId, $day, $opensAt, $closesAt);
     }
 
+    /** Tell whether the slot covers a time of a day: opening included, closing excluded. */
+    public function includes(DayOfWeek $day, TimeOfDay $time): bool
+    {
+        return $this->day->equals($day)
+            && ! $time->isBefore($this->opensAt)
+            && $time->isBefore($this->closesAt);
+    }
+
     /** Tell whether both slots share a day and some minute, the closing excluded. */
     public function overlaps(self $other): bool
     {

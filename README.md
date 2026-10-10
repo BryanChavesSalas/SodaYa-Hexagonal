@@ -29,7 +29,7 @@ El dominio no depende de Laravel y una prueba de arquitectura lo verifica en cad
 
 ## Estado
 
-Construido hasta la clase 6 del curso:
+Construido hasta la clase 7 del curso:
 
 | Clase | Entrega |
 | --- | --- |
@@ -38,6 +38,7 @@ Construido hasta la clase 6 del curso:
 | 4 | Catálogo de platos: dominio, esquema con restricciones, casos de uso y endpoints del personal. |
 | 5 | Menú público, errores RFC 9457, `X-Request-Id` y contrato OpenAPI. |
 | 6 | Pint, Larastan, integración continua, configuración por entorno y esta documentación. |
+| 7 | Categorías del menú, horario de atención por franjas, cierres excepcionales e indicador `abierta` en el menú público. |
 
 El despliegue en una dirección pública está pendiente ([#30](https://github.com/BryanChavesSalas/SodaYa-Hexagonal/issues/30)).
 

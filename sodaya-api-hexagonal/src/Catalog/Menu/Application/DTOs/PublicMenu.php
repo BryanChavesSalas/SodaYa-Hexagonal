@@ -15,5 +15,12 @@ final readonly class PublicMenu
         public string $sodaId,
         public string $sodaName,
         public array $categories,
+        public bool $open = false,
     ) {}
+
+    /** Return the same menu flagged as open or closed. */
+    public function withOpenStatus(bool $open): self
+    {
+        return new self($this->sodaId, $this->sodaName, $this->categories, $open);
+    }
 }

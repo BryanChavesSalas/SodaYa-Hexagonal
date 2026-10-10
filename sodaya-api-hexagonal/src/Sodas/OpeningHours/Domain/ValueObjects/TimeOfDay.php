@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Sodas\OpeningHours\Domain\ValueObjects;
 
+use DateTimeImmutable;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 
 final readonly class TimeOfDay
@@ -16,6 +17,12 @@ final readonly class TimeOfDay
         if (preg_match(self::PATTERN, $value) !== 1) {
             throw new InvalidValueException('sodas.time_of_day_invalid');
         }
+    }
+
+    /** Take the wall-clock time of a moment, in its own time zone, without seconds. */
+    public static function fromMoment(DateTimeImmutable $moment): self
+    {
+        return new self($moment->format('H:i'));
     }
 
     /** Tell whether this time comes strictly before the other. */

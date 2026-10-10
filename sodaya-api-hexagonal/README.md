@@ -89,7 +89,7 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | Método | Ruta | Quién | Descripción |
 | --- | --- | --- | --- |
 | GET | `/api/v1` | Cualquiera | Nombre y versión de la API. |
-| GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda. |
+| GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda, con el indicador `abierta`. |
 | GET | `/api/v1/sodas/{soda}/platos/{plato}` | Visitante | Detalle de un plato del menú. |
 | GET | `/api/v1/cocina/platos` | Personal | Platos de la soda, activos e inactivos. |
 | POST | `/api/v1/cocina/platos` | Dueño | Crea un plato. |
@@ -111,6 +111,8 @@ Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 ```bash
 curl http://localhost:8000/api/v1/sodas/0192f0c4-0000-7000-8000-000000000001/platos
 ```
+
+La respuesta incluye `abierta`, que se calcula en cada consulta con el horario y los cierres de la soda, en hora de Costa Rica. Los datos de demostración traen un horario de lunes a sábado.
 
 Los endpoints del personal todavía no piden autenticación: trabajan sobre la soda indicada en `SODAYA_DEFAULT_SODA_ID`. La autenticación y la soda del usuario llegan en la clase 8.
 
