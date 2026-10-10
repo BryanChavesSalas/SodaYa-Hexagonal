@@ -65,6 +65,33 @@ final class StaffPermissionsTest extends TestCase
     }
 
     /**
+     * Every staff endpoint rejects a request without a token.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    #[DataProvider('unauthenticatedStaffEndpoints')]
+    public function test_staff_endpoints_without_token_answer_unauthenticated(
+        string $method,
+        string $uri,
+        array $payload,
+    ): void {
+        $response = match ($method) {
+            'GET' => $this->getJson($uri),
+            'POST' => $this->postJson($uri, $payload),
+            'PATCH' => $this->patchJson($uri, $payload),
+            'DELETE' => $this->deleteJson($uri),
+            default => throw new \InvalidArgumentException("Unsupported method: {$method}"),
+        };
+
+        $response
+            ->assertUnauthorized()
+            ->assertJsonPath(
+                'type',
+                'http://localhost/problemas/no-autenticado',
+            );
+    }
+
+    /**
      * Staff endpoints and their expected status for customer, kitchen and owner.
      *
      * @return array<string, array{
@@ -205,6 +232,106 @@ final class StaffPermissionsTest extends TestCase
                 403,
                 403,
                 404,
+            ],
+        ];
+    }
+
+    /**
+     * Every staff endpoint called without authentication.
+     *
+     * @return array<string, array{
+     *     string,
+     *     string,
+     *     array<string, mixed>
+     * }>
+     */
+    public static function unauthenticatedStaffEndpoints(): array
+    {
+        $missingId = '0192f0c4-7b1e-7c3a-9f1d-2b6a4e8c0d99';
+
+        return [
+            'list categories without token' => [
+                'GET',
+                '/api/v1/cocina/categorias',
+                [],
+            ],
+
+            'create category without token' => [
+                'POST',
+                '/api/v1/cocina/categorias',
+                [],
+            ],
+
+            'update category without token' => [
+                'PATCH',
+                "/api/v1/cocina/categorias/{$missingId}",
+                [],
+            ],
+
+            'delete category without token' => [
+                'DELETE',
+                "/api/v1/cocina/categorias/{$missingId}",
+                [],
+            ],
+
+            'list closures without token' => [
+                'GET',
+                '/api/v1/cocina/cierres',
+                [],
+            ],
+
+            'create closure without token' => [
+                'POST',
+                '/api/v1/cocina/cierres',
+                [],
+            ],
+
+            'close today without token' => [
+                'POST',
+                '/api/v1/cocina/cierres/hoy',
+                [],
+            ],
+
+            'delete closure without token' => [
+                'DELETE',
+                "/api/v1/cocina/cierres/{$missingId}",
+                [],
+            ],
+
+            'list opening hours without token' => [
+                'GET',
+                '/api/v1/cocina/horario',
+                [],
+            ],
+
+            'create opening hours without token' => [
+                'POST',
+                '/api/v1/cocina/horario',
+                [],
+            ],
+
+            'delete opening hours without token' => [
+                'DELETE',
+                "/api/v1/cocina/horario/{$missingId}",
+                [],
+            ],
+
+            'list dishes without token' => [
+                'GET',
+                '/api/v1/cocina/platos',
+                [],
+            ],
+
+            'create dish without token' => [
+                'POST',
+                '/api/v1/cocina/platos',
+                [],
+            ],
+
+            'update dish without token' => [
+                'PATCH',
+                "/api/v1/cocina/platos/{$missingId}",
+                [],
             ],
         ];
     }
