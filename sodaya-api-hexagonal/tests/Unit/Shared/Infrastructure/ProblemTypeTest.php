@@ -10,12 +10,14 @@ use Src\Shared\Infrastructure\Http\Problem\ProblemType;
 
 final class ProblemTypeTest extends TestCase
 {
-    /** Each type resolves back from its own status. */
-    public function test_every_type_resolves_from_its_status(): void
+    /** Each status resolves to a type that answers with it; a 401 of the framework means no session. */
+    public function test_every_status_resolves_to_a_type_with_that_status(): void
     {
         foreach (ProblemType::cases() as $type) {
-            $this->assertSame($type, ProblemType::fromStatus($type->status()));
+            $this->assertSame($type->status(), ProblemType::fromStatus($type->status())->status());
         }
+
+        $this->assertSame(ProblemType::Unauthenticated, ProblemType::fromStatus(401));
     }
 
     /** Statuses outside the catalog fall back by error class. */

@@ -7,6 +7,7 @@ namespace Tests\Feature\Shared;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Route;
 use RuntimeException;
+use Src\Shared\Domain\Exceptions\AuthenticationFailedException;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Tests\TestCase;
 
@@ -23,6 +24,8 @@ final class ProblemDetailsTest extends TestCase
             Route::get('fallo', fn () => throw new RuntimeException('SQLSTATE[42P01] at /var/www/secret.php'));
             Route::get('dominio', fn () => throw new InvalidValueException('catalog.price_out_of_range', ['min' => 100, 'max' => 100_000]));
             Route::post('validacion', fn (FormRequest $request) => $request->validate(['precio' => 'required|integer']));
+            Route::post('credenciales', fn () => throw new class('problems.credenciales-invalidas.detail') extends AuthenticationFailedException {});
+            Route::get('protegida', fn () => 'ok')->middleware('auth:sanctum');
         });
     }
 
@@ -71,6 +74,29 @@ final class ProblemDetailsTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath('type', 'http://localhost/problemas/datos-invalidos')
             ->assertJsonPath('detail', 'El precio debe estar entre ₡100 y ₡100000.');
+    }
+
+    /** A failed authentication answers the invalid credentials problem. */
+    public function test_failed_authentication_answers_an_invalid_credentials_problem(): void
+    {
+        $this->postJson('/api/v1/pruebas/credenciales')
+            ->assertUnauthorized()
+            ->assertHeader('Content-Type', self::CONTENT_TYPE)
+            ->assertJsonPath('type', 'http://localhost/problemas/credenciales-invalidas')
+            ->assertJsonPath('title', 'Credenciales inválidas')
+            ->assertJsonPath('detail', 'El correo o la contraseña no son correctos.');
+    }
+
+    /** A protected route without a token answers an unauthenticated problem, even without an Accept header. */
+    public function test_missing_token_answers_an_unauthenticated_problem(): void
+    {
+        foreach ([[], ['Accept' => 'application/json']] as $headers) {
+            $this->get('/api/v1/pruebas/protegida', $headers)
+                ->assertUnauthorized()
+                ->assertHeader('Content-Type', self::CONTENT_TYPE)
+                ->assertJsonPath('type', 'http://localhost/problemas/no-autenticado')
+                ->assertJsonPath('detail', 'Debe iniciar sesión para realizar esta acción.');
+        }
     }
 
     /** An unexpected failure never leaks technical details. */
