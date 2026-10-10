@@ -8,14 +8,13 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
+use Tests\Support\Catalog\ActsOnSoda;
 use Tests\Support\RefreshDatabaseAsOwner;
 use Tests\TestCase;
 
 final class PublicMenuOpenStatusTest extends TestCase
 {
-    use RefreshDatabaseAsOwner;
-
-    private SodaModel $soda;
+    use ActsOnSoda, RefreshDatabaseAsOwner;
 
     /** Create a soda that serves on Mondays from 08:00 to 12:00 and from 13:00 to 17:00. */
     protected function setUp(): void
@@ -81,7 +80,7 @@ final class PublicMenuOpenStatusTest extends TestCase
     public function test_closing_for_today_takes_effect_at_once(): void
     {
         $this->travelTo('2026-10-05 10:00:00');
-        config(['sodaya.default_soda_id' => $this->soda->id]);
+        $this->actAsStaffOf($this->soda);
 
         $this->assertTrue($this->isOpen());
 

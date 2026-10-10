@@ -117,7 +117,23 @@ La respuesta incluye `abierta`, que se calcula en cada consulta con el horario y
 
 El token de `POST /api/v1/tokens` se muestra una sola vez y se envía en cada petición en el encabezado `Authorization: Bearer <token>`. Un correo inexistente, una contraseña incorrecta y una cuenta desactivada reciben la misma respuesta 401 `credenciales-invalidas`.
 
-Los endpoints del personal todavía no piden autenticación: trabajan sobre la soda indicada en `SODAYA_DEFAULT_SODA_ID`. La soda del usuario autenticado llega con [#39](https://github.com/BryanChavesSalas/SodaYa-Hexagonal/issues/39).
+Los endpoints de `/api/v1/cocina` piden un token Bearer; sin él responden 401 `no-autenticado`. Trabajan sobre la soda de la persona autenticada: nunca la toman de la URL, de los parámetros ni del cuerpo. Una persona sin soda, como un cliente, recibe 403 `prohibido`.
+
+Los datos de demostración traen dos cuentas de la soda de ejemplo, solo para desarrollo local: `duena@sodaya.test`, con el rol de dueño, y `cocina@sodaya.test`, con el rol de cocina. Las dos usan la contraseña `password`. Para ingresar como la dueña:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/tokens \
+  -H 'Content-Type: application/json' -H 'Accept: application/json' \
+  -d '{"correo":"duena@sodaya.test","contrasena":"password","dispositivo":"Computadora"}'
+```
+
+La respuesta `201` trae el token en `data.token`. Con él se consultan los platos de la soda:
+
+```bash
+curl http://localhost:8000/api/v1/cocina/platos -H 'Accept: application/json' -H 'Authorization: Bearer <token>'
+```
+
+`php artisan db:seed` nunca se ejecuta en producción: crea una soda ficticia y cuentas con una contraseña conocida.
 
 ## Variables de entorno
 
@@ -126,7 +142,6 @@ Los endpoints del personal todavía no piden autenticación: trabajan sobre la s
 | Variable | Uso |
 | --- | --- |
 | `APP_TIMEZONE` | Zona horaria de la aplicación y de la sesión de PostgreSQL. Por defecto, `America/Costa_Rica`. |
-| `SODAYA_DEFAULT_SODA_ID` | Soda sobre la que operan los endpoints del personal hasta que exista la autenticación. |
 
 El código nunca lee variables de entorno directamente: lo hacen los archivos de `config/`. Una prueba lo verifica.
 
@@ -134,7 +149,7 @@ El código nunca lee variables de entorno directamente: lo hacen los archivos de
 
 ```
 app/         Arranque del framework
-config/      Configuración: aplicación, base de datos, producto y contrato
+config/      Configuración: aplicación, autenticación (auth.php, sanctum.php), base de datos y contrato
 database/    Roles, migraciones, factories y seeders
 lang/        Mensajes al usuario en español
 openapi/     Contrato OpenAPI versionado

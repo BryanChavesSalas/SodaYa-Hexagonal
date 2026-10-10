@@ -39,6 +39,25 @@ final class ApiRoutingTest extends TestCase
             ->assertHeader('Content-Type', 'application/problem+json');
     }
 
+    /** Every staff route asks for a bearer token, while the public menu stays open to visitors. */
+    public function test_staff_routes_require_a_token_and_the_menu_does_not(): void
+    {
+        $routes = collect(Route::getRoutes()->getRoutes());
+        $staff = $routes->filter(fn (RouteDefinition $route): bool => str_starts_with($route->uri(), 'api/v1/cocina'));
+        $menu = $routes->filter(fn (RouteDefinition $route): bool => str_starts_with($route->uri(), 'api/v1/sodas'));
+
+        $this->assertNotEmpty($staff);
+        $this->assertNotEmpty($menu);
+
+        foreach ($staff as $route) {
+            $this->assertContains('auth:sanctum', $route->gatherMiddleware(), $route->uri());
+        }
+
+        foreach ($menu as $route) {
+            $this->assertNotContains('auth:sanctum', $route->gatherMiddleware(), $route->uri());
+        }
+    }
+
     /** Sodas and accounts are registered from the console, so no API route creates them. */
     public function test_no_api_route_creates_sodas_or_accounts(): void
     {
