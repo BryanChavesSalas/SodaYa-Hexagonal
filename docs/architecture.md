@@ -113,7 +113,7 @@ Toda respuesta de error sigue RFC 9457 (`application/problem+json`). `ProblemDet
 | `NotFoundException` | `no-encontrado` | 404 |
 | `AuthenticationFailedException`, como un correo o una contraseña incorrectos | `credenciales-invalidas` | 401 |
 | Ruta protegida sin un token válido (`AuthenticationException` del framework) | `no-autenticado` | 401 |
-| Persona autenticada sin permiso, como un cliente en una ruta del personal (`AuthorizationException` del framework) | `prohibido` | 403 |
+| Persona autenticada sin la ability requerida (`MissingAbilityException` / `AuthorizationException`) | `prohibido` | 403 |
 | Otra excepción del dominio, como una franja traslapada o un cierre repetido | `conflicto` | 409 |
 | Excepción HTTP del framework | El tipo de su código de estado | 4xx o 5xx |
 | Cualquier otra | `error-interno`, sin detalles técnicos | 500 |
