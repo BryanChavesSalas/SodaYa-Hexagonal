@@ -91,6 +91,7 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | GET | `/api/v1` | Cualquiera | Nombre y versión de la API. |
 | GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda, con el indicador `abierta`. |
 | GET | `/api/v1/sodas/{soda}/platos/{plato}` | Visitante | Detalle de un plato del menú. |
+| POST | `/api/v1/tokens` | Cualquiera | Ingresa con correo, contraseña y nombre del dispositivo; devuelve un token Bearer con las abilities del rol. |
 | GET | `/api/v1/cocina/platos` | Personal | Platos de la soda, activos e inactivos. |
 | POST | `/api/v1/cocina/platos` | Dueño | Crea un plato. |
 | PATCH | `/api/v1/cocina/platos/{plato}` | Dueño | Edita o desactiva un plato. |
@@ -114,7 +115,9 @@ curl http://localhost:8000/api/v1/sodas/0192f0c4-0000-7000-8000-000000000001/pla
 
 La respuesta incluye `abierta`, que se calcula en cada consulta con el horario y los cierres de la soda, en hora de Costa Rica. Los datos de demostración traen un horario de lunes a sábado.
 
-Los endpoints del personal todavía no piden autenticación: trabajan sobre la soda indicada en `SODAYA_DEFAULT_SODA_ID`. La autenticación y la soda del usuario llegan en la clase 8.
+El token de `POST /api/v1/tokens` se muestra una sola vez y se envía en cada petición en el encabezado `Authorization: Bearer <token>`. Un correo inexistente, una contraseña incorrecta y una cuenta desactivada reciben la misma respuesta 401 `credenciales-invalidas`.
+
+Los endpoints del personal todavía no piden autenticación: trabajan sobre la soda indicada en `SODAYA_DEFAULT_SODA_ID`. La soda del usuario autenticado llega con [#39](https://github.com/BryanChavesSalas/SodaYa-Hexagonal/issues/39).
 
 ## Variables de entorno
 

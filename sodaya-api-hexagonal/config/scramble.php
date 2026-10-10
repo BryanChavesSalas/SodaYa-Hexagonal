@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy;
+
 return [
 
     'api_path' => 'api/v1',
@@ -18,5 +20,7 @@ return [
     ],
 
     'middleware' => [],
+
+    'security_strategy' => MiddlewareAuthSecurityStrategy::class,
 
 ];
