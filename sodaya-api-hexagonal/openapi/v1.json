@@ -743,6 +743,32 @@
                     }
                 },
                 "security": []
+            },
+            "delete": {
+                "operationId": "identity.tokens.destroy-all",
+                "summary": "Cerrar todas las sesiones",
+                "tags": [
+                    "Sesiones"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    }
+                }
+            }
+        },
+        "/tokens/actual": {
+            "delete": {
+                "operationId": "identity.tokens.destroy-current",
+                "summary": "Cerrar la sesi\u00f3n de este dispositivo",
+                "tags": [
+                    "Sesiones"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    }
+                }
             }
         }
     },
