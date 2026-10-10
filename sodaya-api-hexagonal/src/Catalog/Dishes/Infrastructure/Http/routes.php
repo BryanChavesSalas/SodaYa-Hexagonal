@@ -10,7 +10,15 @@ Route::prefix('cocina/platos')
     ->name('catalog.dishes.')
     ->controller(DishController::class)
     ->group(function (): void {
-        Route::get('/', 'index')->name('index');
-        Route::post('/', 'store')->name('store');
-        Route::patch('{plato}', 'update')->name('update')->whereUuid('plato');
+        Route::get('/', 'index')
+            ->middleware('abilities:cocina')
+            ->name('index');
+
+        Route::middleware('abilities:administrar')->group(function (): void {
+            Route::post('/', 'store')->name('store');
+
+            Route::patch('{plato}', 'update')
+                ->name('update')
+                ->whereUuid('plato');
+        });
     });
