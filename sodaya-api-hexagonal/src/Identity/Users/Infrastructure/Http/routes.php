@@ -10,4 +10,9 @@ Route::prefix('tokens')
     ->controller(TokenController::class)
     ->group(function (): void {
         Route::post('/', 'store')->name('store');
+
+        Route::middleware('auth:sanctum')->group(function (): void {
+            Route::delete('actual', 'destroyCurrent')->name('destroy-current');
+            Route::delete('/', 'destroyAll')->name('destroy-all');
+        });
     });
