@@ -39,6 +39,11 @@
             "description": "Franjas de atenci\u00f3n por d\u00eda de la semana; el d\u00eda 1 es lunes y el 7 es domingo."
         }
     ],
+    "security": [
+        {
+            "http": []
+        }
+    ],
     "paths": {
         "/cocina/categorias": {
             "get": {
@@ -366,7 +371,8 @@
                             }
                         }
                     }
-                }
+                },
+                "security": []
             }
         },
         "/cocina/horario": {
@@ -511,7 +517,8 @@
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/sodas/{soda}/platos/{plato}": {
@@ -563,7 +570,8 @@
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/cocina/platos": {
@@ -733,11 +741,18 @@
                     "422": {
                         "$ref": "#/components/responses/InvalidData"
                     }
-                }
+                },
+                "security": []
             }
         }
     },
     "components": {
+        "securitySchemes": {
+            "http": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
         "schemas": {
             "ActualizarPlato": {
                 "type": "object",

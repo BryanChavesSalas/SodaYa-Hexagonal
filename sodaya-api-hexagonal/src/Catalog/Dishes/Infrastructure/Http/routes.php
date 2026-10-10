@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Src\Catalog\Dishes\Infrastructure\Http\Controllers\DishController;
 
 Route::prefix('cocina/platos')
+    ->middleware('auth:sanctum')
     ->name('catalog.dishes.')
     ->controller(DishController::class)
     ->group(function (): void {

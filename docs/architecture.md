@@ -128,6 +128,8 @@ Scramble genera el contrato OpenAPI 3.1 desde el código. La documentación inte
 
 `routes/api.php` incluye el archivo de rutas de cada módulo. Todas se sirven bajo `/api/v1`, prefijo que se configura una sola vez en `bootstrap/app.php`. Un cambio incompatible se publica como `/api/v2`.
 
+Las rutas del personal se agrupan bajo `/api/v1/cocina` y pasan por el middleware `auth:sanctum`. El menú público y el ingreso no lo usan.
+
 ## Pruebas
 
 | Carpeta | Alcance |
