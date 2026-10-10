@@ -14,7 +14,7 @@ return [
     ],
     'credenciales-invalidas' => [
         'title' => 'Credenciales inválidas',
-        'detail' => 'El correo o la contraseña no son válidos.',
+        'detail' => 'El correo o la contraseña no son correctos.',
     ],
     'prohibido' => [
         'title' => 'Acción no permitida',

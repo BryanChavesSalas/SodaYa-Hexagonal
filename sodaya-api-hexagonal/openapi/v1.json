@@ -15,10 +15,6 @@
             "name": "General"
         },
         {
-            "name": "Autenticaci\u00f3n",
-            "description": "Inicio de sesi\u00f3n del personal de una soda."
-        },
-        {
             "name": "Categor\u00edas de la soda",
             "description": "Administraci\u00f3n de las categor\u00edas del men\u00fa por el personal de la soda."
         },
@@ -31,6 +27,10 @@
             "description": "Consulta del men\u00fa de una soda sin iniciar sesi\u00f3n."
         },
         {
+            "name": "Sesiones",
+            "description": "Ingreso con correo y contrase\u00f1a mediante tokens de acceso."
+        },
+        {
             "name": "Cierres excepcionales",
             "description": "D\u00edas en que la soda no abre aunque su horario diga lo contrario."
         },
@@ -40,48 +40,6 @@
         }
     ],
     "paths": {
-        "/tokens": {
-            "post": {
-                "operationId": "identity.tokens.store",
-                "summary": "Ingresar con correo y contrase\u00f1a",
-                "tags": [
-                    "Autenticaci\u00f3n"
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CrearToken"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "token": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "token"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/InvalidData"
-                    }
-                }
-            }
-        },
         "/cocina/categorias": {
             "get": {
                 "operationId": "catalog.categories.index",
@@ -734,6 +692,49 @@
                     }
                 }
             }
+        },
+        "/tokens": {
+            "post": {
+                "operationId": "identity.tokens.store",
+                "description": "Devuelve un token Bearer con las abilities del rol, que se env\u00eda en el encabezado `Authorization`. Responde 401 `credenciales-invalidas` si el correo no existe, la contrase\u00f1a no coincide o la cuenta est\u00e1 desactivada, sin indicar cu\u00e1l dato fall\u00f3.",
+                "summary": "Ingresar con correo y contrase\u00f1a",
+                "tags": [
+                    "Sesiones"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Credenciales"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`TokenDeAcceso`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/TokenDeAcceso"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -939,28 +940,28 @@
                 ],
                 "title": "CrearPlato"
             },
-            "CrearToken": {
+            "Credenciales": {
                 "type": "object",
                 "properties": {
-                    "email": {
+                    "correo": {
                         "type": "string",
                         "format": "email",
                         "maxLength": 255
                     },
-                    "password": {
+                    "contrasena": {
                         "type": "string"
                     },
-                    "device_name": {
+                    "dispositivo": {
                         "type": "string",
-                        "maxLength": 255
+                        "maxLength": 100
                     }
                 },
                 "required": [
-                    "email",
-                    "password",
-                    "device_name"
+                    "correo",
+                    "contrasena",
+                    "dispositivo"
                 ],
-                "title": "CrearToken"
+                "title": "Credenciales"
             },
             "Franja": {
                 "type": "object",
@@ -1146,6 +1147,30 @@
                     "nombre"
                 ],
                 "title": "RenombrarCategoria"
+            },
+            "TokenDeAcceso": {
+                "type": "object",
+                "properties": {
+                    "token": {
+                        "type": "string"
+                    },
+                    "tipo": {
+                        "type": "string",
+                        "const": "Bearer"
+                    },
+                    "abilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "token",
+                    "tipo",
+                    "abilities"
+                ],
+                "title": "TokenDeAcceso"
             }
         },
         "responses": {

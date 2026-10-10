@@ -174,6 +174,7 @@ return [
 
     'attributes' => [
         'categoria_id' => 'categoría',
+        'contrasena' => 'contraseña',
         'descripcion' => 'descripción',
         'dia' => 'día',
         'minutos_preparacion' => 'minutos de preparación',

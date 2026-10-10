@@ -30,4 +30,10 @@ final class BcryptPasswordHasherTest extends TestCase
         $this->assertTrue($hasher->check('secreto123', $hash));
         $this->assertFalse($hasher->check('Secreto123', $hash));
     }
+
+    /** Without a stored hash the check spends the same work and fails. */
+    public function test_check_without_a_hash_fails(): void
+    {
+        $this->assertFalse(new BcryptPasswordHasher()->check('secreto123', null));
+    }
 }
