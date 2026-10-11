@@ -58,6 +58,8 @@ final class SodaOfTheAuthenticatedUserTest extends TestCase
             ->assertCreated();
 
         $this->assertDatabaseHas($table, ['soda_id' => $this->soda->id]);
+
+        $this->scopeQueriesTo($other);
         $this->assertDatabaseMissing($table, ['soda_id' => $other]);
     }
 

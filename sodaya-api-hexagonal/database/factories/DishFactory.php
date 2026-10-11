@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use Database\Factories\Concerns\CreatesRowsOfASoda;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
@@ -13,6 +14,8 @@ use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
  */
 final class DishFactory extends Factory
 {
+    use CreatesRowsOfASoda;
+
     protected $model = DishModel::class;
 
     /**

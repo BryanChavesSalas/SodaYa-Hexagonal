@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\RefreshDatabaseAsOwner;
+use Tests\Support\Shared\ScopesQueriesToSoda;
 use Tests\TestCase;
 
 final class CatalogSchemaTest extends TestCase
 {
-    use RefreshDatabaseAsOwner;
+    use RefreshDatabaseAsOwner, ScopesQueriesToSoda;
 
     /** The database generates the identifier when the application sends none. */
     public function test_database_generates_the_identifier(): void
@@ -28,6 +29,7 @@ final class CatalogSchemaTest extends TestCase
     public function test_database_rejects_out_of_range_values(string $column, int $value): void
     {
         $this->expectException(QueryException::class);
+        $this->expectExceptionCode('23514');
 
         $this->insertDish($this->insertSoda(), [$column => $value]);
     }
@@ -56,17 +58,19 @@ final class CatalogSchemaTest extends TestCase
         $this->insertDish($sodaId, ['name' => 'Casado']);
 
         $this->expectException(QueryException::class);
+        $this->expectExceptionCode('23505');
 
         $this->insertDish($sodaId, ['name' => 'Casado']);
     }
 
-    /** Different sodas may use the same dish name. */
+    /** Different sodas may use the same dish name; each one sees only its own. */
     public function test_dish_name_can_repeat_across_sodas(): void
     {
-        $this->insertDish($this->insertSoda(), ['name' => 'Casado']);
-        $this->insertDish($this->insertSoda(), ['name' => 'Casado']);
+        foreach ([$this->insertSoda(), $this->insertSoda()] as $sodaId) {
+            $this->insertDish($sodaId, ['name' => 'Casado']);
 
-        $this->assertSame(2, DB::table('dishes')->where('name', 'Casado')->count());
+            $this->assertSame(1, DB::table('dishes')->where('name', 'Casado')->count());
+        }
     }
 
     /** A dish cannot reference a category owned by another soda. */
@@ -75,6 +79,7 @@ final class CatalogSchemaTest extends TestCase
         $foreignCategoryId = $this->insertCategory($this->insertSoda());
 
         $this->expectException(QueryException::class);
+        $this->expectExceptionCode('23503');
 
         $this->insertDish($this->insertSoda(), ['category_id' => $foreignCategoryId]);
     }
@@ -103,10 +108,12 @@ final class CatalogSchemaTest extends TestCase
         return $id;
     }
 
-    /** Insert a category for the soda and return its identifier. */
+    /** Insert a category for the soda, under that soda, and return its identifier. */
     private function insertCategory(string $sodaId): string
     {
         $id = (string) Str::uuid7();
+
+        $this->scopeQueriesTo($sodaId);
 
         DB::table('categories')->insert(['id' => $id, 'soda_id' => $sodaId, 'name' => 'Casados']);
 
@@ -114,13 +121,15 @@ final class CatalogSchemaTest extends TestCase
     }
 
     /**
-     * Insert a dish for the soda and return its identifier.
+     * Insert a dish for the soda, under that soda, and return its identifier.
      *
      * @param  array<string, int|string|null>  $overrides
      */
     private function insertDish(string $sodaId, array $overrides = []): string
     {
         $id = (string) Str::uuid7();
+
+        $this->scopeQueriesTo($sodaId);
 
         DB::table('dishes')->insert([
             'id' => $id,

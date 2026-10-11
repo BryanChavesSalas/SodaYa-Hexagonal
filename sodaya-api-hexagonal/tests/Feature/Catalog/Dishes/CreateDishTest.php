@@ -62,6 +62,8 @@ final class CreateDishTest extends TestCase
         $this->postJson(self::ENDPOINT, $this->payload(['soda_id' => $otherSoda->id]))->assertCreated();
 
         $this->assertDatabaseHas('dishes', ['soda_id' => $this->soda->id]);
+
+        $this->scopeQueriesTo($otherSoda->id);
         $this->assertDatabaseMissing('dishes', ['soda_id' => $otherSoda->id]);
     }
 

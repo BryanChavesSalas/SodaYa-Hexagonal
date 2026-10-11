@@ -12,17 +12,18 @@ use Src\Catalog\Categories\Infrastructure\Persistence\Repositories\EloquentCateg
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
+use Tests\Support\Shared\ScopesQueriesToSoda;
 use Tests\TestCase;
 
 final class EloquentCategoryRepositoryTest extends TestCase
 {
-    use RefreshDatabaseAsOwner;
+    use RefreshDatabaseAsOwner, ScopesQueriesToSoda;
 
     private EloquentCategoryRepository $repository;
 
     private SodaId $sodaId;
 
-    /** Create the repository and soda used by every scenario. */
+    /** Create the repository and soda used by every scenario, and scope the queries to it. */
     protected function setUp(): void
     {
         parent::setUp();
@@ -31,6 +32,7 @@ final class EloquentCategoryRepositoryTest extends TestCase
         $this->sodaId = new SodaId(
             SodaModel::factory()->create()->id,
         );
+        $this->scopeQueriesTo($this->sodaId->value);
     }
 
     /** A saved category is read back with the same state. */
@@ -96,6 +98,7 @@ final class EloquentCategoryRepositoryTest extends TestCase
         CategoryModel::factory()->create([
             'name' => 'Extranjera',
         ]);
+        $this->scopeQueriesTo($this->sodaId->value);
 
         $names = array_map(
             fn (Category $category): string => $category->name->value,

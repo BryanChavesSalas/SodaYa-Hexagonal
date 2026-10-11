@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\RefreshDatabaseAsOwner;
+use Tests\Support\Shared\ScopesQueriesToSoda;
 use Tests\TestCase;
 
 final class ScheduleSchemaTest extends TestCase
 {
-    use RefreshDatabaseAsOwner;
+    use RefreshDatabaseAsOwner, ScopesQueriesToSoda;
 
     /** The application role stores slots and the database generates their identifier. */
     public function test_application_role_stores_a_slot(): void
@@ -86,7 +87,10 @@ final class ScheduleSchemaTest extends TestCase
         $this->insertSlot($sodaId, 2, '08:00', '12:00');
         $this->insertSlot($this->insertSoda(), 1, '08:00', '12:00');
 
-        $this->assertSame(3, DB::table('schedules')->count());
+        $this->assertSame(1, DB::table('schedules')->count());
+
+        $this->scopeQueriesTo($sodaId);
+        $this->assertSame(2, DB::table('schedules')->count());
     }
 
     /** Insert a soda and return its identifier. */
@@ -99,9 +103,11 @@ final class ScheduleSchemaTest extends TestCase
         return $id;
     }
 
-    /** Insert a slot for the soda straight into the table. */
+    /** Insert a slot for the soda straight into the table, under that soda. */
     private function insertSlot(string $sodaId, int $day, string $opensAt, string $closesAt): void
     {
+        $this->scopeQueriesTo($sodaId);
+
         DB::table('schedules')->insert([
             'soda_id' => $sodaId,
             'day_of_week' => $day,

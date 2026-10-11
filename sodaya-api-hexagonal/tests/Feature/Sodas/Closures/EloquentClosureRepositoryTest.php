@@ -14,11 +14,12 @@ use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
 use Src\Sodas\Closures\Infrastructure\Persistence\Repositories\EloquentClosureRepository;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
+use Tests\Support\Shared\ScopesQueriesToSoda;
 use Tests\TestCase;
 
 final class EloquentClosureRepositoryTest extends TestCase
 {
-    use RefreshDatabaseAsOwner;
+    use RefreshDatabaseAsOwner, ScopesQueriesToSoda;
 
     private const string TODAY = '2026-10-07';
 
@@ -26,13 +27,14 @@ final class EloquentClosureRepositoryTest extends TestCase
 
     private SodaId $sodaId;
 
-    /** Create the repository and the soda every scenario works on. */
+    /** Create the repository and the soda every scenario works on, and scope the queries to it. */
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->repository = new EloquentClosureRepository;
         $this->sodaId = new SodaId(SodaModel::factory()->create()->id);
+        $this->scopeQueriesTo($this->sodaId->value);
     }
 
     /** A saved closure is read back with the same state. */
@@ -85,6 +87,7 @@ final class EloquentClosureRepositoryTest extends TestCase
         $this->repository->save($this->closure('2026-11-02'));
         ClosureModel::factory()->create(['soda_id' => $this->sodaId->value, 'closed_on' => '2026-10-01']);
         ClosureModel::factory()->create(['closed_on' => '2026-10-20']);
+        $this->scopeQueriesTo($this->sodaId->value);
 
         $dates = array_map(
             fn (Closure $closure): string => $closure->date->value,

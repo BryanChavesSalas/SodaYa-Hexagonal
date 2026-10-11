@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use Database\Factories\Concerns\CreatesRowsOfASoda;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
@@ -13,6 +14,8 @@ use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
  */
 final class TimeSlotFactory extends Factory
 {
+    use CreatesRowsOfASoda;
+
     protected $model = TimeSlotModel::class;
 
     /**
