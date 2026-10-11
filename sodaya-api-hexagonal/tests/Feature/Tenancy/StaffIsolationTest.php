@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Tenancy;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
@@ -18,6 +20,8 @@ use Tests\TestCase;
 final class StaffIsolationTest extends TestCase
 {
     use ActsOnSoda, RefreshDatabaseAsOwner;
+
+    private const string MISSING_ID = '0192f0c4-7b1e-7c3a-9f1d-2b6a4e8c0d99';
 
     private SodaModel $otherSoda;
 
@@ -62,6 +66,92 @@ final class StaffIsolationTest extends TestCase
             'list opening hours' => ['/api/v1/cocina/horario', 'slot'],
             'list closures' => ['/api/v1/cocina/cierres', 'closure'],
         ];
+    }
+
+    /** A row of the other soda answers the same 404 as a row that does not exist, and stays as it was. */
+    #[DataProvider('changesById')]
+    public function test_foreign_row_answers_like_a_missing_one(string $method, string $endpoint, string $kind, array $payload): void
+    {
+        $before = $this->rowsOfTheOtherSoda();
+
+        $foreignResponse = $this->json($method, $endpoint.'/'.$this->foreign[$kind]->getKey(), $payload);
+        $missingResponse = $this->json($method, $endpoint.'/'.self::MISSING_ID, $payload);
+
+        $foreignResponse
+            ->assertNotFound()
+            ->assertJsonPath('type', 'http://localhost/problemas/no-encontrado');
+        $this->assertSame(
+            Arr::except($missingResponse->json(), 'instance'),
+            Arr::except($foreignResponse->json(), 'instance'),
+        );
+        $this->assertSame($before, $this->rowsOfTheOtherSoda());
+    }
+
+    /**
+     * Endpoints that change or delete a row by its identifier, the kind of row and a valid payload.
+     *
+     * @return array<string, array{string, string, string, array<string, mixed>}>
+     */
+    public static function changesById(): array
+    {
+        return [
+            'update a dish' => ['PATCH', '/api/v1/cocina/platos', 'dish', ['precio' => 3000, 'activo' => false]],
+            'rename a category' => ['PATCH', '/api/v1/cocina/categorias', 'category', ['nombre' => 'Platos fuertes']],
+            'delete a category' => ['DELETE', '/api/v1/cocina/categorias', 'category', []],
+            'delete a time slot' => ['DELETE', '/api/v1/cocina/horario', 'slot', []],
+            'delete a closure' => ['DELETE', '/api/v1/cocina/cierres', 'closure', []],
+        ];
+    }
+
+    /** A dish cannot point to a category of the other soda; the answer equals the one for a missing category. */
+    #[DataProvider('dishWrites')]
+    public function test_dish_cannot_reference_a_category_of_the_other_soda(string $method, bool $existing): void
+    {
+        $endpoint = '/api/v1/cocina/platos'.($existing ? '/'.$this->own['dish']->getKey() : '');
+        $payload = ['nombre' => 'Agua dulce', 'precio' => 800, 'minutos_preparacion' => 5, 'porciones_disponibles' => 20];
+
+        $foreignResponse = $this->json($method, $endpoint, [...$payload, 'categoria_id' => $this->foreign['category']->getKey()]);
+        $missingResponse = $this->json($method, $endpoint, [...$payload, 'categoria_id' => self::MISSING_ID]);
+
+        $foreignResponse->assertUnprocessable()->assertJsonPath('errores.categoria_id.0', 'El valor seleccionado para categoría no es válido.');
+        $this->assertSame(
+            Arr::except($missingResponse->json(), 'instance'),
+            Arr::except($foreignResponse->json(), 'instance'),
+        );
+    }
+
+    /**
+     * Requests that write a dish: whether they target an existing one.
+     *
+     * @return array<string, array{string, bool}>
+     */
+    public static function dishWrites(): array
+    {
+        return [
+            'create a dish' => ['POST', false],
+            'update a dish' => ['PATCH', true],
+        ];
+    }
+
+    /**
+     * Every row of the other soda, table by table.
+     *
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private function rowsOfTheOtherSoda(): array
+    {
+        $rows = [];
+
+        foreach (['categories', 'dishes', 'schedules', 'closures'] as $table) {
+            $rows[$table] = DB::table($table)
+                ->where('soda_id', $this->otherSoda->id)
+                ->orderBy('id')
+                ->get()
+                ->map(fn (object $row): array => (array) $row)
+                ->all();
+        }
+
+        return $rows;
     }
 
     /**
