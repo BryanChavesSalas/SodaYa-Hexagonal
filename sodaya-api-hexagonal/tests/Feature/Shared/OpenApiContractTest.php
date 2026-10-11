@@ -38,6 +38,48 @@ final class OpenApiContractTest extends TestCase
         }
     }
 
+    /** Staff operations document their required abilities and forbidden response. */
+    public function test_staff_operations_document_required_abilities(): void
+    {
+        $contract = File::json(base_path(self::CONTRACT_PATH));
+
+        $expected = [
+            'get /cocina/categorias' => ['cocina'],
+            'post /cocina/categorias' => ['administrar'],
+            'patch /cocina/categorias/{categoria}' => ['administrar'],
+            'delete /cocina/categorias/{categoria}' => ['administrar'],
+
+            'get /cocina/cierres' => ['cocina'],
+            'post /cocina/cierres' => ['administrar'],
+            'post /cocina/cierres/hoy' => ['administrar'],
+            'delete /cocina/cierres/{cierre}' => ['administrar'],
+
+            'get /cocina/horario' => ['cocina'],
+            'post /cocina/horario' => ['administrar'],
+            'delete /cocina/horario/{franja}' => ['administrar'],
+
+            'get /cocina/platos' => ['cocina'],
+            'post /cocina/platos' => ['administrar'],
+            'patch /cocina/platos/{plato}' => ['administrar'],
+        ];
+
+        foreach ($expected as $operation => $abilities) {
+            [$method, $path] = explode(' ', $operation, 2);
+
+            $documentedOperation = $contract['paths'][$path][$method];
+
+            $this->assertSame(
+                $abilities,
+                $documentedOperation['x-abilities'],
+            );
+
+            $this->assertSame(
+                '#/components/responses/Forbidden',
+                $documentedOperation['responses']['403']['$ref'],
+            );
+        }
+    }
+
     /** The interactive documentation and its document are published. */
     public function test_interactive_documentation_is_published(): void
     {

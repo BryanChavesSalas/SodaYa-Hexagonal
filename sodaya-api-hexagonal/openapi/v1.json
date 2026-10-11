@@ -73,8 +73,14 @@
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     }
-                }
+                },
+                "x-abilities": [
+                    "cocina"
+                ]
             },
             "post": {
                 "operationId": "catalog.categories.store",
@@ -111,10 +117,16 @@
                             }
                         }
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "422": {
                         "$ref": "#/components/responses/InvalidData"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             }
         },
         "/cocina/categorias/{categoria}": {
@@ -164,13 +176,19 @@
                             }
                         }
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "422": {
                         "$ref": "#/components/responses/InvalidData"
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             },
             "delete": {
                 "operationId": "catalog.categories.destroy",
@@ -193,10 +211,16 @@
                     "204": {
                         "description": "No content"
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             }
         },
         "/cocina/cierres": {
@@ -227,8 +251,14 @@
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     }
-                }
+                },
+                "x-abilities": [
+                    "cocina"
+                ]
             },
             "post": {
                 "operationId": "sodas.closures.store",
@@ -265,10 +295,16 @@
                             }
                         }
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "422": {
                         "$ref": "#/components/responses/InvalidData"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             }
         },
         "/cocina/cierres/hoy": {
@@ -306,10 +342,16 @@
                             }
                         }
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "422": {
                         "$ref": "#/components/responses/InvalidData"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             }
         },
         "/cocina/cierres/{cierre}": {
@@ -334,10 +376,16 @@
                     "204": {
                         "description": "No content"
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             }
         },
         "/": {
@@ -403,8 +451,14 @@
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     }
-                }
+                },
+                "x-abilities": [
+                    "cocina"
+                ]
             },
             "post": {
                 "operationId": "sodas.opening-hours.store",
@@ -442,10 +496,16 @@
                             }
                         }
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "422": {
                         "$ref": "#/components/responses/InvalidData"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             }
         },
         "/cocina/horario/{franja}": {
@@ -470,10 +530,16 @@
                     "204": {
                         "description": "No content"
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             }
         },
         "/sodas/{soda}/platos": {
@@ -602,8 +668,14 @@
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     }
-                }
+                },
+                "x-abilities": [
+                    "cocina"
+                ]
             },
             "post": {
                 "operationId": "catalog.dishes.store",
@@ -640,10 +712,16 @@
                             }
                         }
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "422": {
                         "$ref": "#/components/responses/InvalidData"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             }
         },
         "/cocina/platos/{plato}": {
@@ -692,13 +770,19 @@
                             }
                         }
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "422": {
                         "$ref": "#/components/responses/InvalidData"
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     }
-                }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
             }
         },
         "/tokens": {
@@ -1191,6 +1275,42 @@
         "responses": {
             "NotFound": {
                 "description": "Recurso no encontrado",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "title": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string",
+                                    "format": "uri"
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance"
+                            ]
+                        }
+                    }
+                }
+            },
+            "Forbidden": {
+                "description": "Acci\u00f3n no permitida",
                 "content": {
                     "application/problem+json": {
                         "schema": {

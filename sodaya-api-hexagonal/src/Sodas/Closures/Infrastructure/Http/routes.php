@@ -10,8 +10,16 @@ Route::prefix('cocina/cierres')
     ->name('sodas.closures.')
     ->controller(ClosureController::class)
     ->group(function (): void {
-        Route::get('/', 'index')->name('index');
-        Route::post('/', 'store')->name('store');
-        Route::post('hoy', 'closeForToday')->name('close-for-today');
-        Route::delete('{cierre}', 'destroy')->name('destroy')->whereUuid('cierre');
+        Route::get('/', 'index')
+            ->middleware('abilities:cocina')
+            ->name('index');
+
+        Route::middleware('abilities:administrar')->group(function (): void {
+            Route::post('/', 'store')->name('store');
+            Route::post('hoy', 'closeForToday')->name('close-for-today');
+
+            Route::delete('{cierre}', 'destroy')
+                ->name('destroy')
+                ->whereUuid('cierre');
+        });
     });

@@ -10,8 +10,19 @@ Route::prefix('cocina/categorias')
     ->name('catalog.categories.')
     ->controller(CategoryController::class)
     ->group(function (): void {
-        Route::get('/', 'index')->name('index');
-        Route::post('/', 'store')->name('store');
-        Route::patch('{categoria}', 'update')->name('update')->whereUuid('categoria');
-        Route::delete('{categoria}', 'destroy')->name('destroy')->whereUuid('categoria');
+        Route::get('/', 'index')
+            ->middleware('abilities:cocina')
+            ->name('index');
+
+        Route::middleware('abilities:administrar')->group(function (): void {
+            Route::post('/', 'store')->name('store');
+
+            Route::patch('{categoria}', 'update')
+                ->name('update')
+                ->whereUuid('categoria');
+
+            Route::delete('{categoria}', 'destroy')
+                ->name('destroy')
+                ->whereUuid('categoria');
+        });
     });

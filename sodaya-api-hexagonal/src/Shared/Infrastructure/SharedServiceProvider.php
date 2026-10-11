@@ -10,6 +10,7 @@ use Src\Shared\Domain\Contracts\SodaContext;
 use Src\Shared\Domain\Contracts\TransactionRunner;
 use Src\Shared\Infrastructure\OpenApi\ProblemResponsesTransformer;
 use Src\Shared\Infrastructure\OpenApi\RelativeServerTransformer;
+use Src\Shared\Infrastructure\OpenApi\RequiredAbilitiesTransformer;
 use Src\Shared\Infrastructure\Persistence\DatabaseTransactionRunner;
 use Src\Shared\Infrastructure\Tenancy\AuthenticatedSodaContext;
 
@@ -25,9 +26,13 @@ final class SharedServiceProvider extends ServiceProvider
     /** Adjust the generated API contract. */
     public function boot(): void
     {
-        Scramble::configure()->withDocumentTransformers([
-            ProblemResponsesTransformer::class,
-            RelativeServerTransformer::class,
-        ]);
+        Scramble::configure()
+            ->withOperationTransformers([
+                RequiredAbilitiesTransformer::class,
+            ])
+            ->withDocumentTransformers([
+                ProblemResponsesTransformer::class,
+                RelativeServerTransformer::class,
+            ]);
     }
 }

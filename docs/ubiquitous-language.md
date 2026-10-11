@@ -77,6 +77,13 @@ La lista de roles es cerrada. Cada rol define a qué soda pertenece la cuenta y 
 
 El **personal** es la cocina y el dueño: siempre pertenece a una soda. Un cliente nunca pertenece a una.
 
+Las abilities determinan qué operaciones puede realizar cada miembro del personal:
+
+- `cocina`: permite consultar los recursos del área de cocina, como platos, categorías, horario y cierres.
+- `administrar`: permite crear, editar o eliminar recursos administrativos de la soda.
+
+El rol de cocina recibe únicamente la ability `cocina`, por lo que puede consultar la información pero no modificarla. El dueño recibe las abilities `cocina` y `administrar`, por lo que puede consultar y también realizar operaciones de creación, edición y eliminación.
+
 ## Dinero y fechas
 
 - Los montos son colones enteros. Nunca se usan decimales ni punto flotante.

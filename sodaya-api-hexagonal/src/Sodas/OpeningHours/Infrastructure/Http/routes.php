@@ -11,7 +11,12 @@ Route::prefix('cocina/horario')
     ->controller(TimeSlotController::class)
     ->whereUuid('franja')
     ->group(function (): void {
-        Route::get('/', 'index')->name('index');
-        Route::post('/', 'store')->name('store');
-        Route::delete('{franja}', 'destroy')->name('destroy');
+        Route::get('/', 'index')
+            ->middleware('abilities:cocina')
+            ->name('index');
+
+        Route::middleware('abilities:administrar')->group(function (): void {
+            Route::post('/', 'store')->name('store');
+            Route::delete('{franja}', 'destroy')->name('destroy');
+        });
     });
