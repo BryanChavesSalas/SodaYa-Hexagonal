@@ -2,7 +2,7 @@
 
 El esquema está en tercera forma normal. Este documento describe las tablas que ya existen con todo su detalle y las entidades previstas a nivel de relación; cada módulo completa las suyas en el pull request que agrega su migración.
 
-Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md).
+Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md). Las tablas `categories`, `dishes`, `schedules` y `closures` tienen seguridad a nivel de fila forzada: cada transacción solo alcanza las filas de su soda. El detalle y las excepciones están en la sección «Seguridad a nivel de fila» de ese documento.
 
 ## Diagrama
 
@@ -162,7 +162,7 @@ Cada fila es una cuenta: un cliente o una persona del personal de una soda.
 
 Llaves candidatas: `id` y `email`. La restricción `users_soda_id_check` exige que el personal (`kitchen`, `owner`) tenga soda y que el cliente no la tenga.
 
-El correo es único en todo el sistema y no dentro de cada soda: la persona ingresa con su correo antes de que se sepa a qué soda pertenece.
+El correo es único en todo el sistema y no dentro de cada soda: la persona ingresa con su correo antes de que se sepa a qué soda pertenece. Por la misma razón, `users` no tiene política de seguridad a nivel de fila aunque lleve `soda_id`.
 
 ### personal_access_tokens
 
@@ -198,4 +198,4 @@ La crea Laravel Sanctum. Cada fila es un token de acceso emitido para un disposi
 
 ## Regla para cada migración nueva
 
-Antes de fusionar un pull request con una migración se revisa que la tabla tenga llave primaria `id`, que lleve `soda_id` si pertenece a una soda, que sus llaves únicas y foráneas incluyan `soda_id`, que no guarde valores calculables y que este documento quede actualizado.
+Antes de fusionar un pull request con una migración se revisa que la tabla tenga llave primaria `id`, que lleve `soda_id` si pertenece a una soda, que sus llaves únicas y foráneas incluyan `soda_id`, que tenga la seguridad a nivel de fila habilitada y forzada con su política `<tabla>_soda_isolation`, que no guarde valores calculables y que este documento quede actualizado.

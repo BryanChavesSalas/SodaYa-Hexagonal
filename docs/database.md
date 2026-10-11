@@ -19,7 +19,7 @@ El script `database/roles.sql` crea los dos roles y las dos bases. Lo ejecuta un
 
 La primera migración otorga al rol de la aplicación, con `ALTER DEFAULT PRIVILEGES`, los permisos de lectura y escritura sobre toda tabla y secuencia que el dueño cree después. Ninguna tabla nueva necesita un paso manual.
 
-Por qué importa: en PostgreSQL el dueño de una tabla, los superusuarios y los roles con `BYPASSRLS` no pasan por las políticas de seguridad a nivel de fila. Si la aplicación se conectara como dueña, el aislamiento entre sodas que llega en el módulo multi-inquilino no protegería nada.
+Por qué importa: en PostgreSQL los superusuarios y los roles con `BYPASSRLS` no pasan por las políticas de seguridad a nivel de fila, y el dueño de una tabla tampoco, salvo que la tabla las fuerce. Las tablas de una soda las fuerzan, pero la aplicación igual se conecta con un rol que no es dueño ni tiene `BYPASSRLS`: el aislamiento no depende de una sola línea de una migración.
 
 Un tercer rol, de mantenimiento, se agrega cuando exista la primera tarea que recorra todas las sodas.
 
@@ -49,13 +49,14 @@ La aplicación genera el identificador antes de guardar, así el agregado tiene 
 
 El constructor de esquemas de Laravel no cubre funciones, procedimientos, triggers, políticas ni vistas. Se crean dentro de una migración con `DB::statement()` o `DB::unprepared()`, y su `down()` los elimina.
 
-| Objeto              | Prefijo | Regla                                                                                     |
-| ------------------- | ------- | ----------------------------------------------------------------------------------------- |
-| Función             | `fn_`   | `SECURITY INVOKER` y `search_path` fijo                                                   |
-| Procedimiento       | `sp_`   | Solo para tareas por lotes; se invoca con `CALL` fuera de una transacción                 |
-| Trigger             | `trg_`  | `BEFORE` por fila para validar o completar; `AFTER` por fila para propagar a otras tablas |
-| Vista               | `v_`    | `security_invoker = true`, para que apliquen las políticas de quien consulta              |
-| Vista materializada | `mv_`   | Índice único para refrescar con `CONCURRENTLY`; se consulta a través de una vista         |
+| Objeto              | Prefijo                  | Regla                                                                                     |
+| ------------------- | ------------------------ | ----------------------------------------------------------------------------------------- |
+| Función             | `fn_`                    | `SECURITY INVOKER` y `search_path` fijo                                                   |
+| Procedimiento       | `sp_`                    | Solo para tareas por lotes; se invoca con `CALL` fuera de una transacción                 |
+| Trigger             | `trg_`                   | `BEFORE` por fila para validar o completar; `AFTER` por fila para propagar a otras tablas |
+| Vista               | `v_`                     | `security_invoker = true`, para que apliquen las políticas de quien consulta              |
+| Vista materializada | `mv_`                    | Índice único para refrescar con `CONCURRENTLY`; se consulta a través de una vista         |
+| Política            | `<tabla>_soda_isolation` | Una por tabla de una soda, con la misma expresión en `USING` y `WITH CHECK`               |
 
 ## Extensiones y tipos
 
@@ -83,6 +84,64 @@ Dos filas chocan si tienen la misma soda, el mismo día y rangos con algún minu
 PostgreSQL 18 agrega `WITHOUT OVERLAPS` para llaves primarias y únicas, pero exige que la última columna de la llave sea un rango o multirango. Aquí la franja se guarda como día y dos columnas `time`, así que la herramienta correcta es `EXCLUDE` sobre el rango calculado.
 
 `php artisan migrate:fresh` borra las tablas pero no los tipos. Por eso la migración elimina `timerange` antes de crearlo.
+
+## Seguridad a nivel de fila
+
+Es la segunda barrera del aislamiento entre sodas. La primera está en el código: cada repositorio filtra por `soda_id`. Si una consulta olvida ese filtro, PostgreSQL igual devuelve solo las filas de la soda en curso.
+
+### Qué protege
+
+`categories`, `dishes`, `schedules` y `closures` tienen la seguridad a nivel de fila habilitada y forzada, con una política por tabla:
+
+```sql
+ALTER TABLE dishes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dishes FORCE ROW LEVEL SECURITY;
+CREATE POLICY dishes_soda_isolation ON dishes
+    USING (soda_id = NULLIF(current_setting('app.soda_id', true), '')::uuid)
+    WITH CHECK (soda_id = NULLIF(current_setting('app.soda_id', true), '')::uuid);
+```
+
+| Parte                                  | Qué hace                                                                                                                |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `ENABLE ROW LEVEL SECURITY`            | Aplica las políticas a todo rol que no sea el dueño de la tabla; sin una política que lo permita, no se ve ninguna fila |
+| `FORCE ROW LEVEL SECURITY`             | Las aplica también al dueño, `sodaya_owner`                                                                             |
+| `USING`                                | Decide qué filas existentes se pueden leer, actualizar o borrar                                                         |
+| `WITH CHECK`                           | Valida cada fila insertada o modificada: no se puede crear ni mover una fila a otra soda                                |
+| `current_setting('app.soda_id', true)` | Lee la soda de la transacción; con `true` devuelve `NULL` en lugar de fallar si la variable no existe                   |
+| `NULLIF(..., '')`                      | Convierte el texto vacío en `NULL`; `soda_id = NULL` nunca es verdadero, así que sin soda no se ve ninguna fila         |
+
+Una escritura que no cumple `WITH CHECK` falla con el SQLSTATE `42501` y el mensaje `new row violates row-level security policy`. Un `UPDATE` o un `DELETE` sin soda no falla: no encuentra filas.
+
+### Cómo se fija la soda
+
+La soda vive en la variable `app.soda_id` y se fija con `set_config('app.soda_id', ?, true)`. El tercer argumento la limita a la transacción en curso: al confirmar o deshacer, desaparece, y una conexión reutilizada nunca hereda la soda de la petición anterior. Después de su primera transacción, la variable de esa conexión queda como texto vacío y no como `NULL`; por eso la política usa `NULLIF`.
+
+`SodaTransaction`, en `Src\Shared\Infrastructure\Tenancy`, abre una transacción y fija la soda antes de cualquier consulta. El middleware `soda` la usa en cada petición que toca estas tablas:
+
+| Rutas                                       | Middleware                   | Soda de la transacción       |
+| ------------------------------------------- | ---------------------------- | ---------------------------- |
+| Personal, `/api/v1/cocina`                  | `auth:sanctum` y `soda:user` | La de la persona autenticada |
+| Menú público, `/api/v1/sodas/{soda}/platos` | `soda:route`                 | La de la URL                 |
+
+Una persona sin soda fija el valor vacío y no alcanza ninguna fila. Como el dueño también está sujeto a las políticas, los sembradores escriben los datos de la soda de demostración dentro de `SodaTransaction`, y en las pruebas cada fábrica fija la soda de su fila antes de insertarla. El comando `sodaya:register-soda` solo escribe en `sodas` y `users`, que no tienen política.
+
+### Excepciones
+
+| Tabla   | Por qué no tiene política                                                                                                         |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `users` | Tiene `soda_id`, pero el ingreso busca a la persona por su correo antes de saber a qué soda pertenece, y un cliente no tiene soda |
+| `sodas` | No tiene `soda_id`: cada fila es una soda, y el menú público la busca por el identificador de la URL                              |
+
+### Llaves únicas y foráneas
+
+PostgreSQL revisa las llaves únicas, las restricciones de exclusión y las llaves foráneas sin aplicar las políticas. Por eso todas incluyen `soda_id`. Una llave única sin la soda rechazaría un nombre que ya usa otra soda y revelaría que existe; una llave foránea sin la soda permitiría que un plato apunte a la categoría de otra soda.
+
+### Cómo agregar una tabla de una soda
+
+1. La tabla lleva `soda_id`, y sus llaves únicas y foráneas lo incluyen.
+2. Una migración habilita y fuerza la seguridad a nivel de fila y crea la política `<tabla>_soda_isolation` con la misma expresión en `USING` y `WITH CHECK`; su `down()` deshace los tres pasos.
+3. Las rutas que la usan pasan por el middleware `soda`, y su fábrica usa el trait `CreatesRowsOfASoda`.
+4. `RowLevelSecurityTest` revisa el catálogo de PostgreSQL y falla si una tabla con `soda_id`, salvo `users`, no tiene la seguridad habilitada, forzada y con su política.
 
 ## Reparto de responsabilidades
 

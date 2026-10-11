@@ -1,6 +1,6 @@
 # ADR 0005: Multi-inquilino por un puerto y por seguridad a nivel de fila
 
-Estado: aceptada. La segunda barrera se implementa en el módulo multi-inquilino.
+Estado: aceptada e implementada. La primera barrera es el adaptador `AuthenticatedSodaContext` con los filtros de los repositorios; la segunda, las políticas `<tabla>_soda_isolation` descritas en [database.md](../database.md).
 
 ## Contexto
 
@@ -21,3 +21,4 @@ Hay dos barreras. La primera está en el código: el puerto `SodaContext` respon
 - Cambiar de dónde sale la soda (configuración, usuario autenticado) afecta a un solo adaptador.
 - Toda llave única y foránea incluye `soda_id`.
 - Las migraciones corren con un rol y la aplicación con otro.
+- `users` lleva `soda_id` pero no tiene política: el ingreso busca a la persona por su correo antes de conocer su soda.

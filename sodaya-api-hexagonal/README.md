@@ -52,6 +52,15 @@ La API queda en `http://localhost:8000/api/v1` y la documentación interactiva e
 
 La aplicación se conecta con `sodaya_app`, que no puede cambiar el esquema; las migraciones corren con `sodaya_owner`. El motivo está en [docs/database.md](../docs/database.md).
 
+Las tablas de una soda tienen seguridad a nivel de fila forzada: ni siquiera `sodaya_owner` ve sus filas sin fijar antes la soda de la transacción. `sodaya_app` no es dueño de las tablas ni tiene `BYPASSRLS`, y nunca se le debe otorgar. Para revisar a mano los platos de una soda en `psql`:
+
+```sql
+BEGIN;
+SELECT set_config('app.soda_id', '0192f0c4-0000-7000-8000-000000000001', true);
+SELECT name, price FROM dishes;
+COMMIT;
+```
+
 ## Comandos
 
 | Comando | Qué hace |
