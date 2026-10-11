@@ -197,6 +197,7 @@ final class ManageClosuresTest extends TestCase
             ->assertHeader('Content-Type', ProblemDetailsRenderer::CONTENT_TYPE)
             ->assertJsonPath('detail', 'El cierre no existe.');
 
+        $this->scopeQueriesTo($foreign->soda_id);
         $this->assertDatabaseHas('closures', ['id' => $foreign->id]);
     }
 

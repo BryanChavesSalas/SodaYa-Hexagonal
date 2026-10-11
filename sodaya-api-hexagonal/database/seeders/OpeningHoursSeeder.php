@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Src\Shared\Infrastructure\Tenancy\SodaTransaction;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 
 final class OpeningHoursSeeder extends Seeder
@@ -28,14 +29,16 @@ final class OpeningHoursSeeder extends Seeder
         [6, '07:00', '15:00'],
     ];
 
-    /** Seed the weekly schedule of the demo soda; Sunday stays closed. */
-    public function run(): void
+    /** Seed the weekly schedule of the demo soda in a transaction scoped to it; Sunday stays closed. */
+    public function run(SodaTransaction $transaction): void
     {
-        foreach (self::SCHEDULE as [$day, $opensAt, $closesAt]) {
-            TimeSlotModel::query()->updateOrCreate(
-                ['soda_id' => CatalogSeeder::DEMO_SODA_ID, 'day_of_week' => $day, 'opens_at' => $opensAt],
-                ['closes_at' => $closesAt],
-            );
-        }
+        $transaction->run(CatalogSeeder::DEMO_SODA_ID, function (): void {
+            foreach (self::SCHEDULE as [$day, $opensAt, $closesAt]) {
+                TimeSlotModel::query()->updateOrCreate(
+                    ['soda_id' => CatalogSeeder::DEMO_SODA_ID, 'day_of_week' => $day, 'opens_at' => $opensAt],
+                    ['closes_at' => $closesAt],
+                );
+            }
+        });
     }
 }

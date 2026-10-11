@@ -60,11 +60,12 @@ Convenciones de nombres: las interfaces, los objetos de valor, los DTO y los cas
 ## Flujo de una petición
 
 1. La ruta del módulo (`Infrastructure/Http/routes.php`) entrega la petición a un controlador.
-2. Un Form Request valida la forma de los datos antes de llegar al controlador.
-3. El controlador invoca un caso de uso con un DTO de datos primitivos.
-4. El caso de uso trabaja con el dominio y con los puertos.
-5. El adaptador de persistencia traduce entre el dominio y Eloquent.
-6. Un API Resource construye la respuesta y expone solo los campos permitidos.
+2. En las rutas del personal y del menú público, el middleware `soda` abre una transacción y fija en PostgreSQL la soda de la petición.
+3. Un Form Request valida la forma de los datos antes de llegar al controlador.
+4. El controlador invoca un caso de uso con un DTO de datos primitivos.
+5. El caso de uso trabaja con el dominio y con los puertos.
+6. El adaptador de persistencia traduce entre el dominio y Eloquent.
+7. Un API Resource construye la respuesta y expone solo los campos permitidos.
 
 ## Puertos y adaptadores
 
@@ -106,6 +107,8 @@ Toda operación del personal se limita a la soda que entrega `SodaContext`. La r
 4. Ninguna escritura toca filas de otra soda, y los datos de otra soda no impiden nada: dos sodas pueden tener el mismo nombre de plato, la misma franja o el mismo cierre.
 
 La suite `tests/Feature/Tenancy/StaffIsolationTest.php` lo comprueba con dos sodas, un caso por cada endpoint del personal. Un endpoint nuevo del personal agrega su caso a esa suite.
+
+PostgreSQL es la segunda barrera. Cada petición del personal o del menú público corre en una transacción que fija su soda, y las políticas de seguridad a nivel de fila ocultan las filas de las demás sodas aunque una consulta olvide el filtro. Los repositorios conservan su filtro por `soda_id`: la política no lo reemplaza. El detalle está en [database.md](database.md).
 
 ### Alta de una soda con su dueño
 

@@ -13,23 +13,25 @@ use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Repositories\EloquentTimeSlotRepository;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
+use Tests\Support\Shared\ScopesQueriesToSoda;
 use Tests\TestCase;
 
 final class EloquentTimeSlotRepositoryTest extends TestCase
 {
-    use RefreshDatabaseAsOwner;
+    use RefreshDatabaseAsOwner, ScopesQueriesToSoda;
 
     private EloquentTimeSlotRepository $repository;
 
     private SodaId $sodaId;
 
-    /** Create the repository and the soda every scenario works on. */
+    /** Create the repository and the soda every scenario works on, and scope the queries to it. */
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->repository = new EloquentTimeSlotRepository;
         $this->sodaId = new SodaId(SodaModel::factory()->create()->id);
+        $this->scopeQueriesTo($this->sodaId->value);
     }
 
     /** A saved slot is read back with the same state. */
@@ -60,6 +62,7 @@ final class EloquentTimeSlotRepositoryTest extends TestCase
         $this->repository->save($this->slot(1, '13:00', '17:00'));
         $this->repository->save($this->slot(1, '08:00', '12:00'));
         TimeSlotModel::factory()->create();
+        $this->scopeQueriesTo($this->sodaId->value);
 
         $this->assertSame(
             ['1 08:00', '1 13:00', '2 08:00'],

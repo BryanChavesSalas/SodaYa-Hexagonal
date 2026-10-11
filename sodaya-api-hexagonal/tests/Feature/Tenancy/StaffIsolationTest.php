@@ -167,12 +167,13 @@ final class StaffIsolationTest extends TestCase
     }
 
     /**
-     * Every row of the other soda, table by table.
+     * Every row of the other soda, table by table, read under that soda.
      *
      * @return array<string, list<array<string, mixed>>>
      */
     private function rowsOfTheOtherSoda(): array
     {
+        $this->scopeQueriesTo($this->otherSoda->id);
         $rows = [];
 
         foreach (['categories', 'dishes', 'schedules', 'closures'] as $table) {

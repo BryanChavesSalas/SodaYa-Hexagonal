@@ -8,9 +8,12 @@ use Laravel\Sanctum\Sanctum;
 use Src\Identity\Users\Domain\ValueObjects\Role;
 use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
+use Tests\Support\Shared\ScopesQueriesToSoda;
 
 trait ActsOnSoda
 {
+    use ScopesQueriesToSoda;
+
     private SodaModel $soda;
 
     /** Create a soda and authenticate a member of its staff, the owner by default. */

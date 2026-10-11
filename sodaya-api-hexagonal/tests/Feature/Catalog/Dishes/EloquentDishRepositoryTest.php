@@ -18,23 +18,25 @@ use Src\Catalog\Shared\Domain\ValueObjects\CategoryId;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
+use Tests\Support\Shared\ScopesQueriesToSoda;
 use Tests\TestCase;
 
 final class EloquentDishRepositoryTest extends TestCase
 {
-    use RefreshDatabaseAsOwner;
+    use RefreshDatabaseAsOwner, ScopesQueriesToSoda;
 
     private EloquentDishRepository $repository;
 
     private SodaId $sodaId;
 
-    /** Create the repository and the soda every scenario works on. */
+    /** Create the repository and the soda every scenario works on, and scope the queries to it. */
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->repository = new EloquentDishRepository;
         $this->sodaId = new SodaId(SodaModel::factory()->create()->id);
+        $this->scopeQueriesTo($this->sodaId->value);
     }
 
     /** A saved dish is read back with the same state. */
@@ -78,6 +80,7 @@ final class EloquentDishRepositoryTest extends TestCase
         $this->repository->save($this->dish('Olla de carne'));
         $this->repository->save($this->dish('Arroz con pollo'));
         DishModel::factory()->create();
+        $this->scopeQueriesTo($this->sodaId->value);
 
         $names = array_map(fn (Dish $dish): string => $dish->name->value, $this->repository->allOf($this->sodaId));
 

@@ -128,6 +128,8 @@ final class UpdateCategoryTest extends TestCase
             Arr::except($foreignResponse->json(), 'instance'),
         );
 
+        $this->scopeQueriesTo($foreign->soda_id);
+
         $this->assertDatabaseHas('categories', [
             'id' => $foreign->id,
             'name' => 'Extranjera',

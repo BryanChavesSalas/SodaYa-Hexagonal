@@ -152,6 +152,7 @@ final class ManageOpeningHoursTest extends TestCase
                 ->assertJsonPath('detail', 'La franja no existe.');
         }
 
+        $this->scopeQueriesTo($foreign->soda_id);
         $this->assertDatabaseHas('schedules', ['id' => $foreign->id]);
     }
 

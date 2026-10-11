@@ -45,7 +45,7 @@ final class ListDishesTest extends TestCase
         $this->getJson(self::ENDPOINT)->assertOk()->assertExactJson(['data' => []]);
     }
 
-    /** The number of queries does not grow with the number of dishes. */
+    /** The number of queries does not grow with the number of dishes: one sets the soda and one reads. */
     public function test_listing_runs_a_constant_number_of_queries(): void
     {
         DishModel::factory()->count(25)->create(['soda_id' => $this->soda->id]);
@@ -53,6 +53,6 @@ final class ListDishesTest extends TestCase
         DB::enableQueryLog();
         $this->getJson(self::ENDPOINT)->assertOk()->assertJsonCount(25, 'data');
 
-        $this->assertCount(1, DB::getQueryLog());
+        $this->assertCount(2, DB::getQueryLog());
     }
 }

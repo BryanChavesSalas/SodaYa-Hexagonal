@@ -103,7 +103,9 @@ final class UpdateDishTest extends TestCase
             Arr::except($missingResponse->json(), 'instance'),
             Arr::except($foreignResponse->json(), 'instance'),
         );
-        $this->assertDatabaseMissing('dishes', ['id' => $foreign->id, 'price' => 3000]);
+
+        $this->scopeQueriesTo($foreign->soda_id);
+        $this->assertDatabaseHas('dishes', ['id' => $foreign->id, 'price' => 2_500]);
     }
 
     /** Build the endpoint of a dish, by default the scenario one. */

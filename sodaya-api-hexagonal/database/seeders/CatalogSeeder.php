@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
+use Src\Shared\Infrastructure\Tenancy\SodaTransaction;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 
 final class CatalogSeeder extends Seeder
@@ -34,35 +35,37 @@ final class CatalogSeeder extends Seeder
         ],
     ];
 
-    /** Seed a demo soda with its categories and dishes. */
-    public function run(): void
+    /** Seed a demo soda and, in a transaction scoped to it, its categories and dishes. */
+    public function run(SodaTransaction $transaction): void
     {
         $soda = SodaModel::query()->updateOrCreate(
             ['id' => self::DEMO_SODA_ID],
             ['name' => 'Soda La Esquina'],
         );
 
-        foreach (self::MENU as $categoryName => $dishes) {
-            $category = CategoryModel::query()->updateOrCreate(
-                ['soda_id' => $soda->id, 'name' => $categoryName],
-            );
-
-            foreach ($dishes as [$name, $price, $minutes, $portions]) {
-                DishModel::query()->updateOrCreate(
-                    ['soda_id' => $soda->id, 'name' => $name],
-                    [
-                        'category_id' => $category->id,
-                        'price' => $price,
-                        'preparation_minutes' => $minutes,
-                        'available_portions' => $portions,
-                    ],
+        $transaction->run($soda->id, function () use ($soda): void {
+            foreach (self::MENU as $categoryName => $dishes) {
+                $category = CategoryModel::query()->updateOrCreate(
+                    ['soda_id' => $soda->id, 'name' => $categoryName],
                 );
-            }
-        }
 
-        DishModel::query()->updateOrCreate(
-            ['soda_id' => $soda->id, 'name' => 'Chifrijo'],
-            ['price' => 3_000, 'preparation_minutes' => 15, 'available_portions' => 0],
-        );
+                foreach ($dishes as [$name, $price, $minutes, $portions]) {
+                    DishModel::query()->updateOrCreate(
+                        ['soda_id' => $soda->id, 'name' => $name],
+                        [
+                            'category_id' => $category->id,
+                            'price' => $price,
+                            'preparation_minutes' => $minutes,
+                            'available_portions' => $portions,
+                        ],
+                    );
+                }
+            }
+
+            DishModel::query()->updateOrCreate(
+                ['soda_id' => $soda->id, 'name' => 'Chifrijo'],
+                ['price' => 3_000, 'preparation_minutes' => 15, 'available_portions' => 0],
+            );
+        });
     }
 }

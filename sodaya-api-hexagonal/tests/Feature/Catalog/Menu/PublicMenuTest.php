@@ -118,7 +118,7 @@ final class PublicMenuTest extends TestCase
         $response = $this->getJson($this->endpoint())->assertOk();
 
         $this->assertCount(30, $response->json('data.categorias.*.platos.*'));
-        $this->assertCount(5, DB::getQueryLog());
+        $this->assertCount(6, DB::getQueryLog());
     }
 
     /** An unknown soda answers a not-found problem. */
