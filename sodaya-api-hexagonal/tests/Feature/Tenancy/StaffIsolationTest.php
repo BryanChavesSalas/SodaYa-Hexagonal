@@ -103,6 +103,39 @@ final class StaffIsolationTest extends TestCase
         ];
     }
 
+    /** Creating a row with the values the other soda already uses succeeds in the own soda and leaves the other intact. */
+    #[DataProvider('creations')]
+    public function test_creation_ignores_and_keeps_the_rows_of_the_other_soda(string $endpoint, array $payload, string $table): void
+    {
+        $before = $this->rowsOfTheOtherSoda();
+
+        $rowId = $this->postJson($endpoint, $payload)->assertCreated()->json('data.id');
+
+        $this->assertDatabaseHas($table, ['id' => $rowId, 'soda_id' => $this->soda->id]);
+        $this->assertSame($before, $this->rowsOfTheOtherSoda());
+    }
+
+    /**
+     * Endpoints that create a row, a payload that repeats a row of the other soda and the table that stores it.
+     *
+     * @return array<string, array{string, array<string, mixed>, string}>
+     */
+    public static function creations(): array
+    {
+        return [
+            'create a dish' => ['/api/v1/cocina/platos', [
+                'nombre' => 'Casado de pollo',
+                'precio' => 2800,
+                'minutos_preparacion' => 15,
+                'porciones_disponibles' => 10,
+            ], 'dishes'],
+            'create a category' => ['/api/v1/cocina/categorias', ['nombre' => 'Casados'], 'categories'],
+            'add a time slot' => ['/api/v1/cocina/horario', ['dia' => 1, 'abre' => '08:00', 'cierra' => '12:00'], 'schedules'],
+            'register a closure' => ['/api/v1/cocina/cierres', ['fecha' => '2026-10-05'], 'closures'],
+            'close for today' => ['/api/v1/cocina/cierres/hoy', ['motivo' => 'Se acabó la comida'], 'closures'],
+        ];
+    }
+
     /** A dish cannot point to a category of the other soda; the answer equals the one for a missing category. */
     #[DataProvider('dishWrites')]
     public function test_dish_cannot_reference_a_category_of_the_other_soda(string $method, bool $existing): void
