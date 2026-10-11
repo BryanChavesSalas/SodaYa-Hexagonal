@@ -96,6 +96,17 @@ El modelo `UserModel` vive en la infraestructura del módulo, extiende el usuari
 
 Las operaciones del personal preguntan su soda al puerto `SodaContext` de `Shared`. Su adaptador, `AuthenticatedSodaContext`, la lee de la persona autenticada: la cocina y el dueño trabajan siempre sobre su propia soda y un cliente, que no tiene soda, recibe 403 `prohibido`. Ningún controlador toma la soda de la URL, de los parámetros ni del cuerpo. Cuando este adaptador reemplazó al que leía la soda de la configuración, ningún caso de uso cambió.
 
+### Aislamiento entre sodas
+
+Toda operación del personal se limita a la soda que entrega `SodaContext`. La regla tiene cuatro partes:
+
+1. Cada método de un repositorio recibe el `SodaId` y filtra por `soda_id` en la consulta: buscar, listar y borrar.
+2. Un identificador de otra soda en la URL responde 404 `no-encontrado` con el mismo cuerpo que un identificador inexistente. La respuesta no revela que el recurso existe en otra soda.
+3. Un identificador de otra soda en el cuerpo, como `categoria_id`, responde 422 con el mismo error que uno inexistente, porque las reglas `exists` y `unique` de los Form Requests también filtran por la soda.
+4. Ninguna escritura toca filas de otra soda, y los datos de otra soda no impiden nada: dos sodas pueden tener el mismo nombre de plato, la misma franja o el mismo cierre.
+
+La suite `tests/Feature/Tenancy/StaffIsolationTest.php` lo comprueba con dos sodas, un caso por cada endpoint del personal. Un endpoint nuevo del personal agrega su caso a esa suite.
+
 ### Alta de una soda con su dueño
 
 El caso de uso `RegisterSoda`, del módulo `Sodas/Profile`, crea la soda y la cuenta de su dueño en una sola transacción. Colabora con otras piezas por dos puertos: `TransactionRunner`, en `Shared/Domain/Contracts`, con el adaptador `DatabaseTransactionRunner`; y `OwnerAccounts`, en `Application/Contracts` del módulo, cuyo adaptador `IdentityOwnerAccounts` ejecuta el caso de uso `RegisterStaffMember` de Identity. El dominio y la aplicación de Sodas no importan clases de Identity: solo las importa ese adaptador. Si cualquiera de los dos pasos falla, la transacción se revierte y no queda ni la soda ni la cuenta.
@@ -137,7 +148,7 @@ Las rutas del personal se agrupan bajo `/api/v1/cocina` y pasan por el middlewar
 | Carpeta | Alcance |
 | --- | --- |
 | `tests/Unit` | Dominio y casos de uso, sin arrancar el framework. |
-| `tests/Feature` | Endpoints y adaptadores contra PostgreSQL, con el rol de la aplicación. |
+| `tests/Feature` | Endpoints y adaptadores contra PostgreSQL, con el rol de la aplicación. `tests/Feature/Tenancy` reúne las pruebas de aislamiento entre sodas. |
 | `tests/Architecture` | Regla de dependencias entre capas y entre módulos. |
 
 ## Convenciones
