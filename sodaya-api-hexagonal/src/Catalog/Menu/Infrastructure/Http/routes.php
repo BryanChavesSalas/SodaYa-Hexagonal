@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Src\Catalog\Menu\Infrastructure\Http\Controllers\PublicMenuController;
 
 Route::prefix('sodas/{soda}/platos')
+    ->middleware('soda:route')
     ->name('catalog.menu.')
     ->controller(PublicMenuController::class)
     ->whereUuid(['soda', 'plato'])

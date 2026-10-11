@@ -56,7 +56,7 @@ final class ListCategoriesTest extends TestCase
             ->assertExactJson(['data' => []]);
     }
 
-    /** Listing uses a constant number of queries. */
+    /** Listing uses a constant number of queries: one sets the soda and one reads. */
     public function test_listing_runs_a_constant_number_of_queries(): void
     {
         CategoryModel::factory()
@@ -69,6 +69,6 @@ final class ListCategoriesTest extends TestCase
             ->assertOk()
             ->assertJsonCount(25, 'data');
 
-        $this->assertCount(1, DB::getQueryLog());
+        $this->assertCount(2, DB::getQueryLog());
     }
 }

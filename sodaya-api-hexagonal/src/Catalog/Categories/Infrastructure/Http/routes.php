@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Src\Catalog\Categories\Infrastructure\Http\Controllers\CategoryController;
 
 Route::prefix('cocina/categorias')
-    ->middleware('auth:sanctum')
+    ->middleware(['auth:sanctum', 'soda:user'])
     ->name('catalog.categories.')
     ->controller(CategoryController::class)
     ->group(function (): void {
