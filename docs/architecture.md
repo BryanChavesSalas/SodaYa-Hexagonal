@@ -138,7 +138,7 @@ El campo `instance` repite el identificador de la solicitud, que también viaja 
 
 ## Contrato de la API
 
-Scramble genera el contrato OpenAPI 3.1 desde el código. La documentación interactiva está en `/docs/api` y el contrato se versiona en `sodaya-api-hexagonal/openapi/v1.json`. Tras cambiar un endpoint hay que regenerarlo con `composer openapi`: una prueba falla si el archivo versionado difiere del código.
+Scramble genera el contrato OpenAPI 3.1 desde el código. La documentación interactiva está en `/docs/api` y el contrato se versiona en `sodaya-api-hexagonal/openapi/v1.json`. Tras cambiar un endpoint hay que regenerarlo con `composer openapi`: una prueba falla si el archivo versionado difiere del código. Las operaciones detrás del middleware `auth:sanctum` exigen el esquema `bearer` y documentan la respuesta 401 `no-autenticado`; las demás se marcan como públicas.
 
 ## Rutas
 

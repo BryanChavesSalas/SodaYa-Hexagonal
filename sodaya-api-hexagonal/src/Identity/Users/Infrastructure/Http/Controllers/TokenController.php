@@ -6,11 +6,15 @@ namespace Src\Identity\Users\Infrastructure\Http\Controllers;
 
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Src\Identity\Users\Application\UseCases\IssueToken;
+use Src\Identity\Users\Application\UseCases\RevokeAllTokens;
+use Src\Identity\Users\Application\UseCases\RevokeCurrentToken;
 use Src\Identity\Users\Infrastructure\Http\Requests\IssueTokenRequest;
 use Src\Identity\Users\Infrastructure\Http\Resources\TokenResource;
+use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 
 #[Group('Sesiones', 'Ingreso con correo y contraseña mediante tokens de acceso.')]
 final readonly class TokenController
@@ -25,5 +29,30 @@ final readonly class TokenController
         return new TokenResource($issueToken->execute($request->toCommand()))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    /** Revoke the access token used by the request. */
+    #[Endpoint(title: 'Cerrar la sesión de este dispositivo')]
+    public function destroyCurrent(
+        #[CurrentUser] UserModel $user,
+        RevokeCurrentToken $revokeCurrentToken,
+    ): Response {
+        $revokeCurrentToken->execute(
+            $user->id,
+            (string) $user->currentAccessToken()->getKey(),
+        );
+
+        return response()->noContent();
+    }
+
+    /** Revoke every access token of the authenticated user. */
+    #[Endpoint(title: 'Cerrar todas las sesiones')]
+    public function destroyAll(
+        #[CurrentUser] UserModel $user,
+        RevokeAllTokens $revokeAllTokens,
+    ): Response {
+        $revokeAllTokens->execute($user->id);
+
+        return response()->noContent();
     }
 }

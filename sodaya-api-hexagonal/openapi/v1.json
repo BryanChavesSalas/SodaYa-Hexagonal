@@ -74,6 +74,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     }
@@ -116,6 +119,9 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -176,6 +182,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -210,6 +219,9 @@
                 "responses": {
                     "204": {
                         "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -251,6 +263,9 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -294,6 +309,9 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -342,6 +360,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -375,6 +396,9 @@
                 "responses": {
                     "204": {
                         "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -452,6 +476,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     }
@@ -496,6 +523,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -529,6 +559,9 @@
                 "responses": {
                     "204": {
                         "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -669,6 +702,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     }
@@ -711,6 +747,9 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -770,6 +809,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -827,6 +869,38 @@
                     }
                 },
                 "security": []
+            },
+            "delete": {
+                "operationId": "identity.tokens.destroy-all",
+                "summary": "Cerrar todas las sesiones",
+                "tags": [
+                    "Sesiones"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/tokens/actual": {
+            "delete": {
+                "operationId": "identity.tokens.destroy-current",
+                "summary": "Cerrar la sesi\u00f3n de este dispositivo",
+                "tags": [
+                    "Sesiones"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
             }
         }
     },
@@ -1273,6 +1347,42 @@
             }
         },
         "responses": {
+            "Unauthenticated": {
+                "description": "No autenticado",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "title": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string",
+                                    "format": "uri"
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance"
+                            ]
+                        }
+                    }
+                }
+            },
             "NotFound": {
                 "description": "Recurso no encontrado",
                 "content": {

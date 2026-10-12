@@ -101,6 +101,8 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda, con el indicador `abierta`. |
 | GET | `/api/v1/sodas/{soda}/platos/{plato}` | Visitante | Detalle de un plato del menú. |
 | POST | `/api/v1/tokens` | Cualquiera | Ingresa con correo, contraseña y nombre del dispositivo; devuelve un token Bearer con las abilities del rol. |
+| DELETE | `/api/v1/tokens/actual` | Persona autenticada | Cierra la sesión en este dispositivo: revoca el token de la petición. |
+| DELETE | `/api/v1/tokens` | Persona autenticada | Cierra la sesión en todos los dispositivos: revoca todos sus tokens. |
 | GET | `/api/v1/cocina/platos` | Personal | Platos de la soda, activos e inactivos. |
 | POST | `/api/v1/cocina/platos` | Dueño | Crea un plato. |
 | PATCH | `/api/v1/cocina/platos/{plato}` | Dueño | Edita o desactiva un plato. |
@@ -124,7 +126,7 @@ curl http://localhost:8000/api/v1/sodas/0192f0c4-0000-7000-8000-000000000001/pla
 
 La respuesta incluye `abierta`, que se calcula en cada consulta con el horario y los cierres de la soda, en hora de Costa Rica. Los datos de demostración traen un horario de lunes a sábado.
 
-El token de `POST /api/v1/tokens` se muestra una sola vez y se envía en cada petición en el encabezado `Authorization: Bearer <token>`. Un correo inexistente, una contraseña incorrecta y una cuenta desactivada reciben la misma respuesta 401 `credenciales-invalidas`.
+El token de `POST /api/v1/tokens` se muestra una sola vez y se envía en cada petición en el encabezado `Authorization: Bearer <token>`. Un correo inexistente, una contraseña incorrecta y una cuenta desactivada reciben la misma respuesta 401 `credenciales-invalidas`. Un token revocado, o una petición sin token a una ruta protegida, recibe 401 `no-autenticado`. En `/docs/api` el botón de autorización permite probar las rutas protegidas con el token.
 
 Los endpoints de `/api/v1/cocina` piden un token Bearer; sin él responden 401 `no-autenticado`. Trabajan sobre la soda de la persona autenticada: nunca la toman de la URL, de los parámetros ni del cuerpo. Una persona sin soda, como un cliente, recibe 403 `prohibido`.
 
