@@ -32,7 +32,7 @@ final readonly class EloquentDishRepository implements DishRepository
     public function save(Dish $dish): void
     {
         try {
-            DB::transaction(fn () => DishModel::query()->updateOrCreate(
+            DB::transaction(fn() => DishModel::query()->updateOrCreate(
                 ['id' => $dish->id->value],
                 [
                     'soda_id' => $dish->sodaId->value,
@@ -43,6 +43,7 @@ final readonly class EloquentDishRepository implements DishRepository
                     'preparation_minutes' => $dish->preparationTime->minutes,
                     'available_portions' => $dish->availablePortions->quantity,
                     'is_active' => $dish->active,
+                    'photo_path' => $dish->photoPath,
                 ],
             ));
         } catch (UniqueConstraintViolationException) {
@@ -88,6 +89,7 @@ final readonly class EloquentDishRepository implements DishRepository
             new Portions($model->available_portions),
             $model->category_id === null ? null : new CategoryId($model->category_id),
             $model->is_active,
+            $model->photo_path,
         );
     }
 }

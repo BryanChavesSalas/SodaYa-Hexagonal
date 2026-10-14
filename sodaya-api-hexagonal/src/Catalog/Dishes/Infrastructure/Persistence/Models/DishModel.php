@@ -25,6 +25,7 @@ use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
  * @property int $preparation_minutes
  * @property int $available_portions
  * @property bool $is_active
+ * @property string|null $photo_path
  * @property CarbonImmutable $updated_at
  * @property-read CategoryModel|null $category
  */
@@ -39,6 +40,7 @@ use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
     'preparation_minutes',
     'available_portions',
     'is_active',
+    'photo_path',
 ])]
 #[UseFactory(DishFactory::class)]
 final class DishModel extends Model
