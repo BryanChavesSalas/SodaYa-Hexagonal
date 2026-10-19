@@ -132,6 +132,8 @@ Un pedido nuevo entra por el caso de uso `PlaceOrder`, desde `POST /api/v1/sodas
 
 Con las líneas armadas, en una sola transacción crea el agregado, que valida sus líneas, pide al puerto `PortionStock` que reserve las porciones y guarda el pedido. Si `reserve()` responde `false`, lanza `PortionsSoldOutException` y la transacción se deshace: no queda ni el pedido ni la reserva.
 
+El dinero del pedido lo decide el servidor. La línea congela el nombre y el precio que el catálogo tenía al pedir, el subtotal es precio por cantidad y el total es la suma de las líneas: ninguno de los dos se guarda, los calcula el agregado en cada lectura. El Form Request solo toma `plato_id` y `cantidad` de cada línea, así que un `precio_unitario`, un `subtotal` o un `total` enviados por el navegador se ignoran, y `FrozenPriceTest` lo comprueba junto con que un cambio posterior del precio no altera los pedidos ya hechos.
+
 Las reglas del pedido que el cliente puede romper tienen su propio tipo de problema: un pedido sin líneas responde 422 `pedido-vacio` y una cantidad fuera de 1 a 20, 422 `cantidad-invalida`. El Form Request solo valida la forma de los datos, que `lineas` sea una lista de platos con cantidad; los rangos los decide el dominio, en el mismo lugar que los decide para cualquier otro llamador.
 
 Cuando la cancelación ya quedó confirmada en la base y el pedido estaba pagado, `CancelOrder` solicita el reembolso por el puerto `RefundRequests`. Se solicita después de la transacción para no reembolsar una cancelación que terminó deshaciéndose. Si la cancelación no la hizo el cliente, también le avisa por el puerto `CustomerNotices`. Los dos adaptadores despachan un trabajo a la cola; la sección «Trabajos en cola» los describe.

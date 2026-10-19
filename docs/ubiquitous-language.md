@@ -54,7 +54,9 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Plazo de pago | `paymentDeadline()` | — | — |
 | Plazo de confirmación | `confirmationDeadline()` | — | — |
 | Cantidad | `Quantity` | `quantity` | `cantidad` |
-| Precio unitario | `unitPrice` | `unit_price` | `precio_unitario` |
+| Precio unitario, congelado al pedir | `unitPrice` | `unit_price` | `precio_unitario` |
+| Subtotal de la línea | `subtotal()` | — | `subtotal` |
+| Total del pedido | `total()` | — | `total` |
 | Pago | `Payment` | `payments` | `pago` |
 | Estado del pago | `PaymentStatus` | `payment_status` | `pago.estado` |
 | Pago aprobado | `PaymentStatus::Approved` | `approved` | `aprobado` |
