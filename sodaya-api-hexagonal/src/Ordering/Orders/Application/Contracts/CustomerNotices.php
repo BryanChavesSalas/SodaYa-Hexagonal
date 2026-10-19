@@ -8,6 +8,9 @@ use Src\Ordering\Orders\Domain\Entities\Order;
 
 interface CustomerNotices
 {
+    /** Let the customer know that the order is ready to be picked up. */
+    public function orderReady(Order $order): void;
+
     /** Let the customer know that the order was cancelled and why. */
     public function orderCancelled(Order $order): void;
 }

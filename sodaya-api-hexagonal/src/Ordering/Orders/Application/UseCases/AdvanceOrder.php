@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Src\Ordering\Orders\Application\UseCases;
 
 use DateTimeImmutable;
+use Src\Ordering\Orders\Application\Contracts\CustomerNotices;
 use Src\Ordering\Orders\Application\Contracts\LoyaltyRewards;
 use Src\Ordering\Orders\Application\DTOs\AdvanceOrderCommand;
 use Src\Ordering\Orders\Domain\Contracts\OrderRepository;
@@ -17,16 +18,17 @@ use Src\Shared\Domain\ValueObjects\SodaId;
 
 final readonly class AdvanceOrder
 {
-    /** Receive the order repository, the loyalty rewards and the transaction ports. */
+    /** Receive the order repository, the loyalty rewards, the customer notices and the transaction ports. */
     public function __construct(
         private OrderRepository $orders,
         private LoyaltyRewards $rewards,
+        private CustomerNotices $notices,
         private TransactionRunner $transaction,
     ) {}
 
     /**
      * Move an order of the soda one step forward; the domain refuses a jump, a step back or an unpaid confirmation.
-     * Once a delivery is committed, the customer is rewarded.
+     * Once the step is committed, a ready order is announced to its customer and a delivered one rewards them.
      */
     public function execute(AdvanceOrderCommand $command, DateTimeImmutable $now): Order
     {
@@ -39,6 +41,10 @@ final readonly class AdvanceOrder
 
             return $order;
         });
+
+        if ($order->status === OrderStatus::Ready) {
+            $this->notices->orderReady($order);
+        }
 
         if ($order->status === OrderStatus::Delivered) {
             $this->rewards->orderDelivered($order);

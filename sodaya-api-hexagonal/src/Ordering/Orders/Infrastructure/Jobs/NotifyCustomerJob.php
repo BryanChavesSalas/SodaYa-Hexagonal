@@ -13,6 +13,10 @@ final class NotifyCustomerJob implements ShouldQueue
 {
     use Queueable;
 
+    public const string ORDER_READY = 'order_ready';
+
+    public const string ORDER_CANCELLED = 'order_cancelled';
+
     /** Attempts before the job is recorded as failed. */
     public int $tries = 5;
 

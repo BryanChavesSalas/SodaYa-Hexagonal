@@ -11,9 +11,11 @@ use Src\Ordering\Orders\Application\UseCases\AdvanceOrder;
 use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Exceptions\OrderNotFoundException;
 use Src\Ordering\Orders\Domain\Exceptions\OrderNotPaidException;
+use Src\Ordering\Orders\Domain\Exceptions\TransitionNotAllowedException;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Shared\Domain\ValueObjects\SodaId;
+use Tests\Support\Ordering\FakeCustomerNotices;
 use Tests\Support\Ordering\FakeLoyaltyRewards;
 use Tests\Support\Ordering\InMemoryOrderRepository;
 use Tests\Support\Ordering\Orders;
@@ -27,6 +29,8 @@ final class AdvanceOrderTest extends TestCase
 
     private FakeLoyaltyRewards $rewards;
 
+    private FakeCustomerNotices $notices;
+
     private AdvanceOrder $advanceOrder;
 
     /** Wire the use case to in-memory adapters. */
@@ -35,7 +39,37 @@ final class AdvanceOrderTest extends TestCase
         $this->orders = new InMemoryOrderRepository;
         $this->transaction = new RecordingTransactionRunner;
         $this->rewards = new FakeLoyaltyRewards;
-        $this->advanceOrder = new AdvanceOrder($this->orders, $this->rewards, $this->transaction);
+        $this->notices = new FakeCustomerNotices;
+        $this->advanceOrder = new AdvanceOrder($this->orders, $this->rewards, $this->notices, $this->transaction);
+    }
+
+    /** Only the step to ready tells the customer, once the order is stored; confirming and delivering tell nothing. */
+    public function test_ready_order_is_announced_to_its_customer(): void
+    {
+        $this->orders->save(Orders::paid());
+
+        $this->advanceOrder->execute($this->command('confirmed'), Orders::at('12:01'));
+        $this->assertSame([], $this->notices->ready);
+
+        $this->advanceOrder->execute($this->command('ready'), Orders::at('12:10'));
+        $this->assertSame([Orders::ORDER_ID], $this->notices->ready);
+
+        $this->advanceOrder->execute($this->command('delivered'), Orders::at('12:15'));
+        $this->assertSame([Orders::ORDER_ID], $this->notices->ready);
+        $this->assertSame([], $this->notices->cancelled);
+    }
+
+    /** A step the domain refuses tells the customer nothing. */
+    public function test_refused_step_announces_nothing(): void
+    {
+        $this->orders->save(Orders::paid());
+
+        try {
+            $this->advanceOrder->execute($this->command('ready'), Orders::at('12:01'));
+            $this->fail('A pending order was marked ready.');
+        } catch (TransitionNotAllowedException) {
+            $this->assertSame([], $this->notices->ready);
+        }
     }
 
     /** A paid order is confirmed and stored in one transaction. */

@@ -37,7 +37,32 @@ final class QueuedSideEffectsTest extends TestCase
         $this->postJson("/api/v1/cocina/pedidos/{$order->id}/cancelacion")->assertOk();
 
         Queue::assertPushed(RequestRefundJob::class, fn (RequestRefundJob $job): bool => $job->orderId === $order->id && $job->amount === 5_600);
-        Queue::assertPushed(NotifyCustomerJob::class, fn (NotifyCustomerJob $job): bool => $job->customerId === $order->customer_id && $job->reason === 'kitchen');
+        Queue::assertPushed(NotifyCustomerJob::class, fn (NotifyCustomerJob $job): bool => $job->customerId === $order->customer_id && $job->event === NotifyCustomerJob::ORDER_CANCELLED && $job->reason === 'kitchen');
+    }
+
+    /** Marking an order ready answers at once and leaves the notice in the queue, with the order and the customer. */
+    public function test_marking_an_order_ready_queues_the_notice(): void
+    {
+        $order = OrderModel::factory()->confirmed()->create(['soda_id' => $this->soda->id]);
+        OrderLineModel::factory()->for($order, 'order')->create();
+
+        $this->patchJson("/api/v1/cocina/pedidos/{$order->id}/estado", ['estado' => 'listo'])->assertOk();
+
+        Queue::assertPushed(NotifyCustomerJob::class, fn (NotifyCustomerJob $job): bool => $job->orderId === $order->id && $job->customerId === $order->customer_id && $job->event === NotifyCustomerJob::ORDER_READY);
+    }
+
+    /** Confirming or delivering an order leaves no notice in the queue. */
+    public function test_other_steps_queue_no_notice(): void
+    {
+        $order = OrderModel::factory()->paid()->create(['soda_id' => $this->soda->id]);
+        OrderLineModel::factory()->for($order, 'order')->create();
+
+        $this->patchJson("/api/v1/cocina/pedidos/{$order->id}/estado", ['estado' => 'confirmado'])->assertOk();
+        Queue::assertNotPushed(NotifyCustomerJob::class);
+
+        $this->patchJson("/api/v1/cocina/pedidos/{$order->id}/estado", ['estado' => 'listo'])->assertOk();
+        $this->patchJson("/api/v1/cocina/pedidos/{$order->id}/estado", ['estado' => 'entregado'])->assertOk();
+        Queue::assertPushed(NotifyCustomerJob::class, 1);
     }
 
     /** An unpaid order queues the notice but no refund. */
