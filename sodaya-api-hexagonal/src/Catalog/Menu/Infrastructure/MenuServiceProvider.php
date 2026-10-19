@@ -16,6 +16,7 @@ use Src\Catalog\Menu\Infrastructure\Cache\CachedPublicMenuReader;
 use Src\Catalog\Menu\Infrastructure\Cache\MenuCacheInvalidator;
 use Src\Catalog\Menu\Infrastructure\Persistence\Queries\EloquentPublicMenuReader;
 use Src\Catalog\Menu\Infrastructure\Sodas\OpeningHoursSodaOpenStatus;
+use Src\Catalog\Promotions\Infrastructure\Persistence\Models\PromotionModel;
 use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
@@ -32,6 +33,7 @@ final class MenuServiceProvider extends ServiceProvider
         CategoryModel::class,
         TimeSlotModel::class,
         ClosureModel::class,
+        PromotionModel::class,
         SodaModel::class,
     ];
 

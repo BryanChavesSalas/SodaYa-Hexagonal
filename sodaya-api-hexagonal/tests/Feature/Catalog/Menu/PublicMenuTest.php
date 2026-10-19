@@ -57,6 +57,7 @@ final class PublicMenuTest extends TestCase
                         'nombre' => 'Casado de pollo',
                         'descripcion' => 'Con arroz y frijoles',
                         'precio' => 2800,
+                        'precio_vigente' => 2800,
                         'minutos_preparacion' => 15,
                         'porciones_disponibles' => 10,
                         'agotado' => false,

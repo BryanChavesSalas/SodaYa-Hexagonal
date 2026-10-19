@@ -24,7 +24,7 @@ final class MenuDishResource extends JsonResource
     }
 
     /**
-     * Expose the dish as it appears on the public menu.
+     * Expose the dish as it appears on the public menu: the base price and the price it sells for right now.
      *
      * @return array<string, bool|int|string|null>
      */
@@ -34,7 +34,8 @@ final class MenuDishResource extends JsonResource
             'id' => $this->dish->id,
             'nombre' => $this->dish->name,
             'descripcion' => $this->dish->description,
-            'precio' => $this->dish->currentPrice,
+            'precio' => $this->dish->price,
+            'precio_vigente' => $this->dish->currentPrice,
             'minutos_preparacion' => $this->dish->preparationMinutes,
             'porciones_disponibles' => $this->dish->availablePortions,
             'agotado' => $this->dish->isSoldOut(),

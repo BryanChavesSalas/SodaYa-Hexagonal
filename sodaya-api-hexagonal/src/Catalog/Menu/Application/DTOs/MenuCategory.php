@@ -40,6 +40,16 @@ final readonly class MenuCategory
         );
     }
 
+    /** Return the same category with the happy hour taken off every dish. */
+    public function withDiscount(int $percentage): self
+    {
+        return new self(
+            $this->id,
+            $this->name,
+            array_map(fn (MenuDish $dish): MenuDish => $dish->withDiscount($percentage), $this->dishes),
+        );
+    }
+
     /**
      * Flatten the category and its dishes.
      *

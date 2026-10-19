@@ -49,6 +49,18 @@ final readonly class PublicMenu
         return new self($this->sodaId, $this->sodaName, $this->categories, $open, $this->sodaLogoPath);
     }
 
+    /** Return the same menu with the happy hour taken off every dish: the current price is decided on every response. */
+    public function withDiscount(int $percentage): self
+    {
+        return new self(
+            $this->sodaId,
+            $this->sodaName,
+            array_map(fn (MenuCategory $category): MenuCategory => $category->withDiscount($percentage), $this->categories),
+            $this->open,
+            $this->sodaLogoPath,
+        );
+    }
+
     /**
      * Flatten what only changes when the owner edits, as plain arrays a cache can keep: the open flag is
      * decided on every response and stays out.

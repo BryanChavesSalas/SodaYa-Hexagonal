@@ -743,7 +743,7 @@
         "/sodas/{soda}/platos": {
             "get": {
                 "operationId": "catalog.menu.index",
-                "description": "El atributo `abierta` indica si la soda atiende en el momento de la respuesta, seg\u00fan su horario y sus cierres excepcionales, en hora de Costa Rica.",
+                "description": "El atributo `abierta` indica si la soda atiende en el momento de la respuesta, seg\u00fan su horario y sus cierres excepcionales, en hora de Costa Rica. Cada plato trae su `precio` base y su `precio_vigente`, que aplica la hora feliz activa en ese momento; cuando no hay promoci\u00f3n, los dos coinciden.",
                 "summary": "Consultar el men\u00fa de una soda",
                 "tags": [
                     "Men\u00fa p\u00fablico"
@@ -788,6 +788,7 @@
         "/sodas/{soda}/platos/{plato}": {
             "get": {
                 "operationId": "catalog.menu.show",
+                "description": "El `precio_vigente` aplica la hora feliz activa en el momento de la respuesta.",
                 "summary": "Consultar un plato del men\u00fa",
                 "tags": [
                     "Men\u00fa p\u00fablico"
@@ -3071,6 +3072,9 @@
                     "precio": {
                         "type": "integer"
                     },
+                    "precio_vigente": {
+                        "type": "integer"
+                    },
                     "minutos_preparacion": {
                         "type": "integer"
                     },
@@ -3095,6 +3099,7 @@
                     "nombre",
                     "descripcion",
                     "precio",
+                    "precio_vigente",
                     "minutos_preparacion",
                     "porciones_disponibles",
                     "agotado",

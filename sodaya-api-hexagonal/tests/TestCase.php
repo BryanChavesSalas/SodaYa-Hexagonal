@@ -16,4 +16,20 @@ abstract class TestCase extends BaseTestCase
 
         Http::preventStrayRequests();
     }
+
+    /**
+     * Start every request of a test with fresh scoped instances, as a long-running server does between requests:
+     * what a scoped adapter remembered during one request must not leak into the next one.
+     *
+     * @param  array<string, mixed>  $parameters
+     * @param  array<string, mixed>  $cookies
+     * @param  array<string, mixed>  $files
+     * @param  array<string, mixed>  $server
+     */
+    public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+    {
+        $this->app->forgetScopedInstances();
+
+        return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+    }
 }
