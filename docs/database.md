@@ -289,6 +289,10 @@ PostgreSQL revisa las llaves únicas, las restricciones de exclusión y las llav
 3. Las rutas que la usan pasan por el middleware `soda`, y su fábrica usa el trait `CreatesRowsOfASoda`.
 4. `RowLevelSecurityTest` revisa el catálogo de PostgreSQL y falla si una tabla con `soda_id`, salvo `users`, no tiene la seguridad habilitada, forzada y con su política. También revisa cada vista con `soda_id`: debe ser `security_invoker`, salvo las que leen una vista materializada, que deben ser `security_barrier` y filtrar por sí mismas.
 
+## Caché en PostgreSQL
+
+La caché de la aplicación (`CACHE_STORE=database`) vive en las tablas `cache` y `cache_locks`, que crea la migración `create_cache_table` del esqueleto de Laravel. No tienen `soda_id` ni política de seguridad a nivel de fila: la soda forma parte de la llave (`menu:{soda}:v{n}`), porque la caché no es la base y la RLS no la protege. `php artisan cache:clear` la vacía; una llave vencida se borra cuando alguien la lee. Las pruebas usan el mismo almacén que producción, para que una prueba no pase gracias a un objeto en memoria que la base no sabría reconstruir.
+
 ## Reparto de responsabilidades
 
 El dominio, en PHP, decide las reglas del negocio. PostgreSQL garantiza la integridad de los datos, el aislamiento entre sodas y las consultas por conjuntos. Ningún caso de uso se duplica en PL/pgSQL.

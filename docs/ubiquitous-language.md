@@ -42,6 +42,10 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Fecha del cierre | `ClosureDate` | `closed_on` | `fecha` |
 | Motivo del cierre | `ClosureReason` | `reason` | `motivo` |
 | Soda abierta | `isOpenAt()` | — | `abierta` |
+| Caché del menú | `CachedPublicMenuReader` | `cache`, llave `menu:{soda}:v{n}` | — |
+| Versión del menú | `MenuCacheKeys::version()` | `cache`, llave `menu:{soda}:version` | — |
+| Invalidación del menú | `MenuCacheInvalidator` | — | — |
+| Menú revalidable | — | — | encabezados `Cache-Control`, `ETag`, `If-None-Match` |
 | Pedido | `Order` | `orders` | `pedidos` |
 | Línea del pedido | `OrderLine` | `order_lines` | `lineas` |
 | Estado del pedido | `OrderStatus` | `status` | `estado` |
@@ -144,6 +148,14 @@ Los términos de los contextos que aún no existen quedan reservados para que se
 - Un día puede tener varias franjas, siempre que no se traslapen. El día 1 es lunes y el 7 es domingo (ISO 8601).
 - Un **cierre excepcional** es una fecha en la que la soda no atiende aunque el horario diga lo contrario. Solo hay uno por soda y fecha.
 - La soda está **abierta** en un momento si ese día no tiene un cierre excepcional y alguna franja contiene la hora. No se guarda: se calcula en cada respuesta.
+
+## Caché del menú
+
+- El **menú público** se sirve desde **caché**: categorías, platos activos, nombres, descripciones, precios base y fotos, como arreglos, por soda y por **versión**.
+- La **versión** sube cada vez que el dueño edita un plato, una categoría, el horario, un cierre, una foto o el logo. Las llaves de la versión anterior dejan de usarse y vencen solas a los diez minutos (`MENU_CACHE_SECONDS`).
+- Lo **vivo** nunca va en la caché: las **porciones disponibles**, el indicador **abierta** y el **precio vigente** se completan al responder.
+- Una **estampida** es que muchas peticiones recalculen a la vez una llave vencida; en el último minuto de vida se sirve el valor viejo y se recalcula en segundo plano.
+- El navegador puede reutilizar el menú un minuto y después **revalidarlo** con su `ETag`: si no cambió, la API responde 304 sin cuerpo.
 
 ## Pedidos
 

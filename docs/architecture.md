@@ -89,6 +89,34 @@ Si mañana el horario viviera en otro servicio, solo cambiaría el adaptador.
 
 El dominio nunca pregunta la hora. El momento actual se crea en el borde HTTP con `now()`, en la zona horaria de la aplicación, y viaja como `DateTimeImmutable` hasta el caso de uso y el dominio (`WeeklySchedule::isOpenAt()`, `Closure::create()`). Así las reglas que dependen del reloj se prueban con momentos fijos, sin arrancar el framework, y el indicador `abierta` se calcula en cada respuesta: no se guarda ni se pone en caché.
 
+### El menú público desde caché
+
+El menú se lee miles de veces al día desde celulares y solo cambia cuando el dueño edita. Por eso se sirve desde caché, con la regla de la pizarra: se cachea lo que se lee mucho, cambia poco y se sabe cuándo cambia; lo que cambia con cada venta se pregunta en la caja.
+
+La caché es un adaptador más. `CachedPublicMenuReader`, en `Catalog/Menu/Infrastructure/Cache`, implementa el mismo puerto `PublicMenuReader` que el lector Eloquent y lo envuelve (patrón Decorator): el caso de uso `GetPublicMenu` no cambió ni una línea, y quitar la caché es quitar una línea del `MenuServiceProvider`.
+
+```
+GetPublicMenu ──▶ PublicMenuReader (puerto)
+                      ▲
+          CachedPublicMenuReader ──▶ EloquentPublicMenuReader ──▶ PostgreSQL
+                      │
+                      └──▶ Cache (tabla cache)
+```
+
+| Decisión | Cómo | Por qué |
+| --- | --- | --- |
+| Llave | `menu:{soda}:v{versión}`; la versión vive en `menu:{soda}:version` | La soda aísla: una llave sin la soda serviría el menú de una a otra, y la RLS no lo impide porque la caché no es la base. La versión invalida sin borrar llaves una por una |
+| Qué se guarda | Arreglos planos, con `toArray()` y `fromArray()` en los DTO del menú; nunca modelos ni DTO | `config/cache.php` declara `serializable_classes` en `false`: un objeto guardado en la caché `database` no se reconstruye. La caché `array` de las pruebas lo esconde, por eso las pruebas usan el mismo almacén que producción |
+| Qué no se guarda | Las porciones disponibles, el indicador `abierta` y el precio vigente | Cambian con cada pedido, con la hora y con la promoción de la hora. El decorador completa las porciones con una consulta liviana (`id`, `available_portions`) y el caso de uso calcula `abierta` en cada respuesta |
+| Invalidación | `MenuCacheInvalidator`, un observador de Eloquent que sube la versión con `Cache::increment` al guardar o borrar un plato, una categoría, una franja, un cierre o la soda (su logo) | Las llaves viejas dejan de leerse y vencen solas; no hacen falta tags, que el almacén `database` no soporta. Los repositorios borran a través del modelo para que el observador lo vea |
+| TTL | `MENU_CACHE_SECONDS`, 600 s por defecto | Red de seguridad: si una invalidación se pierde (un cambio por SQL directo), el dato viejo dura diez minutos, no para siempre |
+| Estampida | `Cache::flexible([540, 600])` | En el último minuto se sirve el valor viejo y se recalcula en segundo plano, después de responder: una sola consulta, nadie espera |
+| Almacén | `database`, la tabla `cache` de PostgreSQL, en pruebas, desarrollo y producción | Misma configuración en todos lados; Redis llega en la clase 23 con solo cambiar `CACHE_STORE` |
+
+Del lado HTTP, las rutas del menú responden `Cache-Control: public, max-age=60` y un `ETag`: el navegador reutiliza el menú un minuto sin llamar a la API y después lo revalida con `If-None-Match`, que responde 304 sin cuerpo si no cambió. El servidor sigue calculando `abierta` y las porciones en cada petición; el navegador puede atrasarlas, como mucho, ese minuto.
+
+`MenuCacheTest` comprueba las cuatro cosas que una caché mal hecha rompe: la segunda lectura no consulta `dishes`, editar invalida, las porciones siguen vivas aunque el menú esté en caché y dos sodas no comparten llave.
+
 ### Cuentas y autenticación
 
 El contexto `Identity` guarda las cuentas en el módulo `Identity/Users`. El agregado `User` es PHP puro: sabe que el personal pertenece a una soda y que el cliente no, pero no conoce Eloquent ni Sanctum. Dos puertos lo separan del framework: `UserRepository`, con su adaptador Eloquent, y `PasswordHasher`, cuyo adaptador `BcryptPasswordHasher` usa la fachada `Hash` de Laravel con bcrypt.

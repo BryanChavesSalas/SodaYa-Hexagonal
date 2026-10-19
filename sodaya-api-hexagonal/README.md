@@ -88,6 +88,7 @@ COMMIT;
 | `php artisan sodaya:expire-orders` | Cancela los pedidos cuyo plazo de pago o de confirmación ya pasó. Corre sola cada minuto. |
 | `php artisan sodaya:refresh-daily-sales` | Recalcula el resumen diario de ventas de todas las sodas, del que sale el reporte de ventas diarias. Corre sola cada 15 minutos. |
 | `php artisan sodaya:register-soda` | Registra una soda y la cuenta de su dueño. Ver [Registrar una soda](#registrar-una-soda). |
+| `php artisan cache:clear` | Vacía la caché, incluido el menú público de todas las sodas. Normalmente no hace falta: cada edición del dueño invalida el menú de su soda. |
 
 Antes de abrir un pull request deben pasar `composer lint`, `composer analyse` y `php artisan test`. Si cambió un endpoint, hay que regenerar el contrato con `composer openapi` y versionarlo.
 
@@ -114,7 +115,7 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | Método | Ruta | Quién | Descripción |
 | --- | --- | --- | --- |
 | GET | `/api/v1` | Cualquiera | Nombre y versión de la API. |
-| GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda, con el indicador `abierta`. |
+| GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda, con el indicador `abierta`. Se sirve desde caché por soda y responde `Cache-Control: public, max-age=60` con un `ETag`. |
 | GET | `/api/v1/sodas/{soda}/platos/{plato}` | Visitante | Detalle de un plato del menú. |
 | POST | `/api/v1/tokens` | Cualquiera | Ingresa con correo, contraseña y nombre del dispositivo; devuelve un token Bearer con las abilities del rol. |
 | DELETE | `/api/v1/tokens/actual` | Persona autenticada | Cierra la sesión en este dispositivo: revoca el token de la petición. |
@@ -155,7 +156,7 @@ Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 curl http://localhost:8000/api/v1/sodas/0192f0c4-0000-7000-8000-000000000001/platos
 ```
 
-La respuesta incluye `abierta`, que se calcula en cada consulta con el horario y los cierres de la soda, en hora de Costa Rica. Los datos de demostración traen un horario de lunes a sábado.
+La respuesta incluye `abierta`, que se calcula en cada consulta con el horario y los cierres de la soda, en hora de Costa Rica. Los datos de demostración traen un horario de lunes a sábado. El resto del menú sale de la caché: la segunda consulta no lee los platos de la base, y editar un plato, una categoría, el horario o un cierre desde `/api/v1/cocina` lo invalida al instante. Las porciones disponibles se consultan en cada respuesta.
 
 El token de `POST /api/v1/tokens` se muestra una sola vez y se envía en cada petición en el encabezado `Authorization: Bearer <token>`. Un correo inexistente, una contraseña incorrecta y una cuenta desactivada reciben la misma respuesta 401 `credenciales-invalidas`. Un token revocado, o una petición sin token a una ruta protegida, recibe 401 `no-autenticado`. En `/docs/api` el botón de autorización permite probar las rutas protegidas con el token.
 
@@ -197,6 +198,8 @@ curl http://localhost:8000/api/v1/cocina/platos -H 'Accept: application/json' -H
 | `STRIPE_SECRET` | Llave secreta de Stripe en modo de prueba. Debe empezar por `sk_test_`: el adaptador rechaza cualquier otra. Nunca se versiona. |
 | `STRIPE_BASE_URL` | Dirección de la API de Stripe. Por defecto, `https://api.stripe.com/v1`; solo cambia para apuntar a un simulador local. |
 | `NOTICE_CHANNEL` | Canal por el que salen los avisos al cliente: `log` o `mail`. Por defecto, `log`. Con `mail` el correo sale por el `MAIL_MAILER` configurado. |
+| `CACHE_STORE` | Almacén de la caché de `config/cache.php`. Por defecto, `database`: la tabla `cache` de PostgreSQL, igual en pruebas, desarrollo y producción. |
+| `MENU_CACHE_SECONDS` | Segundos que el menú público de una soda permanece en caché si ninguna edición lo invalida antes. Por defecto, `600`. |
 
 El código nunca lee variables de entorno directamente: lo hacen los archivos de `config/`. Una prueba lo verifica.
 
