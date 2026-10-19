@@ -18,6 +18,9 @@ enum ProblemType: string
     case OrderNotPaid = 'pedido-sin-pago';
     case PortionsSoldOut = 'porciones-agotadas';
     case InsufficientPoints = 'puntos-insuficientes';
+    case OrderAlreadyPaid = 'pedido-ya-pagado';
+    case OrderNotPayable = 'pedido-no-pagable';
+    case PaymentRejected = 'pago-rechazado';
     case DishUnavailable = 'plato-no-disponible';
     case SodaClosed = 'soda-cerrada';
     case InvalidData = 'datos-invalidos';
@@ -36,8 +39,9 @@ enum ProblemType: string
             self::Unauthenticated, self::InvalidCredentials => 401,
             self::Forbidden => 403,
             self::NotFound, self::OrderNotFound => 404,
+            self::PaymentRejected => 402,
             self::MethodNotAllowed => 405,
-            self::Conflict, self::TransitionNotAllowed, self::OrderNotPaid, self::PortionsSoldOut, self::InsufficientPoints, self::DishUnavailable, self::SodaClosed => 409,
+            self::Conflict, self::TransitionNotAllowed, self::OrderNotPaid, self::PortionsSoldOut, self::InsufficientPoints, self::OrderAlreadyPaid, self::OrderNotPayable, self::DishUnavailable, self::SodaClosed => 409,
             self::InvalidData, self::OrderEmpty, self::QuantityInvalid, self::DishNotOfSoda => 422,
             self::TooManyRequests => 429,
             self::InternalError => 500,

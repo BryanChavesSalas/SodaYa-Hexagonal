@@ -52,6 +52,18 @@ return [
         'title' => 'Puntos insuficientes',
         'detail' => 'El saldo de puntos no alcanza para el canje.',
     ],
+    'pedido-ya-pagado' => [
+        'title' => 'Pedido ya pagado',
+        'detail' => 'El pedido ya tiene un pago aprobado.',
+    ],
+    'pedido-no-pagable' => [
+        'title' => 'Pedido no pagable',
+        'detail' => 'Solo se puede pagar un pedido pendiente.',
+    ],
+    'pago-rechazado' => [
+        'title' => 'Pago rechazado',
+        'detail' => 'El proveedor rechazó el pago. Puede intentar de nuevo mientras el pedido siga pendiente.',
+    ],
     'datos-invalidos' => [
         'title' => 'Datos inválidos',
         'detail' => 'Los datos enviados no son válidos.',
