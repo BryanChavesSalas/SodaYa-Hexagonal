@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             StaffSeeder::class,
             CustomerSeeder::class,
             OrderSeeder::class,
+            DailySalesSeeder::class,
         ]);
     }
 }
