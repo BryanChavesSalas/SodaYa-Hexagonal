@@ -17,6 +17,7 @@ Ningún patrón se usa por tenerlo. Cada uno resuelve un problema concreto del p
 | Modelo de lectura (CQRS simple) | Módulos de consulta, en `Infrastructure/Persistence/Queries`, y el resumen precalculado `mv_daily_sales` | Consultas a la medida de la pantalla sin cargar agregados; un reporte que compara meses se lee ya calculado |
 | Cadena de responsabilidad | Middleware HTTP | Tratar cada petición antes y después del controlador |
 | Estado como enum con transiciones | `OrderStatus`, en `Ordering/Orders` | Impedir un cambio de estado inválido |
+| Capa anticorrupción | `StripeGateway`, en `Billing/Payments` | Traducir la forma de la API de Stripe a `ChargeResult` para que el núcleo nunca la conozca |
 
 ## Patrones previstos
 
@@ -26,7 +27,6 @@ Ningún patrón se usa por tenerlo. Cada uno resuelve un problema concreto del p
 | Transacción y bloqueo pesimista | Pedidos | Que dos pedidos no vendan la misma última porción |
 | Observer (eventos de dominio) | Pedidos y avisos | Avisar a otros contextos sin acoplarlos |
 | Strategy | Avisos y pagos | Cambiar de canal o de pasarela sin tocar el caso de uso |
-| Capa anticorrupción | Pagos | Que el modelo de la pasarela no contamine el dominio |
 | Clave de idempotencia | Pedidos y pagos | Que un reintento no cree un segundo pedido ni un segundo cobro |
 | Decorator | Caché del menú | Agregar caché sin modificar el lector |
 

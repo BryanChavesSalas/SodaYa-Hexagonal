@@ -188,6 +188,8 @@ curl http://localhost:8000/api/v1/cocina/platos -H 'Accept: application/json' -H
 | `APP_TIMEZONE` | Zona horaria de la aplicación y de la sesión de PostgreSQL. Por defecto, `America/Costa_Rica`. |
 | `DAILY_PORTIONS_RESET_AT` | Hora de Costa Rica en que las porciones vuelven a su cantidad base. Por defecto, `05:00`. |
 | `MEDIA_DISK` | Disco de `config/filesystems.php` donde se guardan las fotos y los logos. Por defecto, `public`. |
+| `STRIPE_SECRET` | Llave secreta de Stripe en modo de prueba. Debe empezar por `sk_test_`: el adaptador rechaza cualquier otra. Nunca se versiona. |
+| `STRIPE_BASE_URL` | Dirección de la API de Stripe. Por defecto, `https://api.stripe.com/v1`; solo cambia para apuntar a un simulador local. |
 
 El código nunca lee variables de entorno directamente: lo hacen los archivos de `config/`. Una prueba lo verifica.
 

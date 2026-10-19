@@ -69,6 +69,13 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Pago | `Payment` | `payments` | `pago` |
 | Estado del pago | `PaymentStatus` | `payment_status` | `pago.estado` |
 | Pago aprobado | `PaymentStatus::Approved` | `approved` | `aprobado` |
+| Pasarela de pago | `PaymentGateway` | — | — |
+| Proveedor de pago | `provider()`, `StripeGateway` | `provider` | `proveedor` |
+| Solicitud de cobro | `ChargeRequest` | — | — |
+| Desenlace del cobro | `ChargeResult` | — | — |
+| Referencia del proveedor | `ChargeReference` | `reference` | `referencia` |
+| Monto del pago | `Amount` | `amount` | `monto` |
+| Proveedor no disponible | `GatewayUnavailableException` | — | `servicio-no-disponible` |
 | Reembolso | `RefundRequests`, `RequestRefundJob` | — | — |
 | Aviso al cliente | `CustomerNotices`, `NotifyCustomerJob` | — | — |
 | Trabajo en cola | `ShouldQueue` | `jobs`, `failed_jobs` | — |
@@ -107,7 +114,7 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Cliente | `Role::Customer` | `customer` | — |
 | Visitante | `Visitor` | — | — |
 
-Los términos de los contextos que aún no existen (pagos) quedan reservados para que se usen así cuando se construyan.
+Los términos de los contextos que aún no existen quedan reservados para que se usen así cuando se construyan.
 
 ## Porciones
 
@@ -154,6 +161,14 @@ Los términos de los contextos que aún no existen (pagos) quedan reservados par
 - Las **ventas por hora** y las **ventas diarias** cuentan solo los pedidos **entregados**, por la hora o la fecha de Costa Rica en que se crearon, y suman las líneas de cada pedido **sin propinas**.
 - Las ventas diarias salen del **resumen diario de ventas**, una copia precalculada que se recalcula cada 15 minutos. El reporte dice la hora del **último refresco**; mientras no haya habido ninguno, está vacío y lo indica con un valor nulo.
 - El dueño de una soda nunca ve el resumen de otra.
+
+## Pagos
+
+- La **pasarela de pago** es el proveedor externo que cobra; hoy, Stripe en modo de prueba. El resto del sistema habla con ella en sus propios términos: una **solicitud de cobro** y un **desenlace del cobro**.
+- Un cobro tiene tres desenlaces: **aprobado**, el proveedor cobró; **rechazado**, el banco no autorizó la tarjeta y dice por qué con un código; y **pendiente**, el proveedor todavía no decidió o no respondió.
+- La **referencia del proveedor** es el identificador que la pasarela le da al cobro, como `pi_…` en Stripe. Con ella se le pregunta después qué pasó.
+- El monto viaja a cada proveedor en su unidad: Stripe quiere céntimos de colón, ₡5600 son 560000. La conversión vive en el adaptador; el resto del sistema sigue en colones enteros.
+- Un **proveedor no disponible** no es un rechazo: la API responde 503 con `Retry-After` y el cliente vuelve a intentar.
 
 ## Roles
 

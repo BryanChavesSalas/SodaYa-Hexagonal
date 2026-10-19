@@ -11,7 +11,7 @@ src/
 ├── Shared/                      Núcleo compartido entre contextos
 │   ├── Domain/
 │   └── Infrastructure/
-└── <Contexto>/                  Catalog (platos, categorías, menú), Sodas (horario, cierres), Identity (cuentas), Ordering (pedidos), Reporting (reportes) y Loyalty (puntos)
+└── <Contexto>/                  Catalog (platos, categorías, menú), Sodas (horario, cierres), Identity (cuentas), Ordering (pedidos), Reporting (reportes), Loyalty (puntos) y Billing (pagos)
     ├── Shared/                  Lo común a los módulos del contexto
     └── <Módulo>/                Un agregado; por ejemplo, Dishes
         ├── Domain/
@@ -242,6 +242,18 @@ El reporte de ventas por día, `GET /api/v1/cocina/reportes/ventas-diarias?desde
 
 El resumen lo mantiene el otro puerto del módulo, `DailySalesSummary`, con un solo método, `refresh($now)`. El caso de uso `RefreshDailySales` lo llama desde el comando `sodaya:refresh-daily-sales`, y el adaptador `MaintenanceDailySalesSummary` refresca la vista materializada con el rol de mantenimiento, sin bloquear las lecturas, y guarda el momento en la misma transacción. El comando corre cada 15 minutos: el día en curso queda a lo sumo un cuarto de hora atrás, al costo de una consulta de agregación cada vez; un reporte que compara meses no necesita más. El seeder `DailySalesSeeder` ejecuta el mismo caso de uso al final de `php artisan db:seed`, para que el reporte muestre los pedidos de demostración sin esperar al programador. Los detalles de la vista materializada, de por qué no aplica la seguridad a nivel de fila y de cómo se aísla cada soda están en «Resumen diario de ventas» de [database.md](database.md).
 
+### Pagos
+
+El contexto `Billing` reúne lo que mueve dinero: hoy el cobro de un pedido; en la clase 17, el reembolso y la comisión de la plataforma. No es facturación electrónica, que queda fuera del alcance. Su módulo `Billing/Payments` no importa el dominio de `Ordering`: tiene sus propios `OrderId` y `CustomerId`, como `Loyalty`, y colabora con los pedidos por puertos.
+
+El proveedor de pagos vive detrás del puerto `PaymentGateway`, en `Application/Contracts`, con tres operaciones: `provider()`, el nombre con que se guarda cada pago; `charge(ChargeRequest)`, que cobra una vez; y `status(ChargeReference)`, que pregunta qué pasó con un cobro. El núcleo habla en sus términos. `ChargeRequest` lleva la clave de idempotencia, el monto en colones enteros (`Amount`), el método de pago del cliente y el pedido. `ChargeResult` trae el estado que toma el pago (`PaymentStatus`: aprobado, rechazado o pendiente), la referencia que el proveedor le dio al cobro (`ChargeReference`) y, si el banco lo rechazó, su código. Son objetos de valor del dominio, no DTO de la aplicación, porque el agregado `Payment` los recibe para cerrar el pago.
+
+El adaptador `StripeGateway`, en `Infrastructure/Stripe`, es la capa anticorrupción: traduce entre esos objetos y la forma de la API de Stripe, sin SDK, con el cliente HTTP de Laravel. Manda `POST /v1/payment_intents` con `confirm=true`, el monto en céntimos (`colones * 100`, porque CRC no está en la lista de monedas sin decimales de Stripe), `currency=crc`, la llave secreta como bearer, el cuerpo como formulario y el encabezado `Idempotency-Key`; y `GET /v1/payment_intents/{id}` para consultar. Lee tres desenlaces: 200 con `status: succeeded` es aprobado; 402 con `card_declined` es rechazado, con el `decline_code` del banco y el intento que Stripe alcanzó a crear; y un 200 con otro estado, como `processing`, es pendiente. Lo demás no es una decisión: un timeout o una conexión caída se reintenta tres veces con la misma clave, con 200 ms entre intentos, y después lanza `GatewayUnavailableException`; un 5xx, un 401 o cualquier otra respuesta fallida la lanza sin reintentar. Un 402 no se reintenta nunca, porque sería volver a pedirle permiso al banco con la misma tarjeta. Cada llamada espera a lo sumo 10 segundos. El `retry()` del cliente HTTP se configura con `throw: false`: con el valor por defecto, un 402 saldría del cliente como `RequestException` y la API respondería 500 en lugar de un desenlace de negocio.
+
+`GatewayUnavailableException` extiende `ServiceUnavailableException`, de `Shared`, y `ProblemDetailsRenderer` la publica como 503 `servicio-no-disponible` con el encabezado `Retry-After: 30`. Cualquier otro servicio externo que se caiga puede reutilizar esa base.
+
+La llave vive en `STRIPE_SECRET` y se lee en `config/services.php`. El adaptador rechaza al construirse cualquier llave que no empiece por `sk_test_`: solo se aceptan credenciales de prueba, y `PaymentsServiceProvider` es el único lugar que nombra a Stripe. Ninguna prueba llama a Stripe: `tests/TestCase.php` activa `Http::preventStrayRequests()`, así cualquier llamada no simulada falla la prueba, y las pruebas del adaptador usan `Http::fake`, `Http::assertSent` para revisar el número exacto que viaja (₡5600 son 560000) y `Http::failedConnection` para el proveedor caído. El doble `FakePaymentGateway`, en `tests/Support/Billing`, responde lo que la prueba le indique, sin red.
+
 ### Imágenes
 
 Las fotos de los platos y el logo de la soda pasan por el puerto `ImageStorage` de `Src\Shared\Domain\Contracts`. Su adaptador, `FilesystemImageStorage`, guarda cada archivo en el disco que indica `MEDIA_DISK` con un nombre UUID v7 que genera el servidor: el nombre que envía el navegador nunca se usa. El Form Request acepta JPG, PNG y WebP de hasta 2 MB y 4000 × 4000 píxeles, y decide el tipo por el contenido del archivo, no por su extensión. La base guarda solo la ruta; el menú y los recursos la convierten en la dirección pública con el mismo puerto.
@@ -262,6 +274,7 @@ Toda respuesta de error sigue RFC 9457 (`application/problem+json`). `ProblemDet
 | Persona autenticada sin permiso: un token sin la ability que pide la ruta (`MissingAbilityException` de Sanctum) o un cliente en una ruta del personal. Ambas son `AuthorizationException` del framework | `prohibido` | 403 |
 | `BusinessRuleException`, una regla de negocio con nombre propio: `transicion-no-permitida` si el pedido no puede pasar al estado pedido, `pedido-sin-pago` si se confirma sin pago aprobado, `porciones-agotadas` si un plato no tiene las porciones que el pedido pide y `puntos-insuficientes` si un canje supera el saldo | El tipo que nombra la regla; `conflicto` si el catálogo no lo tiene | 409 |
 | Otra excepción del dominio, como una franja traslapada o un cierre repetido | `conflicto` | 409 |
+| `ServiceUnavailableException`, un servicio externo que no responde: `GatewayUnavailableException` si el proveedor de pagos no contesta o falla | `servicio-no-disponible`, con el encabezado `Retry-After: 30` | 503 |
 | Excepción HTTP del framework | El tipo de su código de estado | 4xx o 5xx |
 | Cualquier otra | `error-interno`, sin detalles técnicos | 500 |
 
