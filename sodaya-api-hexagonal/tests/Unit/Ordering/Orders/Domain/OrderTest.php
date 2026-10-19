@@ -16,6 +16,7 @@ use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
+use Src\Ordering\Orders\Domain\ValueObjects\PickupNumber;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Tests\Support\Ordering\Orders;
@@ -50,9 +51,46 @@ final class OrderTest extends TestCase
             $this->expectException($exception);
         }
 
-        $order = Order::place(new OrderId(Orders::ORDER_ID), new SodaId(Orders::SODA_ID), new CustomerId(Orders::CUSTOMER_ID), $lines, Orders::at('12:00'));
+        $order = Order::place(new OrderId(Orders::ORDER_ID), new SodaId(Orders::SODA_ID), new CustomerId(Orders::CUSTOMER_ID), $lines, Orders::at('12:00'), new PickupNumber(1));
 
         $this->assertCount($count, $order->lines);
+    }
+
+    /** The order keeps the pickup number it was given and is ready when its slowest dish is: placed at 12:00, casado of 15 minutes, 12:15. */
+    public function test_order_keeps_its_pickup_number_and_estimates_its_pickup_time(): void
+    {
+        $order = Orders::pending();
+
+        $this->assertSame(1, $order->pickupNumber->value);
+        $this->assertSame(15, $order->lines[0]->preparationMinutes);
+        $this->assertSame(5, $order->lines[1]->preparationMinutes);
+        $this->assertEquals(Orders::at('12:15'), $order->estimatedPickupAt());
+    }
+
+    /** The preparation minutes of a line keep the range of the catalog, from 1 to 120. */
+    #[DataProvider('preparationMinutes')]
+    public function test_preparation_minutes_are_limited(int $minutes, bool $valid): void
+    {
+        if (! $valid) {
+            $this->expectException(InvalidValueException::class);
+        }
+
+        $this->assertSame($minutes, Orders::line(minutes: $minutes)->preparationMinutes);
+    }
+
+    /**
+     * Minutes at and beyond the limits.
+     *
+     * @return array<string, array{int, bool}>
+     */
+    public static function preparationMinutes(): array
+    {
+        return [
+            'zero' => [0, false],
+            'one' => [1, true],
+            'two hours' => [120, true],
+            'beyond two hours' => [121, false],
+        ];
     }
 
     /**
@@ -88,6 +126,7 @@ final class OrderTest extends TestCase
             new CustomerId(Orders::CUSTOMER_ID),
             [Orders::line(), Orders::line(quantity: 3)],
             Orders::at('12:00'),
+            new PickupNumber(1),
         );
     }
 

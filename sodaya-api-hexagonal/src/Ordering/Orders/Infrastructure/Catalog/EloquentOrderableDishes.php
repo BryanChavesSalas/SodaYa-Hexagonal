@@ -27,7 +27,7 @@ final readonly class EloquentOrderableDishes implements OrderableDishes
             ->get();
 
         foreach ($models as $model) {
-            $dishes[$model->id] = new OrderableDish($model->id, $model->name, $model->price, $model->is_active);
+            $dishes[$model->id] = new OrderableDish($model->id, $model->name, $model->price, $model->preparation_minutes, $model->is_active);
         }
 
         return $dishes;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Src\Ordering\Orders\Infrastructure\Persistence\Repositories;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -19,6 +20,7 @@ use Src\Ordering\Orders\Domain\ValueObjects\IdempotencyKey;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
+use Src\Ordering\Orders\Domain\ValueObjects\PickupNumber;
 use Src\Ordering\Orders\Domain\ValueObjects\Quantity;
 use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderLineModel;
 use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
@@ -111,6 +113,8 @@ final readonly class EloquentOrderRepository implements OrderRepository
             'customer_id' => $order->customerId->value,
             'idempotency_key' => $order->idempotencyKey?->value,
             'request_fingerprint' => $order->idempotencyKey?->fingerprint,
+            'pickup_date' => $order->placedAt->setTimezone(new DateTimeZone('America/Costa_Rica'))->format('Y-m-d'),
+            'pickup_number' => $order->pickupNumber->value,
             'created_at' => $order->placedAt,
             ...$this->statusColumns($order),
         ]);
@@ -123,6 +127,7 @@ final readonly class EloquentOrderRepository implements OrderRepository
                 'dish_name' => $line->dishName,
                 'unit_price' => $line->unitPrice,
                 'quantity' => $line->quantity->value,
+                'preparation_minutes' => $line->preparationMinutes,
             ]);
         }
     }
@@ -170,9 +175,11 @@ final readonly class EloquentOrderRepository implements OrderRepository
                 $line->dish_name,
                 $line->unit_price,
                 new Quantity($line->quantity),
+                $line->preparation_minutes,
             ))->all()),
             OrderStatus::from($model->status),
             $model->created_at->toDateTimeImmutable(),
+            new PickupNumber($model->pickup_number),
             $changes,
             $model->cancellation_origin === null ? null : CancellationOrigin::from($model->cancellation_origin),
             PaymentStatus::from($model->payment_status),

@@ -7,6 +7,7 @@ namespace Src\Ordering\Orders\Application\UseCases;
 use DateTimeImmutable;
 use Src\Ordering\Orders\Application\Contracts\OrderableDishes;
 use Src\Ordering\Orders\Application\Contracts\OrderDeadlines;
+use Src\Ordering\Orders\Application\Contracts\PickupNumbers;
 use Src\Ordering\Orders\Application\Contracts\PortionStock;
 use Src\Ordering\Orders\Application\Contracts\SodaSchedule;
 use Src\Ordering\Orders\Application\DTOs\PlacedOrder;
@@ -28,19 +29,20 @@ use Src\Shared\Domain\ValueObjects\SodaId;
 
 final readonly class PlaceOrder
 {
-    /** Receive the order repository, the catalog, the schedule, the portion stock, the order deadlines and the transaction ports. */
+    /** Receive the order repository, the catalog, the schedule, the portion stock, the pickup numbers, the order deadlines and the transaction ports. */
     public function __construct(
         private OrderRepository $orders,
         private OrderableDishes $catalog,
         private SodaSchedule $schedule,
         private PortionStock $portions,
+        private PickupNumbers $pickupNumbers,
         private OrderDeadlines $deadlines,
         private TransactionRunner $transaction,
     ) {}
 
     /**
-     * Place a pending order of an open soda, with the name and the price each dish has in the catalog right now,
-     * and take its portions in the same transaction; if a dish falls short, nothing is saved.
+     * Place a pending order of an open soda, with the name, the price and the minutes each dish has in the catalog right now,
+     * number it for the day and take its portions in the same transaction; if a dish falls short, nothing is saved.
      * The same request sent again, with the same key and the same lines, answers the order already placed
      * without taking portions again; the same key with other lines is refused.
      * The order gets checked again at its payment deadline.
@@ -66,7 +68,8 @@ final readonly class PlaceOrder
 
         try {
             $order = $this->transaction->run(function () use ($customerId, $sodaId, $lines, $now, $key): Order {
-                $order = Order::place($this->orders->nextId(), $sodaId, $customerId, $lines, $now, $key);
+                $pickupNumber = $this->pickupNumbers->nextFor($sodaId, $now);
+                $order = Order::place($this->orders->nextId(), $sodaId, $customerId, $lines, $now, $pickupNumber, $key);
 
                 if (! $this->portions->reserve($sodaId, $order->lines)) {
                     throw PortionsSoldOutException::create();
@@ -115,7 +118,7 @@ final readonly class PlaceOrder
                 throw DishUnavailableException::create();
             }
 
-            $lines[] = new OrderLine(new DishId($dish->id), $dish->name, $dish->unitPrice, new Quantity($line['quantity']));
+            $lines[] = new OrderLine(new DishId($dish->id), $dish->name, $dish->unitPrice, new Quantity($line['quantity']), $dish->preparationMinutes);
         }
 
         return $lines;

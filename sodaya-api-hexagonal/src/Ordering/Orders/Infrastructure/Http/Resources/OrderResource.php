@@ -36,6 +36,8 @@ final class OrderResource extends JsonResource
     {
         return [
             'id' => $this->order->id->value,
+            /** Número corto que el mostrador dice en voz alta; consecutivo por soda y por día. */
+            'numero_retiro' => $this->order->pickupNumber->value,
             'estado' => self::status($this->order->status),
             'cancelado_por' => self::origin($this->order->cancellationOrigin),
             'pago' => [
@@ -51,6 +53,8 @@ final class OrderResource extends JsonResource
             ], $this->order->lines),
             'total' => $this->order->total(),
             'creado_en' => self::moment($this->order->placedAt),
+            /** Hora estimada de retiro: la creación más el mayor tiempo de preparación de sus platos. */
+            'retiro_estimado' => self::moment($this->order->estimatedPickupAt()),
             'confirmado_en' => self::moment($this->order->changedAt(OrderStatus::Confirmed)),
             'listo_en' => self::moment($this->order->changedAt(OrderStatus::Ready)),
             'entregado_en' => self::moment($this->order->changedAt(OrderStatus::Delivered)),

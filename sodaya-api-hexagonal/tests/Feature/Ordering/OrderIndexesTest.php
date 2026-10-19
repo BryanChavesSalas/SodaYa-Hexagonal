@@ -116,24 +116,26 @@ final class OrderIndexesTest extends TestCase
         $this->scopeQueriesTo($soda->id);
 
         DB::insert(<<<'SQL'
-            INSERT INTO orders (soda_id, customer_id, status, cancellation_origin, cancelled_at, payment_status, paid_at, created_at, updated_at)
+            INSERT INTO orders (soda_id, customer_id, status, cancellation_origin, cancelled_at, payment_status, paid_at, pickup_date, pickup_number, created_at, updated_at)
             SELECT ?, ?, s.status,
                    CASE WHEN s.status = 'cancelled' THEN 'kitchen' END,
                    CASE WHEN s.status = 'cancelled' THEN s.at END,
                    CASE WHEN s.status = 'pending' THEN 'pending' ELSE 'approved' END,
                    CASE WHEN s.status = 'pending' THEN NULL ELSE s.at END,
+                   (s.at AT TIME ZONE 'America/Costa_Rica')::date, s.number,
                    s.at, s.at
             FROM (
                 SELECT (ARRAY['delivered', 'delivered', 'delivered', 'delivered', 'delivered', 'delivered',
                               'pending', 'confirmed', 'ready', 'cancelled'])[i % 10 + 1] AS status,
-                       timestamptz '2026-08-01 07:00:00-06' + (i % 80) * interval '1 day' + (i % 600) * interval '1 minute' AS at
+                       timestamptz '2026-08-01 07:00:00-06' + (i % 80) * interval '1 day' + (i % 600) * interval '1 minute' AS at,
+                       i / 80 + 1 AS number
                 FROM generate_series(1, ?) AS i
             ) AS s
             SQL, [$soda->id, $customer->id, $count]);
 
         DB::insert(<<<'SQL'
-            INSERT INTO order_lines (order_id, soda_id, dish_id, dish_name, unit_price, quantity)
-            SELECT o.id, o.soda_id, ?, 'Casado', 2500, 1 FROM orders o WHERE o.soda_id = ?
+            INSERT INTO order_lines (order_id, soda_id, dish_id, dish_name, unit_price, quantity, preparation_minutes)
+            SELECT o.id, o.soda_id, ?, 'Casado', 2500, 1, 15 FROM orders o WHERE o.soda_id = ?
             SQL, [$dish->id, $soda->id]);
     }
 }

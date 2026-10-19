@@ -38,8 +38,8 @@ final class CustomerPlacesOrderTest extends TestCase
         $this->travelTo('2026-10-05 12:00:00');
         $this->soda = SodaModel::factory()->create();
         TimeSlotModel::factory()->create(['soda_id' => $this->soda->id, 'day_of_week' => 1, 'opens_at' => '06:00', 'closes_at' => '14:00']);
-        $this->casado = DishModel::factory()->create(['soda_id' => $this->soda->id, 'name' => 'Casado de pollo', 'price' => 2_800, 'available_portions' => 3]);
-        $this->fresco = DishModel::factory()->create(['soda_id' => $this->soda->id, 'name' => 'Fresco de cas', 'price' => 1_000, 'available_portions' => 10]);
+        $this->casado = DishModel::factory()->create(['soda_id' => $this->soda->id, 'name' => 'Casado de pollo', 'price' => 2_800, 'preparation_minutes' => 15, 'available_portions' => 3]);
+        $this->fresco = DishModel::factory()->create(['soda_id' => $this->soda->id, 'name' => 'Fresco de cas', 'price' => 1_000, 'preparation_minutes' => 5, 'available_portions' => 10]);
         $this->customer = UserModel::factory()->create();
 
         Sanctum::actingAs($this->customer, Role::Customer->abilities());
@@ -115,11 +115,26 @@ final class CustomerPlacesOrderTest extends TestCase
             ->assertJsonPath('data.lineas.0.precio_unitario', 2_800)
             ->assertJsonPath('data.lineas.0.subtotal', 5_600)
             ->assertJsonPath('data.total', 6_600)
-            ->assertJsonPath('data.creado_en', '2026-10-05T12:00:00-06:00');
+            ->assertJsonPath('data.creado_en', '2026-10-05T12:00:00-06:00')
+            ->assertJsonPath('data.numero_retiro', 1)
+            ->assertJsonPath('data.retiro_estimado', '2026-10-05T12:15:00-06:00');
 
         $this->assertTrue(Str::isUuid($response->json('data.id'), 7));
-        $this->assertDatabaseHas('orders', ['id' => $response->json('data.id'), 'customer_id' => $this->customer->id, 'soda_id' => $this->soda->id]);
+        $this->assertDatabaseHas('orders', ['id' => $response->json('data.id'), 'customer_id' => $this->customer->id, 'soda_id' => $this->soda->id, 'pickup_date' => '2026-10-05', 'pickup_number' => 1]);
         $this->assertSame(1, $this->casado->refresh()->available_portions);
+    }
+
+    /** Each new order of the soda takes the next number of the day; a repeated request keeps the number it already got. */
+    public function test_each_order_of_the_day_takes_the_next_pickup_number(): void
+    {
+        $first = $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->fresco->id, 'cantidad' => 1]]])->assertCreated();
+        $second = $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->fresco->id, 'cantidad' => 2]]], ['Idempotency-Key' => 'toque-2'])->assertCreated();
+        $again = $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->fresco->id, 'cantidad' => 1]]])->assertOk();
+
+        $this->assertSame(1, $first->json('data.numero_retiro'));
+        $this->assertSame(2, $second->json('data.numero_retiro'));
+        $this->assertSame(1, $again->json('data.numero_retiro'));
+        $this->assertSame('2026-10-05T12:05:00-06:00', $second->json('data.retiro_estimado'));
     }
 
     /** An order without lines has its own problem type. */

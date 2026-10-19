@@ -11,6 +11,7 @@ use Src\Ordering\Orders\Application\Contracts\ExpiredOrders;
 use Src\Ordering\Orders\Application\Contracts\LoyaltyRewards;
 use Src\Ordering\Orders\Application\Contracts\OrderableDishes;
 use Src\Ordering\Orders\Application\Contracts\OrderDeadlines;
+use Src\Ordering\Orders\Application\Contracts\PickupNumbers;
 use Src\Ordering\Orders\Application\Contracts\PortionStock;
 use Src\Ordering\Orders\Application\Contracts\RefundRequests;
 use Src\Ordering\Orders\Application\Contracts\SodaSchedule;
@@ -19,6 +20,7 @@ use Src\Ordering\Orders\Infrastructure\Catalog\DishPortionStock;
 use Src\Ordering\Orders\Infrastructure\Catalog\EloquentOrderableDishes;
 use Src\Ordering\Orders\Infrastructure\Console\ExpireOrdersConsoleCommand;
 use Src\Ordering\Orders\Infrastructure\Loyalty\QueuedLoyaltyRewards;
+use Src\Ordering\Orders\Infrastructure\Persistence\CounterPickupNumbers;
 use Src\Ordering\Orders\Infrastructure\Persistence\Queries\MaintenanceExpiredOrders;
 use Src\Ordering\Orders\Infrastructure\Persistence\Repositories\EloquentOrderRepository;
 use Src\Ordering\Orders\Infrastructure\Queue\QueuedCustomerNotices;
@@ -38,6 +40,7 @@ final class OrdersServiceProvider extends ServiceProvider
         OrderableDishes::class => EloquentOrderableDishes::class,
         SodaSchedule::class => OpeningHoursSodaSchedule::class,
         PortionStock::class => DishPortionStock::class,
+        PickupNumbers::class => CounterPickupNumbers::class,
         RefundRequests::class => QueuedRefundRequests::class,
         CustomerNotices::class => QueuedCustomerNotices::class,
         OrderDeadlines::class => QueuedOrderDeadlines::class,

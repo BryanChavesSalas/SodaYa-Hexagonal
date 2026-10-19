@@ -19,6 +19,7 @@ use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Tests\Support\Ordering\FakeOrderableDishes;
 use Tests\Support\Ordering\FakeOrderDeadlines;
+use Tests\Support\Ordering\FakePickupNumbers;
 use Tests\Support\Ordering\FakePortionStock;
 use Tests\Support\Ordering\FakeSodaSchedule;
 use Tests\Support\Ordering\InMemoryOrderRepository;
@@ -55,15 +56,29 @@ final class PlaceOrderTest extends TestCase
         $this->placeOrder = new PlaceOrder(
             $this->orders,
             new FakeOrderableDishes([
-                Orders::CASADO => new OrderableDish(Orders::CASADO, 'Casado de pollo', 2_800, true),
-                Orders::FRESCO => new OrderableDish(Orders::FRESCO, 'Fresco de cas', 1_000, true),
-                self::CHIFRIJO => new OrderableDish(self::CHIFRIJO, 'Chifrijo', 3_000, false),
+                Orders::CASADO => new OrderableDish(Orders::CASADO, 'Casado de pollo', 2_800, 15, true),
+                Orders::FRESCO => new OrderableDish(Orders::FRESCO, 'Fresco de cas', 1_000, 5, true),
+                self::CHIFRIJO => new OrderableDish(self::CHIFRIJO, 'Chifrijo', 3_000, 15, false),
             ]),
             $this->schedule,
             $this->portions,
+            new FakePickupNumbers,
             $this->deadlines,
             $this->transaction,
         );
+    }
+
+    /** Each order of the soda gets the next number of the day, starting at 1, and freezes the minutes of its dishes. */
+    public function test_orders_are_numbered_in_sequence_with_the_minutes_of_the_catalog(): void
+    {
+        $first = $this->placeOrder->execute($this->command([Orders::CASADO => 1, Orders::FRESCO => 1], 'toque-1'), Orders::at('12:00'));
+        $second = $this->placeOrder->execute($this->command([Orders::FRESCO => 1], 'toque-2'), Orders::at('12:01'));
+
+        $this->assertSame(1, $first->order->pickupNumber->value);
+        $this->assertSame(2, $second->order->pickupNumber->value);
+        $this->assertSame(15, $first->order->lines[0]->preparationMinutes);
+        $this->assertEquals(Orders::at('12:15'), $first->order->estimatedPickupAt());
+        $this->assertEquals(Orders::at('12:06'), $second->order->estimatedPickupAt());
     }
 
     /** The order is saved pending with the names and prices of the catalog, and its portions are taken, in one transaction. */
@@ -130,9 +145,10 @@ final class PlaceOrderTest extends TestCase
         $winner = $this->placeOrder->execute($this->command([Orders::CASADO => 1]), Orders::at('12:00'));
         $racing = new PlaceOrder(
             new LateIdempotencyLookup($this->orders),
-            new FakeOrderableDishes([Orders::CASADO => new OrderableDish(Orders::CASADO, 'Casado de pollo', 2_800, true)]),
+            new FakeOrderableDishes([Orders::CASADO => new OrderableDish(Orders::CASADO, 'Casado de pollo', 2_800, 15, true)]),
             $this->schedule,
             $this->portions,
+            new FakePickupNumbers,
             $this->deadlines,
             $this->transaction,
         );

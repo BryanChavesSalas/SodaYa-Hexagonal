@@ -2001,6 +2001,10 @@
                     "id": {
                         "type": "string"
                     },
+                    "numero_retiro": {
+                        "type": "integer",
+                        "description": "N\u00famero corto que el mostrador dice en voz alta; consecutivo por soda y por d\u00eda."
+                    },
                     "estado": {
                         "type": "string",
                         "enum": [
@@ -2059,6 +2063,13 @@
                             "null"
                         ]
                     },
+                    "retiro_estimado": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Hora estimada de retiro: la creaci\u00f3n m\u00e1s el mayor tiempo de preparaci\u00f3n de sus platos."
+                    },
                     "confirmado_en": {
                         "type": [
                             "string",
@@ -2086,12 +2097,14 @@
                 },
                 "required": [
                     "id",
+                    "numero_retiro",
                     "estado",
                     "cancelado_por",
                     "pago",
                     "lineas",
                     "total",
                     "creado_en",
+                    "retiro_estimado",
                     "confirmado_en",
                     "listo_en",
                     "entregado_en",

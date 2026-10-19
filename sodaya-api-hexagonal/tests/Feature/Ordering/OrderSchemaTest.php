@@ -22,6 +22,8 @@ final class OrderSchemaTest extends TestCase
 
     private string $dishId;
 
+    private int $pickupNumber = 0;
+
     /** Give a soda a customer and a dish, under that soda. */
     protected function setUp(): void
     {
@@ -120,6 +122,71 @@ final class OrderSchemaTest extends TestCase
         $this->expectExceptionCode('23505');
 
         $this->insertOrder(['idempotency_key' => 'toque-1', 'request_fingerprint' => $fingerprint]);
+    }
+
+    /** A pickup number is used once per soda and day: another day or another soda may repeat it. */
+    public function test_pickup_number_is_unique_per_soda_and_day(): void
+    {
+        $this->insertOrder(['pickup_date' => '2026-10-05', 'pickup_number' => 7]);
+        $this->insertOrder(['pickup_date' => '2026-10-06', 'pickup_number' => 7]);
+
+        $otherSodaId = $this->insertSoda();
+        $this->scopeQueriesTo($otherSodaId);
+        DB::table('orders')->insert(['soda_id' => $otherSodaId, 'customer_id' => $this->customerId, 'pickup_date' => '2026-10-05', 'pickup_number' => 7]);
+
+        $this->expectException(QueryException::class);
+        $this->expectExceptionCode('23505');
+
+        $this->insertOrder(['pickup_date' => '2026-10-05', 'pickup_number' => 7]);
+    }
+
+    /** A pickup number goes from 1 to 9999 and the counter of a soda and day is one row. */
+    public function test_pickup_number_and_counter_keep_their_rules(): void
+    {
+        DB::table('pickup_counters')->insert(['soda_id' => $this->sodaId, 'pickup_date' => '2026-10-05', 'last_number' => 3]);
+
+        try {
+            DB::transaction(fn (): bool => DB::table('pickup_counters')->insert(['soda_id' => $this->sodaId, 'pickup_date' => '2026-10-05', 'last_number' => 4]));
+            $this->fail('A soda got two counters for the same day.');
+        } catch (QueryException $exception) {
+            $this->assertSame('23505', $exception->getCode());
+        }
+
+        $this->expectException(QueryException::class);
+        $this->expectExceptionCode('23514');
+
+        $this->insertOrder(['pickup_number' => 10_000]);
+    }
+
+    /** The preparation minutes of a line keep the range of the catalog. */
+    #[DataProvider('preparationMinutes')]
+    public function test_preparation_minutes_keep_the_range_of_the_catalog(int $minutes, bool $valid): void
+    {
+        $orderId = $this->insertOrder();
+
+        if (! $valid) {
+            $this->expectException(QueryException::class);
+            $this->expectExceptionCode('23514');
+        }
+
+        $this->insertLine($orderId, $this->dishId, ['preparation_minutes' => $minutes]);
+
+        $this->assertSame($minutes, DB::table('order_lines')->value('preparation_minutes'));
+    }
+
+    /**
+     * Minutes at and beyond the limits.
+     *
+     * @return array<string, array{int, bool}>
+     */
+    public static function preparationMinutes(): array
+    {
+        return [
+            'zero' => [0, false],
+            'one' => [1, true],
+            'two hours' => [120, true],
+            'beyond two hours' => [121, false],
+        ];
     }
 
     /** A dish appears once per order. */
@@ -294,7 +361,14 @@ final class OrderSchemaTest extends TestCase
     {
         $id = (string) Str::uuid7();
         $this->scopeQueriesTo($this->sodaId);
-        DB::table('orders')->insert(['id' => $id, 'soda_id' => $this->sodaId, 'customer_id' => $this->customerId, ...$overrides]);
+        DB::table('orders')->insert([
+            'id' => $id,
+            'soda_id' => $this->sodaId,
+            'customer_id' => $this->customerId,
+            'pickup_date' => '2026-10-05',
+            'pickup_number' => ++$this->pickupNumber,
+            ...$overrides,
+        ]);
 
         return $id;
     }
@@ -314,6 +388,7 @@ final class OrderSchemaTest extends TestCase
             'dish_name' => 'Casado de pollo',
             'unit_price' => 2_800,
             'quantity' => 1,
+            'preparation_minutes' => 15,
             ...$overrides,
         ]);
     }

@@ -17,6 +17,7 @@ use Src\Ordering\Orders\Domain\ValueObjects\DishId;
 use Src\Ordering\Orders\Domain\ValueObjects\IdempotencyKey;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
+use Src\Ordering\Orders\Domain\ValueObjects\PickupNumber;
 use Src\Ordering\Orders\Domain\ValueObjects\Quantity;
 use Src\Ordering\Orders\Infrastructure\Persistence\Repositories\EloquentOrderRepository;
 use Src\Shared\Domain\ValueObjects\SodaId;
@@ -127,7 +128,7 @@ final class EloquentOrderRepositoryTest extends TestCase
     {
         $first = $this->placedOrder(new IdempotencyKey('toque-1', str_repeat('a', 64)));
         $this->repository->save($first);
-        $second = Order::place($this->repository->nextId(), $this->sodaId, $first->customerId, $first->lines, Orders::at('12:01'), new IdempotencyKey('toque-1', str_repeat('b', 64)));
+        $second = Order::place($this->repository->nextId(), $this->sodaId, $first->customerId, $first->lines, Orders::at('12:01'), new PickupNumber(2), new IdempotencyKey('toque-1', str_repeat('b', 64)));
 
         try {
             $this->repository->save($second);
@@ -146,7 +147,7 @@ final class EloquentOrderRepositoryTest extends TestCase
         $this->assertNotEquals($this->repository->nextId(), $this->repository->nextId());
     }
 
-    /** Place an order of a customer with two dishes of the soda, with the key of its request if there is one. */
+    /** Place an order of a customer with two dishes of the soda, numbered 1, with the key of its request if there is one. */
     private function placedOrder(?IdempotencyKey $key = null): Order
     {
         $customer = UserModel::factory()->create();
@@ -159,10 +160,11 @@ final class EloquentOrderRepositoryTest extends TestCase
             $this->sodaId,
             new CustomerId($customer->id),
             [
-                new OrderLine(new DishId($casado->id), 'Casado de pollo', 2_800, new Quantity(2)),
-                new OrderLine(new DishId($fresco->id), 'Fresco de cas', 1_000, new Quantity(1)),
+                new OrderLine(new DishId($casado->id), 'Casado de pollo', 2_800, new Quantity(2), 15),
+                new OrderLine(new DishId($fresco->id), 'Fresco de cas', 1_000, new Quantity(1), 5),
             ],
             Orders::at('12:00'),
+            new PickupNumber(1),
             $key,
         );
     }

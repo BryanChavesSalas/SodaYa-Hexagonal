@@ -29,6 +29,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $paid_at
  * @property string|null $idempotency_key
  * @property string|null $request_fingerprint
+ * @property string $pickup_date
+ * @property int $pickup_number
  * @property CarbonImmutable $created_at
  * @property-read Collection<int, OrderLineModel> $lines
  */
@@ -47,6 +49,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'paid_at',
     'idempotency_key',
     'request_fingerprint',
+    'pickup_date',
+    'pickup_number',
     'created_at',
 ])]
 #[UseFactory(OrderFactory::class)]
@@ -78,6 +82,7 @@ final class OrderModel extends Model
             'delivered_at' => 'immutable_datetime',
             'cancelled_at' => 'immutable_datetime',
             'paid_at' => 'immutable_datetime',
+            'pickup_number' => 'integer',
         ];
     }
 }

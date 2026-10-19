@@ -16,12 +16,17 @@ final readonly class OrderLine
 
     public const int MAX_PRICE = 100_000;
 
-    /** Freeze the name and the price the dish had when it was ordered. */
+    public const int MIN_MINUTES = 1;
+
+    public const int MAX_MINUTES = 120;
+
+    /** Freeze the name, the price and the preparation minutes the dish had when it was ordered. */
     public function __construct(
         public DishId $dishId,
         public string $dishName,
         public int $unitPrice,
         public Quantity $quantity,
+        public int $preparationMinutes,
     ) {
         if (trim($dishName) === '' || mb_strlen($dishName) > self::MAX_NAME_LENGTH) {
             throw new InvalidValueException('ordering.dish_name_invalid', ['max' => self::MAX_NAME_LENGTH]);
@@ -29,6 +34,10 @@ final readonly class OrderLine
 
         if ($unitPrice < self::MIN_PRICE || $unitPrice > self::MAX_PRICE) {
             throw new InvalidValueException('ordering.unit_price_out_of_range', ['min' => self::MIN_PRICE, 'max' => self::MAX_PRICE]);
+        }
+
+        if ($preparationMinutes < self::MIN_MINUTES || $preparationMinutes > self::MAX_MINUTES) {
+            throw new InvalidValueException('ordering.preparation_minutes_out_of_range', ['min' => self::MIN_MINUTES, 'max' => self::MAX_MINUTES]);
         }
     }
 
