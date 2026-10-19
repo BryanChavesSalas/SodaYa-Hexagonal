@@ -1007,6 +1007,146 @@
                 ]
             }
         },
+        "/pedidos": {
+            "get": {
+                "operationId": "ordering.orders.index",
+                "description": "Lista los pedidos del cliente autenticado en cualquier soda, del m\u00e1s reciente al m\u00e1s antiguo, paginados con `pagina` y `por_pagina`. Cada pedido trae en `acciones` los enlaces de lo que el cliente puede hacer con \u00e9l en su estado: `pagar` mientras est\u00e1 pendiente y sin pago aprobado y `cancelar` mientras est\u00e1 pendiente o confirmado; en un estado final no hay acciones.",
+                "summary": "Consultar mis pedidos",
+                "tags": [
+                    "Pedidos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `PedidoDelCliente`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PedidoDelCliente"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
+        "/pedidos/{pedido}": {
+            "get": {
+                "operationId": "ordering.orders.show",
+                "description": "Responde un pedido del cliente autenticado con sus l\u00edneas, su n\u00famero de retiro, su hora estimada de retiro y las acciones disponibles en su estado. Un pedido ajeno responde el mismo 404 `pedido-no-encontrado` que uno que no existe.",
+                "summary": "Consultar un pedido m\u00edo",
+                "tags": [
+                    "Pedidos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PedidoDelCliente`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PedidoDelCliente"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
         "/cocina/logo": {
             "post": {
                 "operationId": "sodas.profile.logo.store",
@@ -2111,6 +2251,136 @@
                     "cancelado_en"
                 ],
                 "title": "Pedido"
+            },
+            "PedidoDelCliente": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "numero_retiro": {
+                        "type": "integer",
+                        "description": "N\u00famero corto que el mostrador dice en voz alta; consecutivo por soda y por d\u00eda."
+                    },
+                    "estado": {
+                        "type": "string",
+                        "enum": [
+                            "pendiente",
+                            "confirmado",
+                            "listo",
+                            "entregado",
+                            "cancelado"
+                        ]
+                    },
+                    "cancelado_por": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "cliente",
+                            "cocina",
+                            "falta_de_pago",
+                            "falta_de_confirmacion",
+                            null
+                        ]
+                    },
+                    "pago": {
+                        "type": "object",
+                        "properties": {
+                            "estado": {
+                                "type": "string",
+                                "enum": [
+                                    "aprobado",
+                                    "pendiente"
+                                ]
+                            },
+                            "aprobado_en": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "estado",
+                            "aprobado_en"
+                        ]
+                    },
+                    "lineas": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "creado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "retiro_estimado": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Hora estimada de retiro: la creaci\u00f3n m\u00e1s el mayor tiempo de preparaci\u00f3n de sus platos."
+                    },
+                    "confirmado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "listo_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "entregado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cancelado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "acciones": {
+                        "type": "object",
+                        "description": "Enlaces a las acciones disponibles seg\u00fan el estado: `pagar` mientras est\u00e1 pendiente y sin pago aprobado, `cancelar` mientras est\u00e1 pendiente o confirmado. Vac\u00edo en un estado final.",
+                        "properties": {
+                            "pagar": {
+                                "type": "string"
+                            },
+                            "cancelar": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "numero_retiro",
+                    "estado",
+                    "cancelado_por",
+                    "pago",
+                    "lineas",
+                    "total",
+                    "creado_en",
+                    "retiro_estimado",
+                    "confirmado_en",
+                    "listo_en",
+                    "entregado_en",
+                    "cancelado_en",
+                    "acciones"
+                ],
+                "title": "PedidoDelCliente"
             },
             "Plato": {
                 "type": "object",

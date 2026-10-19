@@ -9,6 +9,8 @@ use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Exceptions\IdempotencyKeyReusedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 
 final class InMemoryOrderRepository implements OrderRepository
@@ -67,5 +69,26 @@ final class InMemoryOrderRepository implements OrderRepository
         }
 
         return null;
+    }
+
+    /** Find a copy of an order of the customer, whatever its soda. */
+    public function findOfCustomer(OrderId $id, CustomerId $customerId): ?Order
+    {
+        $order = $this->orders[$id->value] ?? null;
+
+        return $order !== null && $order->customerId->equals($customerId) ? clone $order : null;
+    }
+
+    /** Page the orders of the customer newest first, as the database does. */
+    public function pageOfCustomer(CustomerId $customerId, PageRequest $page): Page
+    {
+        $orders = array_values(array_filter($this->orders, fn (Order $order): bool => $order->customerId->equals($customerId)));
+        usort($orders, fn (Order $a, Order $b): int => [$b->placedAt, $b->id->value] <=> [$a->placedAt, $a->id->value]);
+
+        return new Page(
+            array_map(fn (Order $order): Order => clone $order, array_slice($orders, $page->offset(), $page->size)),
+            count($orders),
+            $page,
+        );
     }
 }

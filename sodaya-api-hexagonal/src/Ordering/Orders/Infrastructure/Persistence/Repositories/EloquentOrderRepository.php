@@ -24,7 +24,10 @@ use Src\Ordering\Orders\Domain\ValueObjects\PickupNumber;
 use Src\Ordering\Orders\Domain\ValueObjects\Quantity;
 use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderLineModel;
 use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
+use Src\Shared\Infrastructure\Persistence\EloquentPages;
 
 final readonly class EloquentOrderRepository implements OrderRepository
 {
@@ -79,6 +82,33 @@ final readonly class EloquentOrderRepository implements OrderRepository
             ->first();
 
         return $model === null ? null : $this->toDomain($model);
+    }
+
+    /** Find the order scoped to its customer; the lines come with it. */
+    public function findOfCustomer(OrderId $id, CustomerId $customerId): ?Order
+    {
+        $model = OrderModel::query()
+            ->with('lines')
+            ->where('customer_id', $customerId->value)
+            ->find($id->value);
+
+        return $model === null ? null : $this->toDomain($model);
+    }
+
+    /**
+     * List one page of the orders of the customer, newest first; the lines of the page come in one more query.
+     *
+     * @return Page<Order>
+     */
+    public function pageOfCustomer(CustomerId $customerId, PageRequest $page): Page
+    {
+        $query = OrderModel::query()
+            ->with('lines')
+            ->where('customer_id', $customerId->value)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+
+        return EloquentPages::of($query, $page, $this->toDomain(...));
     }
 
     /** Find the order scoped to its soda. */

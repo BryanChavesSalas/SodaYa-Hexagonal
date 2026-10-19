@@ -8,6 +8,8 @@ use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Exceptions\IdempotencyKeyReusedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 
 interface OrderRepository
@@ -30,4 +32,14 @@ interface OrderRepository
 
     /** Find the order a customer placed with a key, if the key was used. */
     public function findByIdempotencyKey(CustomerId $customerId, string $key): ?Order;
+
+    /** Find an order of the customer with its lines, whatever its soda. */
+    public function findOfCustomer(OrderId $id, CustomerId $customerId): ?Order;
+
+    /**
+     * List one page of the orders of the customer, at every soda, newest first.
+     *
+     * @return Page<Order>
+     */
+    public function pageOfCustomer(CustomerId $customerId, PageRequest $page): Page;
 }

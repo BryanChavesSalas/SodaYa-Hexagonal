@@ -8,6 +8,8 @@ use Src\Ordering\Orders\Domain\Contracts\OrderRepository;
 use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 
 /** A repository whose first lookup by key arrives too early to see the order another request is saving. */
@@ -40,6 +42,18 @@ final class LateIdempotencyLookup implements OrderRepository
     public function findForUpdate(OrderId $id, SodaId $sodaId): ?Order
     {
         return $this->inner->findForUpdate($id, $sodaId);
+    }
+
+    /** Delegate. */
+    public function findOfCustomer(OrderId $id, CustomerId $customerId): ?Order
+    {
+        return $this->inner->findOfCustomer($id, $customerId);
+    }
+
+    /** Delegate. */
+    public function pageOfCustomer(CustomerId $customerId, PageRequest $page): Page
+    {
+        return $this->inner->pageOfCustomer($customerId, $page);
     }
 
     /** See nothing the first time, as if the other request had not committed yet; afterwards, delegate. */

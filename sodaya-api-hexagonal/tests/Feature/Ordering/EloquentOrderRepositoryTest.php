@@ -20,6 +20,7 @@ use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PickupNumber;
 use Src\Ordering\Orders\Domain\ValueObjects\Quantity;
 use Src\Ordering\Orders\Infrastructure\Persistence\Repositories\EloquentOrderRepository;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\Ordering\Orders;
@@ -138,6 +139,39 @@ final class EloquentOrderRepositoryTest extends TestCase
             $this->assertSame(1, DB::table('orders')->count());
             $this->assertSame(2, DB::table('order_lines')->count());
         }
+    }
+
+    /** A customer finds their order by its identifier, whatever its soda; another customer does not. */
+    public function test_order_is_found_by_its_customer(): void
+    {
+        $order = $this->placedOrder();
+        $this->repository->save($order);
+        $this->scopeQueriesTo(null);
+        $this->scopeQueriesToCustomer($order->customerId->value);
+
+        $this->assertEquals($order, $this->repository->findOfCustomer($order->id, $order->customerId));
+        $this->assertNull($this->repository->findOfCustomer($order->id, new CustomerId(Orders::CUSTOMER_ID)));
+    }
+
+    /** The orders of a customer are paged newest first, at every soda, and the orders of other customers stay out. */
+    public function test_orders_of_a_customer_are_paged_newest_first(): void
+    {
+        $oldest = $this->placedOrder();
+        $this->repository->save($oldest);
+        $otherSoda = new SodaId(SodaModel::factory()->create()->id);
+        $dish = DishModel::factory()->create(['soda_id' => $otherSoda->value, 'name' => 'Olla de carne', 'price' => 3_500]);
+        $newest = Order::place($this->repository->nextId(), $otherSoda, $oldest->customerId, [new OrderLine(new DishId($dish->id), 'Olla de carne', 3_500, new Quantity(1), 25)], Orders::at('12:30'), new PickupNumber(1));
+        $this->repository->save($newest);
+        $this->scopeQueriesTo($this->sodaId->value);
+        $this->repository->save(Order::place($this->repository->nextId(), $this->sodaId, new CustomerId(UserModel::factory()->create()->id), $oldest->lines, Orders::at('12:45'), new PickupNumber(2)));
+        $this->scopeQueriesTo(null);
+        $this->scopeQueriesToCustomer($oldest->customerId->value);
+
+        $page = $this->repository->pageOfCustomer($oldest->customerId, new PageRequest(1, 1));
+
+        $this->assertSame(2, $page->total);
+        $this->assertEquals([$newest], $page->items);
+        $this->assertEquals([$oldest], $this->repository->pageOfCustomer($oldest->customerId, new PageRequest(2, 1))->items);
     }
 
     /** Every new identity is a distinct time-ordered UUID. */

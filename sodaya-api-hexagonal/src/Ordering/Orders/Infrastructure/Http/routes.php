@@ -11,6 +11,18 @@ Route::post('sodas/{soda}/pedidos', [CustomerOrderController::class, 'store'])
     ->whereUuid('soda')
     ->name('ordering.orders.store');
 
+Route::prefix('pedidos')
+    ->middleware(['auth:sanctum', 'abilities:pedidos'])
+    ->name('ordering.orders.')
+    ->controller(CustomerOrderController::class)
+    ->whereUuid('pedido')
+    ->group(function (): void {
+        Route::middleware('soda:customer')->group(function (): void {
+            Route::get('/', 'index')->name('index');
+            Route::get('{pedido}', 'show')->name('show');
+        });
+    });
+
 Route::prefix('cocina/pedidos')
     ->middleware(['auth:sanctum', 'soda:user', 'abilities:cocina'])
     ->name('ordering.kitchen-orders.')
