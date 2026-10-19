@@ -8,7 +8,10 @@ use Src\Catalog\Categories\Domain\Contracts\CategoryRepository;
 use Src\Catalog\Categories\Domain\Entities\Category;
 use Src\Catalog\Categories\Domain\Exceptions\CategoryNameAlreadyInUseException;
 use Src\Catalog\Shared\Domain\ValueObjects\CategoryId;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
+use Tests\Support\Shared\Pages;
 
 final class InMemoryCategoryRepository implements CategoryRepository
 {
@@ -51,11 +54,11 @@ final class InMemoryCategoryRepository implements CategoryRepository
     }
 
     /**
-     * List the categories of the soda ordered by name.
+     * List one page of the categories of the soda ordered by name.
      *
-     * @return list<Category>
+     * @return Page<Category>
      */
-    public function allOf(SodaId $sodaId): array
+    public function pageOf(SodaId $sodaId, PageRequest $page): Page
     {
         $categories = array_filter(
             $this->categories,
@@ -67,7 +70,7 @@ final class InMemoryCategoryRepository implements CategoryRepository
             fn (Category $a, Category $b): int => $a->name->value <=> $b->name->value,
         );
 
-        return $categories;
+        return Pages::slice($categories, $page);
     }
 
     /** Remove a category. */

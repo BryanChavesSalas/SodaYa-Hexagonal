@@ -39,6 +39,7 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_PASSWORD: app-secret
       DB_ADMIN_PASSWORD: owner-secret
+      DB_MAINTENANCE_PASSWORD: maintenance-secret
 
     steps:
       - name: Check out the repository
@@ -80,6 +81,7 @@ jobs:
         run: >-
           psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1
           -v owner_password="$DB_ADMIN_PASSWORD" -v app_password="$DB_PASSWORD"
+          -v maintenance_password="$DB_MAINTENANCE_PASSWORD"
           -f database/roles.sql
 
       - name: Check the code style

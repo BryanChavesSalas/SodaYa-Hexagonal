@@ -42,6 +42,19 @@ final class UpdateDishTest extends TestCase
         $this->assertDatabaseHas('dishes', ['id' => $this->dish->id, 'price' => 3000, 'name' => 'Casado de pollo']);
     }
 
+    /** Changing the base portions leaves the portions available today as they were. */
+    public function test_base_portions_change_without_touching_the_portions_of_today(): void
+    {
+        $this->dish->update(['available_portions' => 3]);
+
+        $this->patchJson($this->endpoint(), ['porciones_base' => 40])
+            ->assertOk()
+            ->assertJsonPath('data.porciones_base', 40)
+            ->assertJsonPath('data.porciones_disponibles', 3);
+
+        $this->assertDatabaseHas('dishes', ['id' => $this->dish->id, 'base_portions' => 40, 'available_portions' => 3]);
+    }
+
     /** The active flag takes the dish off the menu and puts it back. */
     public function test_owner_deactivates_and_reactivates_a_dish(): void
     {

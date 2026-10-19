@@ -27,6 +27,12 @@ final class InMemorySodaRepository implements SodaRepository
         $this->sodas[$soda->id->value] = $soda;
     }
 
+    /** Find a stored soda. */
+    public function find(SodaId $id): ?Soda
+    {
+        return $this->sodas[$id->value] ?? null;
+    }
+
     /**
      * List the stored sodas.
      *

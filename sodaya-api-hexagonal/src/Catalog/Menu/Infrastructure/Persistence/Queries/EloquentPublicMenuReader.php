@@ -34,7 +34,7 @@ final readonly class EloquentPublicMenuReader implements PublicMenuReader
             ->map($this->toCategory(...))
             ->sortBy(fn (MenuCategory $category): array => [$category->id === null, $category->name]);
 
-        return new PublicMenu($soda->id, $soda->name, array_values($categories->all()));
+        return new PublicMenu($soda->id, $soda->name, array_values($categories->all()), sodaLogoPath: $soda->logo_path);
     }
 
     /** Read a single active dish of the soda. */
@@ -84,6 +84,7 @@ final readonly class EloquentPublicMenuReader implements PublicMenuReader
             $dish->preparation_minutes,
             $dish->available_portions,
             $dish->updated_at->toDateTimeImmutable(),
+            $dish->photo_path,
         );
     }
 }

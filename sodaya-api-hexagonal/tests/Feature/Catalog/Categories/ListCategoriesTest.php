@@ -53,10 +53,10 @@ final class ListCategoriesTest extends TestCase
     {
         $this->getJson(self::ENDPOINT)
             ->assertOk()
-            ->assertExactJson(['data' => []]);
+            ->assertExactJson(['data' => [], 'meta' => ['pagina' => 1, 'por_pagina' => 15, 'total' => 0, 'ultima_pagina' => 1]]);
     }
 
-    /** Listing uses a constant number of queries: one sets the soda and one reads. */
+    /** Listing uses a constant number of queries: one sets the soda, one counts and one reads the page. */
     public function test_listing_runs_a_constant_number_of_queries(): void
     {
         CategoryModel::factory()
@@ -65,10 +65,10 @@ final class ListCategoriesTest extends TestCase
 
         DB::enableQueryLog();
 
-        $this->getJson(self::ENDPOINT)
+        $this->getJson(self::ENDPOINT.'?por_pagina=50')
             ->assertOk()
             ->assertJsonCount(25, 'data');
 
-        $this->assertCount(2, DB::getQueryLog());
+        $this->assertCount(3, DB::getQueryLog());
     }
 }

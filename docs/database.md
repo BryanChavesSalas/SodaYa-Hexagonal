@@ -14,20 +14,35 @@ La aplicación nunca se conecta con el rol dueño de las tablas.
 | -------------- | --------------------- | ----------------------------------------------- | ----------------------------------------------------------------------- |
 | `sodaya_owner` | `pgsql_admin`         | Es dueño de las bases y ejecuta las migraciones | No atiende peticiones                                                   |
 | `sodaya_app`   | `pgsql` (por defecto) | Lee y escribe filas                             | Crear, alterar o borrar tablas; no es superusuario ni tiene `BYPASSRLS` |
+| `sodaya_maintenance` | `pgsql_maintenance` | Ejecuta las tareas por lotes que recorren todas las sodas | Cambiar el esquema; solo tiene los permisos que cada migración le otorga |
 
-El script `database/roles.sql` crea los dos roles y las dos bases. Lo ejecuta una sola vez un superusuario, con las contraseñas como variables de `psql`: nunca se versionan.
+El script `database/roles.sql` crea los tres roles y las dos bases. Lo ejecuta una sola vez un superusuario, con las contraseñas como variables de `psql`: nunca se versionan.
 
 La primera migración otorga al rol de la aplicación, con `ALTER DEFAULT PRIVILEGES`, los permisos de lectura y escritura sobre toda tabla y secuencia que el dueño cree después. Ninguna tabla nueva necesita un paso manual.
 
 Por qué importa: en PostgreSQL los superusuarios y los roles con `BYPASSRLS` no pasan por las políticas de seguridad a nivel de fila, y el dueño de una tabla tampoco, salvo que la tabla las fuerce. Las tablas de una soda las fuerzan, pero la aplicación igual se conecta con un rol que no es dueño ni tiene `BYPASSRLS`: el aislamiento no depende de una sola línea de una migración.
 
-Un tercer rol, de mantenimiento, se agrega cuando exista la primera tarea que recorra todas las sodas.
+`sodaya_maintenance` es el único rol con `BYPASSRLS`. Lo necesita una tarea que recorre todas las sodas, como el restablecimiento diario de las porciones: con el rol de la aplicación tendría que fijar una soda por transacción y recorrerlas desde PHP. A cambio, no recibe permisos por defecto: cada migración le otorga solo lo que su tarea usa, a veces columna por columna, y la aplicación nunca atiende peticiones con él.
 
 ## Migraciones
 
 - Se ejecutan siempre con el rol dueño: `php artisan migrate --database=pgsql_admin`.
 - Cada migración tiene su `down()` y una prueba las ejecuta hacia atrás y hacia adelante.
 - Un cambio que rompe la versión anterior del código se hace en dos despliegues: primero se expande el esquema y, cuando el código viejo ya no corre, se contrae.
+- Un índice sobre una tabla que crece, como `orders`, se crea con `CREATE INDEX CONCURRENTLY`: no bloquea las escrituras mientras se construye. Esa instrucción no puede correr dentro de una transacción, así que la migración declara `public $withinTransaction = false;`.
+
+## Índices de los listados
+
+Cada consulta frecuente tiene un índice que cubre su filtro y su orden. Una prueba carga 10 000 pedidos y revisa el plan con `EXPLAIN ANALYZE`: si el índice desaparece o la consulta cambia de forma, la prueba falla.
+
+| Consulta | Índice |
+| --- | --- |
+| Ventas por hora: pedidos entregados de una soda en un rango de `created_at` | `orders_soda_id_status_created_at_index` |
+| Lista de cocina: pedidos de una soda en un estado, del más antiguo al más nuevo | `orders_soda_id_status_created_at_index`, que además entrega las filas ya ordenadas |
+| Platos y categorías de una soda por nombre | Las llaves únicas `(soda_id, name)` |
+| Cierres de una soda desde una fecha | La llave única `(soda_id, closed_on)` |
+
+El orden de las columnas importa: primero las que se comparan con `=` (`soda_id`, `status`) y al final la del rango o del orden (`created_at`). La lista de cocina llega con el endpoint de la clase 11 y debe conservar esa forma de consulta.
 
 ## Convenciones del esquema
 
@@ -49,6 +64,8 @@ La aplicación genera el identificador antes de guardar, así el agregado tiene 
 
 El constructor de esquemas de Laravel no cubre funciones, procedimientos, triggers, políticas ni vistas. Se crean dentro de una migración con `DB::statement()` o `DB::unprepared()`, y su `down()` los elimina.
 
+Las funciones y los procedimientos se crean con `CREATE OR REPLACE`: `migrate:fresh` borra las tablas, y con ellas sus triggers y vistas, pero no las funciones, y la siguiente ejecución fallaría al crearlas de nuevo.
+
 | Objeto              | Prefijo                  | Regla                                                                                     |
 | ------------------- | ------------------------ | ----------------------------------------------------------------------------------------- |
 | Función             | `fn_`                    | `SECURITY INVOKER` y `search_path` fijo                                                   |
@@ -57,6 +74,52 @@ El constructor de esquemas de Laravel no cubre funciones, procedimientos, trigge
 | Vista               | `v_`                     | `security_invoker = true`, para que apliquen las políticas de quien consulta              |
 | Vista materializada | `mv_`                    | Índice único para refrescar con `CONCURRENTLY`; se consulta a través de una vista         |
 | Política            | `<tabla>_soda_isolation` | Una por tabla de una soda, con la misma expresión en `USING` y `WITH CHECK`               |
+
+### Historial de estados del pedido
+
+El trigger `trg_orders_status_history` corre `AFTER UPDATE OF status` por cada fila de `orders` cuyo estado cambia, y la función `fn_record_order_status_change()` agrega a `order_status_history` el estado anterior, el nuevo y la hora. Es un trigger `AFTER` porque propaga el cambio a otra tabla, como recomienda la documentación de PostgreSQL; uno `BEFORE` se usa para validar o completar la misma fila.
+
+La función es `SECURITY INVOKER`: inserta con el rol de quien cambia el pedido, y la política de la tabla exige que la fila sea de la soda en curso. El rol de la aplicación puede insertar y leer el historial, pero no actualizarlo, borrarlo ni vaciarlo: la migración le revoca `UPDATE`, `DELETE` y `TRUNCATE` sobre esa tabla. Así el historial registra también los cambios hechos con SQL directo, y la aplicación no puede reescribirlo.
+
+El dominio sigue decidiendo qué transición es válida; el trigger solo deja constancia.
+
+### Restablecimiento diario de las porciones
+
+El procedimiento `sp_reset_daily_portions()` copia `base_portions` sobre `available_portions` en cada plato cuyas porciones difieren de la base. Recorre las sodas una por una y confirma con `COMMIT` después de cada una: así nunca bloquea los platos de todas las sodas a la vez, y si se interrumpe, las sodas ya procesadas quedan listas.
+
+Un procedimiento que hace `COMMIT` tiene dos condiciones. Se invoca con `CALL` fuera de una transacción, porque dentro de una falla con el SQLSTATE `2D000`. Y no puede tener cláusulas `SET`, como `SET search_path`, por eso nombra sus tablas con el esquema, `public.dishes`.
+
+La migración le quita el permiso de ejecutarlo a `PUBLIC` y se lo da solo a `sodaya_maintenance`, junto con `SELECT` sobre `sodas` y `dishes` y `UPDATE` sobre las columnas `available_portions` y `updated_at`.
+
+### Libro de puntos
+
+`point_movements` es inmutable por dos caminos. El rol de la aplicación no tiene `UPDATE`, `DELETE` ni `TRUNCATE` sobre la tabla: la migración se los revoca. Y el trigger `trg_point_movements_immutable`, `BEFORE UPDATE OR DELETE` por fila, rechaza el cambio con su mensaje aunque lo intente el dueño de la tabla. Un error en los puntos se corrige con un movimiento nuevo, nunca editando uno viejo.
+
+Dos canjes simultáneos del mismo cliente se ordenan con un bloqueo consultivo transaccional, `pg_advisory_xact_lock`, con una clave derivada del cliente. Es la herramienta cuando lo que hay que proteger no es una fila sino un cálculo, aquí la suma de los movimientos: `FOR UPDATE` no tiene a qué aplicarse, porque el canje que se está por escribir todavía no existe. La prueba `RedeemPointsRaceTest` lo demuestra con dos procesos, igual que la de la última porción.
+
+Es un trigger `BEFORE` porque impide el cambio de la propia fila; el del historial de pedidos es `AFTER` porque propaga un cambio a otra tabla.
+
+### Pedidos vencidos
+
+La migración `let_the_maintenance_role_find_expired_orders` le da a `sodaya_maintenance` permiso de leer `orders` y nada más, y crea el índice parcial `orders_pending_created_at_index` sobre `created_at` de los pedidos pendientes. El comando que corre cada minuto busca solo pedidos pendientes, que son pocos; un índice parcial guarda solo esas filas y se mantiene pequeño aunque la tabla tenga años de pedidos entregados.
+
+### Reserva de porciones
+
+`fn_reserve_portions(p_soda_id, p_dish_ids, p_quantities)` descuenta las porciones de todas las líneas de un pedido o de ninguna, y responde si reservó. Primero bloquea con `SELECT ... FOR UPDATE` los platos del pedido en el orden de sus identificadores; después revisa que todos existan en la soda, estén activos y tengan porciones suficientes; solo entonces descuenta. Si algo falta, devuelve `false` sin haber cambiado nada.
+
+Dos pedidos que piden la última porción a la vez se ordenan en el bloqueo: el segundo espera a que el primero confirme, vuelve a leer la fila ya descontada y recibe `false`. El orden fijo de los bloqueos evita el interbloqueo: si un pedido bloqueara el casado y luego el fresco y otro lo hiciera al revés, cada uno esperaría al otro. La devolución de porciones al cancelar recorre los platos en el mismo orden. El `CHECK` de `available_portions` sigue como última barrera: ninguna fila puede quedar en negativo.
+
+La prueba `LastPortionRaceTest` lo demuestra con dos procesos de PHP de verdad. Los dos esperan detrás de un bloqueo consultivo (`pg_advisory_lock`) que tiene la prueba; cuando ambos están esperando, la prueba lo suelta y los dos piden la última porción en el mismo instante.
+
+### Ventas por hora
+
+La vista `v_hourly_sales` tiene una fila por pedido entregado: su soda, su identificador, el momento en que se creó, la hora de Costa Rica de ese momento y la suma de sus líneas. No incluye propinas: el total sale de las líneas. Es `security_invoker = true`, así que la consulta corre con el rol de quien la hace y las políticas de `orders` y `order_lines` siguen filtrando por la soda en curso. Sin esa opción, una vista corre con los permisos de su dueño y podría saltarse la seguridad a nivel de fila.
+
+La función `fn_hourly_sales(p_soda_id, p_date, p_min_orders)` agrupa esas filas por hora y descarta las horas con menos pedidos que el mínimo. Filtra la fecha con un rango sobre `created_at`, desde la medianoche de Costa Rica de esa fecha hasta la del día siguiente, y no con una expresión sobre la columna: así PostgreSQL puede usar un índice sobre `created_at`. La zona horaria se escribe en la función porque el negocio cuenta las horas de Costa Rica, sin importar la zona de la sesión que consulte.
+
+`fn_hourly_sales` es la única función sin `search_path` fijo, y por eso nombra su vista como `public.v_hourly_sales`. PostgreSQL puede expandir una función SQL de una sola consulta dentro de la consulta que la llama, como si fuera una vista, pero solo si la función no tiene cláusulas `SET`. Expandida, el planificador ve el filtro por soda y por fecha, y puede elegir un índice; `EXPLAIN` muestra el plan completo y no una caja negra.
+
+La vista también se crea con `CREATE OR REPLACE`. Borrar `orders` con `migrate:fresh` la borra en cascada, porque depende de esa tabla.
 
 ## Extensiones y tipos
 

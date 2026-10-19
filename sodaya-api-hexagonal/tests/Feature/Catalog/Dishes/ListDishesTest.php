@@ -42,17 +42,17 @@ final class ListDishesTest extends TestCase
     /** A soda without dishes gets an empty list. */
     public function test_soda_without_dishes_gets_an_empty_list(): void
     {
-        $this->getJson(self::ENDPOINT)->assertOk()->assertExactJson(['data' => []]);
+        $this->getJson(self::ENDPOINT)->assertOk()->assertExactJson(['data' => [], 'meta' => ['pagina' => 1, 'por_pagina' => 15, 'total' => 0, 'ultima_pagina' => 1]]);
     }
 
-    /** The number of queries does not grow with the number of dishes: one sets the soda and one reads. */
+    /** The number of queries does not grow with the number of dishes: one sets the soda, one counts and one reads the page. */
     public function test_listing_runs_a_constant_number_of_queries(): void
     {
         DishModel::factory()->count(25)->create(['soda_id' => $this->soda->id]);
 
         DB::enableQueryLog();
-        $this->getJson(self::ENDPOINT)->assertOk()->assertJsonCount(25, 'data');
+        $this->getJson(self::ENDPOINT.'?por_pagina=50')->assertOk()->assertJsonCount(25, 'data');
 
-        $this->assertCount(2, DB::getQueryLog());
+        $this->assertCount(3, DB::getQueryLog());
     }
 }

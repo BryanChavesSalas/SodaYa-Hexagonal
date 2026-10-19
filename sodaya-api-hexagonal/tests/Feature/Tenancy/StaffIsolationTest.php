@@ -7,6 +7,7 @@ namespace Tests\Feature\Tenancy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
@@ -15,6 +16,7 @@ use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\Catalog\ActsOnSoda;
 use Tests\Support\RefreshDatabaseAsOwner;
+use Tests\Support\Shared\TestImages;
 use Tests\TestCase;
 
 final class StaffIsolationTest extends TestCase
@@ -85,6 +87,24 @@ final class StaffIsolationTest extends TestCase
             Arr::except($foreignResponse->json(), 'instance'),
         );
         $this->assertSame($before, $this->rowsOfTheOtherSoda());
+    }
+
+    /** The photo of a dish of the other soda answers the same 404 as a missing dish and stores nothing. */
+    public function test_photo_of_a_foreign_dish_answers_like_a_missing_one(): void
+    {
+        Storage::fake('public');
+        $before = $this->rowsOfTheOtherSoda();
+
+        $foreignResponse = $this->post("/api/v1/cocina/platos/{$this->foreign['dish']->getKey()}/foto", ['foto' => TestImages::png()], ['Accept' => 'application/json']);
+        $missingResponse = $this->post('/api/v1/cocina/platos/'.self::MISSING_ID.'/foto', ['foto' => TestImages::png()], ['Accept' => 'application/json']);
+
+        $foreignResponse->assertNotFound();
+        $this->assertSame(
+            Arr::except($missingResponse->json(), 'instance'),
+            Arr::except($foreignResponse->json(), 'instance'),
+        );
+        $this->assertSame($before, $this->rowsOfTheOtherSoda());
+        $this->assertSame([], Storage::disk('public')->allFiles());
     }
 
     /**

@@ -24,11 +24,13 @@ final class Dish
         public private(set) Price $price,
         public private(set) PreparationTime $preparationTime,
         public private(set) Portions $availablePortions,
+        public private(set) Portions $basePortions,
         public private(set) ?CategoryId $categoryId,
         public private(set) bool $active,
+        public private(set) ?string $photoPath,
     ) {}
 
-    /** Register a new dish, active from the start. */
+    /** Register a new dish, active from the start; without base portions, the ones available today become the base. */
     public static function create(
         DishId $id,
         SodaId $sodaId,
@@ -38,8 +40,9 @@ final class Dish
         PreparationTime $preparationTime,
         Portions $availablePortions,
         ?CategoryId $categoryId,
+        ?Portions $basePortions = null,
     ): self {
-        return new self($id, $sodaId, $name, $description, $price, $preparationTime, $availablePortions, $categoryId, true);
+        return new self($id, $sodaId, $name, $description, $price, $preparationTime, $availablePortions, $basePortions ?? $availablePortions, $categoryId, true, null);
     }
 
     /** Rebuild a dish from its stored state. */
@@ -51,10 +54,12 @@ final class Dish
         Price $price,
         PreparationTime $preparationTime,
         Portions $availablePortions,
+        Portions $basePortions,
         ?CategoryId $categoryId,
         bool $active,
+        ?string $photoPath = null,
     ): self {
-        return new self($id, $sodaId, $name, $description, $price, $preparationTime, $availablePortions, $categoryId, $active);
+        return new self($id, $sodaId, $name, $description, $price, $preparationTime, $availablePortions, $basePortions, $categoryId, $active, $photoPath);
     }
 
     /** Replace the editable details of the dish. */
@@ -74,6 +79,12 @@ final class Dish
         $this->categoryId = $categoryId;
     }
 
+    /** Change the portions prepared on a normal day; the portions left today stay as they are. */
+    public function changeBasePortions(Portions $basePortions): void
+    {
+        $this->basePortions = $basePortions;
+    }
+
     /** Put the dish back on the menu. */
     public function activate(): void
     {
@@ -84,6 +95,15 @@ final class Dish
     public function deactivate(): void
     {
         $this->active = false;
+    }
+
+    /** Show a new photo and answer the path of the one it replaces, if any. */
+    public function changePhoto(string $path): ?string
+    {
+        $previous = $this->photoPath;
+        $this->photoPath = $path;
+
+        return $previous;
     }
 
     /** Tell whether no portions are left to sell. */

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Src\Sodas\Closures\Domain\Contracts;
 
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Closures\Domain\Entities\Closure;
 use Src\Sodas\Closures\Domain\Exceptions\ClosureAlreadyExistsException;
@@ -29,11 +31,11 @@ interface ClosureRepository
     public function onDate(SodaId $sodaId, ClosureDate $date): ?Closure;
 
     /**
-     * List the closures of the soda from a date onward, ordered by date.
+     * List one page of the closures of the soda from a date onward, ordered by date.
      *
-     * @return list<Closure>
+     * @return Page<Closure>
      */
-    public function from(SodaId $sodaId, ClosureDate $date): array;
+    public function from(SodaId $sodaId, ClosureDate $date, PageRequest $page): Page;
 
     /** Remove a closure. */
     public function delete(Closure $closure): void;

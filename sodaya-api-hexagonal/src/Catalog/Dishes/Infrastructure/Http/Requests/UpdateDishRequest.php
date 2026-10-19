@@ -30,6 +30,7 @@ final class UpdateDishRequest extends FormRequest
         'precio' => 'price',
         'minutos_preparacion' => 'preparation_minutes',
         'porciones_disponibles' => 'available_portions',
+        'porciones_base' => 'base_portions',
         'categoria_id' => 'category_id',
         'activo' => 'active',
     ];
@@ -60,6 +61,13 @@ final class UpdateDishRequest extends FormRequest
                 'between:'.PreparationTime::MIN.','.PreparationTime::MAX,
             ],
             'porciones_disponibles' => [
+                'sometimes',
+                'required',
+                'integer',
+                'between:'.Portions::MIN.','.Portions::MAX,
+            ],
+            /** Porciones que la soda prepara en un día normal; cambiarlas no toca las disponibles de hoy. */
+            'porciones_base' => [
                 'sometimes',
                 'required',
                 'integer',

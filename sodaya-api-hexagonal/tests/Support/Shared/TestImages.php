@@ -29,13 +29,13 @@ final class TestImages
     /** Upload a real grayscale PNG; level 0 stores the pixels uncompressed, which makes big files on purpose. */
     public static function png(int $width = 2, int $height = 2, string $name = 'foto.png', int $compression = 9): UploadedFile
     {
-        $pixels = str_repeat("\0" . str_repeat("\x80", $width), $height);
+        $pixels = str_repeat("\0".str_repeat("\x80", $width), $height);
         $header = pack('NNCCCCC', $width, $height, 8, 0, 0, 0, 0);
 
         $png = "\x89PNG\r\n\x1a\n"
-            . self::chunk('IHDR', $header)
-            . self::chunk('IDAT', (string) gzcompress($pixels, $compression))
-            . self::chunk('IEND', '');
+            .self::chunk('IHDR', $header)
+            .self::chunk('IDAT', (string) gzcompress($pixels, $compression))
+            .self::chunk('IEND', '');
 
         return self::upload($name, $png);
     }
@@ -54,7 +54,7 @@ final class TestImages
     {
         $path = (string) tempnam(sys_get_temp_dir(), 'img');
         file_put_contents($path, $content);
-        register_shutdown_function(fn() => @unlink($path));
+        register_shutdown_function(fn () => @unlink($path));
 
         return new UploadedFile($path, $name, test: true);
     }
@@ -62,6 +62,6 @@ final class TestImages
     /** Build a PNG chunk: length, type, data and checksum. */
     private static function chunk(string $type, string $data): string
     {
-        return pack('N', strlen($data)) . $type . $data . pack('N', crc32($type . $data));
+        return pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
     }
 }

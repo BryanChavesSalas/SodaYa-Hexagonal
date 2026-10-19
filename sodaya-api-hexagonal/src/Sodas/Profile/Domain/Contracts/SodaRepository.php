@@ -14,4 +14,7 @@ interface SodaRepository
 
     /** Persist a new or modified soda. */
     public function save(Soda $soda): void;
+
+    /** Find a soda by its identity. */
+    public function find(SodaId $id): ?Soda;
 }

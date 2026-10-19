@@ -6,6 +6,8 @@ namespace Src\Catalog\Categories\Application\UseCases;
 
 use Src\Catalog\Categories\Domain\Contracts\CategoryRepository;
 use Src\Catalog\Categories\Domain\Entities\Category;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 
 final readonly class ListCategories
@@ -14,12 +16,12 @@ final readonly class ListCategories
     public function __construct(private CategoryRepository $categories) {}
 
     /**
-     * List every category of the soda.
+     * List one page of the categories of the soda.
      *
-     * @return list<Category>
+     * @return Page<Category>
      */
-    public function execute(string $sodaId): array
+    public function execute(string $sodaId, PageRequest $page): Page
     {
-        return $this->categories->allOf(new SodaId($sodaId));
+        return $this->categories->pageOf(new SodaId($sodaId), $page);
     }
 }

@@ -13,7 +13,10 @@ use Src\Catalog\Categories\Domain\Exceptions\CategoryNameAlreadyInUseException;
 use Src\Catalog\Categories\Domain\ValueObjects\CategoryName;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Shared\Domain\ValueObjects\CategoryId;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
+use Src\Shared\Infrastructure\Persistence\EloquentPages;
 
 final readonly class EloquentCategoryRepository implements CategoryRepository
 {
@@ -50,18 +53,17 @@ final readonly class EloquentCategoryRepository implements CategoryRepository
     }
 
     /**
-     * List the categories of the soda ordered by name.
+     * List one page of the categories of the soda ordered by name.
      *
-     * @return list<Category>
+     * @return Page<Category>
      */
-    public function allOf(SodaId $sodaId): array
+    public function pageOf(SodaId $sodaId, PageRequest $page): Page
     {
-        $categories = CategoryModel::query()
+        $query = CategoryModel::query()
             ->where('soda_id', $sodaId->value)
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
 
-        return array_values($categories->map($this->toDomain(...))->all());
+        return EloquentPages::of($query, $page, $this->toDomain(...));
     }
 
     /** Delete the persisted category. */

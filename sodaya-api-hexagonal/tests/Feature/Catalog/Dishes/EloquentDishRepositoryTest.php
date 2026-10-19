@@ -15,6 +15,7 @@ use Src\Catalog\Dishes\Domain\ValueObjects\Price;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Repositories\EloquentDishRepository;
 use Src\Catalog\Shared\Domain\ValueObjects\CategoryId;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
@@ -82,7 +83,7 @@ final class EloquentDishRepositoryTest extends TestCase
         DishModel::factory()->create();
         $this->scopeQueriesTo($this->sodaId->value);
 
-        $names = array_map(fn (Dish $dish): string => $dish->name->value, $this->repository->allOf($this->sodaId));
+        $names = array_map(fn (Dish $dish): string => $dish->name->value, $this->repository->pageOf($this->sodaId, new PageRequest)->items);
 
         $this->assertSame(['Arroz con pollo', 'Olla de carne'], $names);
     }
@@ -112,6 +113,7 @@ final class EloquentDishRepositoryTest extends TestCase
             new PreparationTime(15),
             new Portions(10),
             $categoryId,
+            new Portions(25),
         );
     }
 }

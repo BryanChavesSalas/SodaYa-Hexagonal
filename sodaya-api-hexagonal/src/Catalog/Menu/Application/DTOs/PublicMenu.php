@@ -16,11 +16,12 @@ final readonly class PublicMenu
         public string $sodaName,
         public array $categories,
         public bool $open = false,
+        public ?string $sodaLogoPath = null,
     ) {}
 
     /** Return the same menu flagged as open or closed. */
     public function withOpenStatus(bool $open): self
     {
-        return new self($this->sodaId, $this->sodaName, $this->categories, $open);
+        return new self($this->sodaId, $this->sodaName, $this->categories, $open, $this->sodaLogoPath);
     }
 }

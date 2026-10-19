@@ -47,6 +47,10 @@ final readonly class UpdateDish
                 : $dish->categoryId,
         );
 
+        if (isset($changes['base_portions'])) {
+            $dish->changeBasePortions(new Portions($changes['base_portions']));
+        }
+
         match ($changes['active'] ?? null) {
             true => $dish->activate(),
             false => $dish->deactivate(),

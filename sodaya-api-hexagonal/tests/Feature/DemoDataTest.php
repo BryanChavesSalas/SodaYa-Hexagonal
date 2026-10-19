@@ -7,6 +7,8 @@ namespace Tests\Feature;
 use Database\Seeders\CatalogSeeder;
 use Database\Seeders\StaffSeeder;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
+use Src\Shared\Infrastructure\Tenancy\SodaTransaction;
 use Tests\Support\RefreshDatabaseAsOwner;
 use Tests\TestCase;
 
@@ -50,13 +52,27 @@ final class DemoDataTest extends TestCase
         ];
     }
 
-    /** Seeding again keeps one account per email, both on the demo soda. */
+    /** Seeding again keeps one account per email: the staff on the demo soda and a customer without soda. */
     public function test_seeding_again_keeps_the_same_accounts(): void
     {
         $this->seed();
 
-        $this->assertDatabaseCount('users', 2);
+        $this->assertDatabaseCount('users', 3);
+        $this->assertDatabaseHas('users', ['email' => 'cliente@sodaya.test', 'role' => 'customer', 'soda_id' => null]);
         $this->assertDatabaseHas('users', ['email' => 'duena@sodaya.test', 'role' => 'owner', 'soda_id' => CatalogSeeder::DEMO_SODA_ID]);
         $this->assertDatabaseHas('users', ['email' => 'cocina@sodaya.test', 'role' => 'kitchen', 'soda_id' => CatalogSeeder::DEMO_SODA_ID]);
+    }
+
+    /** The demo soda has three orders of the demo customer, and seeding again adds none. */
+    public function test_demo_soda_has_three_orders_once(): void
+    {
+        $this->seed();
+        $this->app->make(SodaTransaction::class)->scope(CatalogSeeder::DEMO_SODA_ID);
+
+        $this->assertSame(
+            ['cancelled', 'confirmed', 'delivered'],
+            OrderModel::query()->orderBy('status')->pluck('status')->all(),
+        );
+        $this->assertDatabaseCount('order_lines', 6);
     }
 }

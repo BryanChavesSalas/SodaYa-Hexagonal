@@ -8,6 +8,7 @@ use Dedoc\Scramble\Attributes\SchemaName;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Src\Catalog\Dishes\Domain\Entities\Dish;
+use Src\Shared\Domain\Contracts\ImageStorage;
 
 /**
  * @property-read Dish $resource
@@ -35,9 +36,11 @@ final class DishResource extends JsonResource
             'precio' => $this->dish->price->amount,
             'minutos_preparacion' => $this->dish->preparationTime->minutes,
             'porciones_disponibles' => $this->dish->availablePortions->quantity,
+            'porciones_base' => $this->dish->basePortions->quantity,
             'categoria_id' => $this->dish->categoryId?->value,
             'activo' => $this->dish->active,
             'agotado' => $this->dish->isSoldOut(),
+            'foto' => $this->dish->photoPath === null ? null : app(ImageStorage::class)->url($this->dish->photoPath),
         ];
     }
 }

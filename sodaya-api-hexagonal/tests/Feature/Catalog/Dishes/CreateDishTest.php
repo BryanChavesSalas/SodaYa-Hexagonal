@@ -46,12 +46,25 @@ final class CreateDishTest extends TestCase
                 'precio' => 2800,
                 'minutos_preparacion' => 15,
                 'porciones_disponibles' => 10,
+                'porciones_base' => 10,
                 'categoria_id' => $category->id,
                 'activo' => true,
                 'agotado' => false,
+                'foto' => null,
             ]]);
 
         $this->assertDatabaseHas('dishes', ['id' => $dishId, 'soda_id' => $this->soda->id]);
+    }
+
+    /** The owner may set base portions different from the ones available today. */
+    public function test_owner_sets_the_base_portions(): void
+    {
+        $this->postJson(self::ENDPOINT, $this->payload(['porciones_disponibles' => 4, 'porciones_base' => 30]))
+            ->assertCreated()
+            ->assertJsonPath('data.porciones_disponibles', 4)
+            ->assertJsonPath('data.porciones_base', 30);
+
+        $this->assertDatabaseHas('dishes', ['available_portions' => 4, 'base_portions' => 30]);
     }
 
     /** The dish belongs to the current soda even if the payload names another. */
@@ -99,6 +112,11 @@ final class CreateDishTest extends TestCase
                 'porciones_disponibles',
                 -1,
                 'El campo porciones disponibles debe estar entre 0 y 500.',
+            ],
+            'base portions above maximum' => [
+                'porciones_base',
+                501,
+                'El campo porciones base debe estar entre 0 y 500.',
             ],
             'malformed category' => ['categoria_id', 'abc', 'El campo categoría debe ser un UUID válido.'],
         ];

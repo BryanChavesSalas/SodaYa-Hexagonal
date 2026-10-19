@@ -11,6 +11,7 @@ use RuntimeException;
 use Src\Identity\Users\Domain\ValueObjects\Role;
 use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 use Src\Shared\Domain\Exceptions\AuthenticationFailedException;
+use Src\Shared\Domain\Exceptions\BusinessRuleException;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Tests\Support\RefreshDatabaseAsOwner;
 use Tests\TestCase;
@@ -50,6 +51,28 @@ final class ProblemDetailsTest extends TestCase
             Route::post(
                 'credenciales',
                 fn () => throw new class('problems.credenciales-invalidas.detail') extends AuthenticationFailedException {},
+            );
+
+            Route::post(
+                'regla',
+                fn () => throw new class('ordering.transition_not_allowed') extends BusinessRuleException
+                {
+                    public function rule(): string
+                    {
+                        return 'transicion-no-permitida';
+                    }
+                },
+            );
+
+            Route::post(
+                'regla-sin-tipo',
+                fn () => throw new class('ordering.transition_not_allowed') extends BusinessRuleException
+                {
+                    public function rule(): string
+                    {
+                        return 'regla-desconocida';
+                    }
+                },
             );
 
             Route::get(
@@ -150,6 +173,25 @@ final class ProblemDetailsTest extends TestCase
                 'detail',
                 'El correo o la contraseña no son correctos.',
             );
+    }
+
+    /** A broken business rule answers the problem type it names, with 409 and its translated message. */
+    public function test_business_rule_answers_its_own_problem_type(): void
+    {
+        $this->postJson('/api/v1/pruebas/regla')
+            ->assertConflict()
+            ->assertHeader('Content-Type', self::CONTENT_TYPE)
+            ->assertJsonPath('type', 'http://localhost/problemas/transicion-no-permitida')
+            ->assertJsonPath('title', 'Transición no permitida')
+            ->assertJsonPath('detail', 'El pedido no puede pasar a ese estado.');
+    }
+
+    /** A rule that is not in the catalog falls back to the generic conflict. */
+    public function test_unknown_business_rule_answers_a_conflict(): void
+    {
+        $this->postJson('/api/v1/pruebas/regla-sin-tipo')
+            ->assertConflict()
+            ->assertJsonPath('type', 'http://localhost/problemas/conflicto');
     }
 
     /** A protected route without a token answers an unauthenticated problem, even without an Accept header. */
