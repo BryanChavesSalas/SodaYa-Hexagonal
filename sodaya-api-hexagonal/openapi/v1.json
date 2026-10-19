@@ -44,7 +44,7 @@
         },
         {
             "name": "Cierres excepcionales",
-            "description": "D\u00edas en que la soda no abre aunque su horario diga lo contrario."
+            "description": "Fechas en las que la soda no atiende aunque su horario diga lo contrario."
         },
         {
             "name": "Horario de la soda",
@@ -299,7 +299,7 @@
         "/cocina/cierres": {
             "get": {
                 "operationId": "sodas.closures.index",
-                "summary": "Listar los cierres de la soda",
+                "summary": "Listar los cierres desde hoy",
                 "tags": [
                     "Cierres excepcionales"
                 ],
@@ -383,7 +383,8 @@
             },
             "post": {
                 "operationId": "sodas.closures.store",
-                "summary": "Registrar un cierre",
+                "description": "Responde 409 si la soda ya tiene un cierre en esa fecha.",
+                "summary": "Registrar un cierre por fecha",
                 "tags": [
                     "Cierres excepcionales"
                 ],
@@ -434,6 +435,7 @@
         "/cocina/cierres/hoy": {
             "post": {
                 "operationId": "sodas.closures.close-for-today",
+                "description": "Registra un cierre con la fecha de hoy en Costa Rica. Responde 409 si ya existe.",
                 "summary": "Cerrar por el resto del d\u00eda",
                 "tags": [
                     "Cierres excepcionales"
