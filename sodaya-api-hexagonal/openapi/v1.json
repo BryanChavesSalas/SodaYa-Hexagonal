@@ -31,6 +31,10 @@
             "description": "Consulta del men\u00fa de una soda sin iniciar sesi\u00f3n."
         },
         {
+            "name": "Promociones de la soda",
+            "description": "Horas felices: un descuento para toda la soda por d\u00eda de la semana y franja horaria, solo para el due\u00f1o."
+        },
+        {
             "name": "Sesiones",
             "description": "Ingreso con correo y contrase\u00f1a y cierre de sesi\u00f3n mediante tokens de acceso."
         },
@@ -1732,6 +1736,180 @@
                 ]
             }
         },
+        "/cocina/promociones": {
+            "get": {
+                "operationId": "catalog.promotions.index",
+                "description": "Ordenadas por d\u00eda y hora de inicio; el d\u00eda 1 es lunes y el 7 es domingo.",
+                "summary": "Consultar las promociones de la soda",
+                "tags": [
+                    "Promociones de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `Promocion`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Promocion"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            },
+            "post": {
+                "operationId": "catalog.promotions.store",
+                "description": "El descuento va de 1 % a 90 % y aplica a todos los platos de la soda desde `inicio`, incluido, hasta `fin`, excluido. Responde 409 `promocion-traslapada` si comparte un minuto con otra promoci\u00f3n del mismo d\u00eda.",
+                "summary": "Definir una promoci\u00f3n",
+                "tags": [
+                    "Promociones de la soda"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrearPromocion"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`Promocion`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Promocion"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            }
+        },
+        "/cocina/promociones/{promocion}": {
+            "delete": {
+                "operationId": "catalog.promotions.destroy",
+                "summary": "Eliminar una promoci\u00f3n",
+                "tags": [
+                    "Promociones de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "promocion",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            }
+        },
         "/puntos": {
             "get": {
                 "operationId": "loyalty.points.show",
@@ -2309,6 +2487,34 @@
                     "porciones_disponibles"
                 ],
                 "title": "CrearPlato"
+            },
+            "CrearPromocion": {
+                "type": "object",
+                "properties": {
+                    "dia": {
+                        "type": "integer",
+                        "description": "D\u00eda de la semana ISO 8601: 1 es lunes y 7 es domingo."
+                    },
+                    "inicio": {
+                        "type": "string",
+                        "description": "Hora de inicio, HH:MM, incluida en la promoci\u00f3n."
+                    },
+                    "fin": {
+                        "type": "string",
+                        "description": "Hora de fin, HH:MM, excluida de la promoci\u00f3n."
+                    },
+                    "porcentaje": {
+                        "type": "integer",
+                        "description": "Descuento en porcentaje, de 1 a 90."
+                    }
+                },
+                "required": [
+                    "dia",
+                    "inicio",
+                    "fin",
+                    "porcentaje"
+                ],
+                "title": "CrearPromocion"
             },
             "Credenciales": {
                 "type": "object",
@@ -2896,6 +3102,34 @@
                     "foto"
                 ],
                 "title": "PlatoDelMenu"
+            },
+            "Promocion": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "dia": {
+                        "type": "integer"
+                    },
+                    "inicio": {
+                        "type": "string"
+                    },
+                    "fin": {
+                        "type": "string"
+                    },
+                    "porcentaje": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "dia",
+                    "inicio",
+                    "fin",
+                    "porcentaje"
+                ],
+                "title": "Promocion"
             },
             "Puntos": {
                 "type": "object",

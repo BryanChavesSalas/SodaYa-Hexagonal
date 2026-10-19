@@ -88,6 +88,10 @@ return [
         'title' => 'Soda cerrada',
         'detail' => 'La soda no recibe pedidos en este momento.',
     ],
+    'promocion-traslapada' => [
+        'title' => 'Promoción traslapada',
+        'detail' => 'La promoción se traslapa con otra del mismo día.',
+    ],
     'demasiadas-solicitudes' => [
         'title' => 'Demasiadas solicitudes',
         'detail' => 'Superó el límite de solicitudes. Intente de nuevo más tarde.',

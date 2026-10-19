@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
+use Src\Catalog\Promotions\Infrastructure\Persistence\Models\PromotionModel;
 use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderLineModel;
 use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
 use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
@@ -70,6 +71,7 @@ final class ListingBudgetTest extends TestCase
             'opening hours' => ['slot', '/api/v1/cocina/horario?por_pagina=50'],
             'closures' => ['closure', '/api/v1/cocina/cierres?por_pagina=50'],
             'kitchen orders' => ['order', '/api/v1/cocina/pedidos?por_pagina=50'],
+            'promotions' => ['promotion', '/api/v1/cocina/promociones?por_pagina=50'],
             'public menu' => ['menu dish', '/api/v1/sodas/{soda}/platos'],
         ];
     }
@@ -126,6 +128,12 @@ final class ListingBudgetTest extends TestCase
                 'order' => OrderLineModel::factory()
                     ->for(OrderModel::factory()->confirmed()->create(['soda_id' => $this->soda->id]), 'order')
                     ->create(['dish_name' => $name(120), 'quantity' => 20]),
+                'promotion' => PromotionModel::factory()->create([
+                    'soda_id' => $this->soda->id,
+                    'weekday' => ($n - 1) % 7 + 1,
+                    'starts_at' => sprintf('%02d:%02d', intdiv($n - 1, 7), 0),
+                    'ends_at' => sprintf('%02d:%02d', intdiv($n - 1, 7), 30),
+                ]),
             };
         }
     }

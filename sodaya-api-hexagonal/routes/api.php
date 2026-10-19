@@ -7,6 +7,7 @@ require base_path('src/Billing/Payments/Infrastructure/Http/routes.php');
 require base_path('src/Catalog/Categories/Infrastructure/Http/routes.php');
 require base_path('src/Catalog/Dishes/Infrastructure/Http/routes.php');
 require base_path('src/Catalog/Menu/Infrastructure/Http/routes.php');
+require base_path('src/Catalog/Promotions/Infrastructure/Http/routes.php');
 require base_path('src/Identity/Users/Infrastructure/Http/routes.php');
 require base_path('src/Loyalty/Points/Infrastructure/Http/routes.php');
 require base_path('src/Ordering/Orders/Infrastructure/Http/routes.php');
