@@ -7,9 +7,13 @@ namespace Tests\Feature\Catalog\Promotions;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Laravel\Sanctum\Sanctum;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Catalog\Promotions\Infrastructure\Persistence\Models\PromotionModel;
+use Src\Identity\Users\Domain\ValueObjects\Role;
+use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\Catalog\ActsOnSoda;
@@ -103,6 +107,26 @@ final class CurrentPriceWithPromotionTest extends TestCase
 
         $this->deleteJson("/api/v1/cocina/promociones/{$promotionId}")->assertNoContent();
         $this->menu()->assertJsonPath('data.categorias.0.platos.0.precio_vigente', 2_800);
+    }
+
+    /** An order placed inside the happy hour freezes the discounted price in its lines, and the total follows. */
+    public function test_an_order_freezes_the_discounted_price(): void
+    {
+        $this->onWednesdayAt('14:10');
+        Sanctum::actingAs(UserModel::factory()->create(), Role::Customer->abilities());
+
+        $response = $this->postJson(
+            "/api/v1/sodas/{$this->soda->id}/pedidos",
+            ['lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 2]]],
+            ['Idempotency-Key' => (string) Str::uuid7()],
+        );
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.lineas.0.precio_unitario', 2_240)
+            ->assertJsonPath('data.total', 4_480);
+
+        $this->assertDatabaseHas('order_lines', ['order_id' => $response->json('data.id'), 'unit_price' => 2_240]);
     }
 
     /** Wednesday 21/10/2026 at that time of Costa Rica. */

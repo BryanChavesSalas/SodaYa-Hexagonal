@@ -64,7 +64,7 @@ final readonly class PlaceOrder
             throw SodaClosedException::create();
         }
 
-        $lines = $this->linesOf($sodaId, $command->lines);
+        $lines = $this->linesOf($sodaId, $command->lines, $now);
 
         try {
             $order = $this->transaction->run(function () use ($customerId, $sodaId, $lines, $now, $key): Order {
@@ -101,14 +101,15 @@ final readonly class PlaceOrder
     }
 
     /**
-     * Build the lines from the catalog: a dish the soda does not have, or took off the menu, stops the order.
+     * Build the lines from the catalog, with the price each dish sells for at the moment: a dish the soda does
+     * not have, or took off the menu, stops the order.
      *
      * @param  list<array{dish_id: string, quantity: int}>  $requested
      * @return list<OrderLine>
      */
-    private function linesOf(SodaId $sodaId, array $requested): array
+    private function linesOf(SodaId $sodaId, array $requested, DateTimeImmutable $now): array
     {
-        $dishes = $this->catalog->ofSoda($sodaId, array_column($requested, 'dish_id'));
+        $dishes = $this->catalog->ofSoda($sodaId, array_column($requested, 'dish_id'), $now);
         $lines = [];
 
         foreach ($requested as $line) {
