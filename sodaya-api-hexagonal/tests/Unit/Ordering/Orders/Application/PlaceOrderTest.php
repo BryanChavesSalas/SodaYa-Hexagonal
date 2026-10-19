@@ -7,9 +7,9 @@ namespace Tests\Unit\Ordering\Orders\Application;
 use PHPUnit\Framework\TestCase;
 use Src\Ordering\Orders\Application\DTOs\PlaceOrderCommand;
 use Src\Ordering\Orders\Application\UseCases\PlaceOrder;
+use Src\Ordering\Orders\Domain\Exceptions\OrderEmptyException;
 use Src\Ordering\Orders\Domain\Exceptions\PortionsSoldOutException;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
-use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Tests\Support\Ordering\FakeOrderDeadlines;
 use Tests\Support\Ordering\FakePortionStock;
 use Tests\Support\Ordering\InMemoryOrderRepository;
@@ -73,10 +73,10 @@ final class PlaceOrderTest extends TestCase
         }
     }
 
-    /** An order the domain rejects never reaches the stock. */
+    /** An order the domain rejects, like an empty one, never reaches the stock. */
     public function test_invalid_order_reserves_nothing(): void
     {
-        $this->expectException(InvalidValueException::class);
+        $this->expectException(OrderEmptyException::class);
 
         try {
             $this->placeOrder->execute(new PlaceOrderCommand(Orders::CUSTOMER_ID, Orders::SODA_ID, []), Orders::at('12:00'));

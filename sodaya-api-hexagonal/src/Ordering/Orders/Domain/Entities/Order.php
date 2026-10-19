@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Src\Ordering\Orders\Domain\Entities;
 
 use DateTimeImmutable;
+use Src\Ordering\Orders\Domain\Exceptions\OrderEmptyException;
 use Src\Ordering\Orders\Domain\Exceptions\OrderNotPaidException;
 use Src\Ordering\Orders\Domain\Exceptions\TransitionNotAllowedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
@@ -47,7 +48,7 @@ final class Order
     ) {}
 
     /**
-     * Place a new order: it starts pending, with between 1 and 20 lines and one line per dish.
+     * Place a new order: it starts pending, with at least one line, at most 20, and one line per dish.
      *
      * @param  list<OrderLine>  $lines
      */
@@ -58,7 +59,11 @@ final class Order
         array $lines,
         DateTimeImmutable $placedAt,
     ): self {
-        if (count($lines) < self::MIN_LINES || count($lines) > self::MAX_LINES) {
+        if (count($lines) < self::MIN_LINES) {
+            throw OrderEmptyException::create();
+        }
+
+        if (count($lines) > self::MAX_LINES) {
             throw new InvalidValueException('ordering.lines_out_of_range', ['min' => self::MIN_LINES, 'max' => self::MAX_LINES]);
         }
 

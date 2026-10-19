@@ -52,6 +52,26 @@ return [
         'title' => 'Datos inválidos',
         'detail' => 'Los datos enviados no son válidos.',
     ],
+    'pedido-vacio' => [
+        'title' => 'Pedido vacío',
+        'detail' => 'El pedido debe tener al menos una línea.',
+    ],
+    'cantidad-invalida' => [
+        'title' => 'Cantidad inválida',
+        'detail' => 'La cantidad de cada línea debe estar entre 1 y 20.',
+    ],
+    'plato-no-pertenece-a-la-soda' => [
+        'title' => 'Plato de otra soda',
+        'detail' => 'Un plato del pedido no pertenece a la soda.',
+    ],
+    'plato-no-disponible' => [
+        'title' => 'Plato no disponible',
+        'detail' => 'Un plato del pedido no está disponible.',
+    ],
+    'soda-cerrada' => [
+        'title' => 'Soda cerrada',
+        'detail' => 'La soda no recibe pedidos en este momento.',
+    ],
     'demasiadas-solicitudes' => [
         'title' => 'Demasiadas solicitudes',
         'detail' => 'Superó el límite de solicitudes. Intente de nuevo más tarde.',

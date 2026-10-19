@@ -7,7 +7,9 @@ namespace Tests\Unit\Ordering\Orders\Domain;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Src\Ordering\Orders\Domain\Entities\Order;
+use Src\Ordering\Orders\Domain\Exceptions\OrderEmptyException;
 use Src\Ordering\Orders\Domain\Exceptions\OrderNotPaidException;
+use Src\Ordering\Orders\Domain\Exceptions\QuantityOutOfRangeException;
 use Src\Ordering\Orders\Domain\Exceptions\TransitionNotAllowedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
@@ -17,6 +19,7 @@ use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Tests\Support\Ordering\Orders;
+use Throwable;
 
 final class OrderTest extends TestCase
 {
@@ -33,9 +36,9 @@ final class OrderTest extends TestCase
         $this->assertNull($order->cancellationOrigin);
     }
 
-    /** An order needs between 1 and 20 lines. */
+    /** An order needs between 1 and 20 lines: none is an empty order, more than 20 is invalid data. */
     #[DataProvider('lineCounts')]
-    public function test_number_of_lines_is_limited(int $count, bool $valid): void
+    public function test_number_of_lines_is_limited(int $count, ?string $exception): void
     {
         $lines = [];
 
@@ -43,8 +46,8 @@ final class OrderTest extends TestCase
             $lines[] = Orders::line(sprintf('0192f0c4-0000-7000-8000-%012d', $i));
         }
 
-        if (! $valid) {
-            $this->expectException(InvalidValueException::class);
+        if ($exception !== null) {
+            $this->expectException($exception);
         }
 
         $order = Order::place(new OrderId(Orders::ORDER_ID), new SodaId(Orders::SODA_ID), new CustomerId(Orders::CUSTOMER_ID), $lines, Orders::at('12:00'));
@@ -53,18 +56,25 @@ final class OrderTest extends TestCase
     }
 
     /**
-     * Line counts at and beyond the limits.
+     * Line counts at and beyond the limits, with the exception each one raises.
      *
-     * @return array<string, array{int, bool}>
+     * @return array<string, array{int, class-string<Throwable>|null}>
      */
     public static function lineCounts(): array
     {
         return [
-            'no lines' => [0, false],
-            'one line' => [1, true],
-            'twenty lines' => [20, true],
-            'twenty-one lines' => [21, false],
+            'no lines' => [0, OrderEmptyException::class],
+            'one line' => [1, null],
+            'twenty lines' => [20, null],
+            'twenty-one lines' => [21, InvalidValueException::class],
         ];
+    }
+
+    /** The rules the API publishes with their own problem type carry a stable name. */
+    public function test_named_rules_keep_their_problem_type(): void
+    {
+        $this->assertSame('pedido-vacio', OrderEmptyException::create()->rule());
+        $this->assertSame('cantidad-invalida', QuantityOutOfRangeException::create()->rule());
     }
 
     /** The same dish cannot appear in two lines. */
@@ -81,29 +91,29 @@ final class OrderTest extends TestCase
         );
     }
 
-    /** Quantities go from 1 to 20 and prices keep the range of the catalog. */
+    /** Quantities go from 1 to 20, with a rule of their own, and prices keep the range of the catalog. */
     #[DataProvider('invalidLines')]
-    public function test_invalid_lines_are_rejected(int $quantity, int $price, string $name): void
+    public function test_invalid_lines_are_rejected(int $quantity, int $price, string $name, string $exception): void
     {
-        $this->expectException(InvalidValueException::class);
+        $this->expectException($exception);
 
         Orders::line(quantity: $quantity, price: $price, name: $name);
     }
 
     /**
-     * Lines that break one rule each.
+     * Lines that break one rule each, with the exception each one raises.
      *
-     * @return array<string, array{int, int, string}>
+     * @return array<string, array{int, int, string, class-string<Throwable>}>
      */
     public static function invalidLines(): array
     {
         return [
-            'zero portions' => [0, 2_800, 'Casado'],
-            'twenty-one portions' => [21, 2_800, 'Casado'],
-            'price below the minimum' => [1, 99, 'Casado'],
-            'price above the maximum' => [1, 100_001, 'Casado'],
-            'blank name' => [1, 2_800, '  '],
-            'name too long' => [1, 2_800, str_repeat('a', 121)],
+            'zero portions' => [0, 2_800, 'Casado', QuantityOutOfRangeException::class],
+            'twenty-one portions' => [21, 2_800, 'Casado', QuantityOutOfRangeException::class],
+            'price below the minimum' => [1, 99, 'Casado', InvalidValueException::class],
+            'price above the maximum' => [1, 100_001, 'Casado', InvalidValueException::class],
+            'blank name' => [1, 2_800, '  ', InvalidValueException::class],
+            'name too long' => [1, 2_800, str_repeat('a', 121), InvalidValueException::class],
         ];
     }
 

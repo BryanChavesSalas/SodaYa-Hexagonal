@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Ordering\Orders\Domain\ValueObjects;
 
-use Src\Shared\Domain\Exceptions\InvalidValueException;
+use Src\Ordering\Orders\Domain\Exceptions\QuantityOutOfRangeException;
 
 final readonly class Quantity
 {
@@ -16,7 +16,7 @@ final readonly class Quantity
     public function __construct(public int $value)
     {
         if ($value < self::MIN || $value > self::MAX) {
-            throw new InvalidValueException('ordering.quantity_out_of_range', ['min' => self::MIN, 'max' => self::MAX]);
+            throw QuantityOutOfRangeException::create();
         }
     }
 }
