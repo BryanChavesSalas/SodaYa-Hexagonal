@@ -65,6 +65,12 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Mínimo de pedidos | `minimumOrders` | `p_min_orders` | `minimo_pedidos` |
 | Reserva de porciones | `PortionStock::reserve()` | `fn_reserve_portions` | — |
 | Porciones agotadas | `PortionsSoldOutException` | — | `porciones-agotadas` |
+| Pedido vacío | `OrderEmptyException` | — | `pedido-vacio` |
+| Cantidad inválida | `QuantityOutOfRangeException` | — | `cantidad-invalida` |
+| Plato de otra soda | `DishNotOfSodaException` | — | `plato-no-pertenece-a-la-soda` |
+| Plato no disponible | `DishUnavailableException` | — | `plato-no-disponible` |
+| Soda cerrada | `SodaClosedException` | — | `soda-cerrada` |
+| Plato del catálogo para pedir | `OrderableDish` | — | `plato_id` |
 | Movimiento de puntos | `PointMovement` | `point_movements` | `movimientos` |
 | Compra | `MovementReason::Purchase` | `purchase` | `compra` |
 | Canje | `MovementReason::Redemption` | `redemption` | `canje` |
@@ -102,7 +108,8 @@ Los términos de los contextos que aún no existen (pagos) quedan reservados par
 
 ## Pedidos
 
-- Un **pedido** pertenece a una soda y a un cliente, y tiene de 1 a 20 líneas, una por plato, con cantidades de 1 a 20.
+- Un **pedido** pertenece a una soda y a un cliente, y tiene de 1 a 20 líneas, una por plato, con cantidades de 1 a 20. Sin líneas es un **pedido vacío**; con una cantidad fuera del rango, una **cantidad inválida**.
+- Solo se pide en una soda **abierta** y solo platos **activos** de esa soda: un plato de otra soda se trata como un plato que no existe.
 - La **línea** congela el nombre y el precio que tenía el plato al pedirlo: un cambio posterior del menú no altera un pedido hecho.
 - El pedido avanza en un solo sentido: **pendiente**, **confirmado**, **listo** y **entregado**. Se puede **cancelar** mientras está pendiente o confirmado, y la cancelación registra quién la originó: el cliente, la cocina, la falta de pago o la falta de confirmación.
 - Entregado y cancelado son estados finales.
