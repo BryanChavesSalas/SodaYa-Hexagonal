@@ -46,7 +46,7 @@ final readonly class ProblemDetailsRenderer
     private function typeOfDomainException(DomainException $exception): ProblemType
     {
         return match (true) {
-            $exception instanceof NotFoundException => ProblemType::NotFound,
+            $exception instanceof NotFoundException => ProblemType::tryFrom($exception->type() ?? '') ?? ProblemType::NotFound,
             $exception instanceof InvalidValueException => ProblemType::InvalidData,
             $exception instanceof AuthenticationFailedException => ProblemType::InvalidCredentials,
             $exception instanceof BusinessRuleException => ProblemType::tryFrom($exception->rule()) ?? ProblemType::Conflict,

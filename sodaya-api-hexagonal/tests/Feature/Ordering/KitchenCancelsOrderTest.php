@@ -139,7 +139,7 @@ final class KitchenCancelsOrderTest extends TestCase
     {
         $foreign = OrderModel::factory()->create();
 
-        $foreignResponse = $this->postJson($this->endpoint($foreign->id))->assertNotFound();
+        $foreignResponse = $this->postJson($this->endpoint($foreign->id))->assertNotFound()->assertJsonPath('type', 'http://localhost/problemas/pedido-no-encontrado');
         $missingResponse = $this->postJson($this->endpoint(self::MISSING_ID))->assertNotFound();
 
         $this->assertSame(Arr::except($missingResponse->json(), 'instance'), Arr::except($foreignResponse->json(), 'instance'));

@@ -21,12 +21,14 @@ use Src\Ordering\Orders\Infrastructure\Catalog\EloquentOrderableDishes;
 use Src\Ordering\Orders\Infrastructure\Console\ExpireOrdersConsoleCommand;
 use Src\Ordering\Orders\Infrastructure\Loyalty\QueuedLoyaltyRewards;
 use Src\Ordering\Orders\Infrastructure\Persistence\CounterPickupNumbers;
+use Src\Ordering\Orders\Infrastructure\Persistence\Queries\EloquentSodaOfOrder;
 use Src\Ordering\Orders\Infrastructure\Persistence\Queries\MaintenanceExpiredOrders;
 use Src\Ordering\Orders\Infrastructure\Persistence\Repositories\EloquentOrderRepository;
 use Src\Ordering\Orders\Infrastructure\Queue\QueuedCustomerNotices;
 use Src\Ordering\Orders\Infrastructure\Queue\QueuedOrderDeadlines;
 use Src\Ordering\Orders\Infrastructure\Queue\QueuedRefundRequests;
 use Src\Ordering\Orders\Infrastructure\Sodas\OpeningHoursSodaSchedule;
+use Src\Shared\Infrastructure\Tenancy\SodaOfOrder;
 
 final class OrdersServiceProvider extends ServiceProvider
 {
@@ -46,6 +48,7 @@ final class OrdersServiceProvider extends ServiceProvider
         OrderDeadlines::class => QueuedOrderDeadlines::class,
         ExpiredOrders::class => MaintenanceExpiredOrders::class,
         LoyaltyRewards::class => QueuedLoyaltyRewards::class,
+        SodaOfOrder::class => EloquentSodaOfOrder::class,
     ];
 
     /** Register the console command of the module and run it every minute, as a safety net for the deadlines of the queue. */

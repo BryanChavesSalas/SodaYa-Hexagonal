@@ -24,6 +24,10 @@ return [
         'title' => 'Recurso no encontrado',
         'detail' => 'El recurso solicitado no existe.',
     ],
+    'pedido-no-encontrado' => [
+        'title' => 'Pedido no encontrado',
+        'detail' => 'El pedido no existe.',
+    ],
     'metodo-no-permitido' => [
         'title' => 'Método no permitido',
         'detail' => 'La ruta no acepta el método HTTP usado.',

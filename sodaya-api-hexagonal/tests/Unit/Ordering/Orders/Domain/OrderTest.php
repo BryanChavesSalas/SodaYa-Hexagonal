@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Exceptions\OrderEmptyException;
+use Src\Ordering\Orders\Domain\Exceptions\OrderNotFoundException;
 use Src\Ordering\Orders\Domain\Exceptions\OrderNotPaidException;
 use Src\Ordering\Orders\Domain\Exceptions\QuantityOutOfRangeException;
 use Src\Ordering\Orders\Domain\Exceptions\TransitionNotAllowedException;
@@ -113,6 +114,7 @@ final class OrderTest extends TestCase
     {
         $this->assertSame('pedido-vacio', OrderEmptyException::create()->rule());
         $this->assertSame('cantidad-invalida', QuantityOutOfRangeException::create()->rule());
+        $this->assertSame('pedido-no-encontrado', OrderNotFoundException::create()->type());
     }
 
     /** The same dish cannot appear in two lines. */

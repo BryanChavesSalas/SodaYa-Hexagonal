@@ -117,6 +117,7 @@ final class AdvanceOrderTest extends TestCase
         $missingResponse = $this->patchJson($this->endpoint(self::MISSING_ID), ['estado' => 'confirmado'])->assertNotFound();
 
         $this->assertSame(Arr::except($missingResponse->json(), 'instance'), Arr::except($foreignResponse->json(), 'instance'));
+        $this->assertSame('http://localhost/problemas/pedido-no-encontrado', $foreignResponse->json('type'));
         $this->assertSame('El pedido no existe.', $foreignResponse->json('detail'));
         $this->scopeQueriesTo($foreign->soda_id);
         $this->assertSame('pending', $foreign->refresh()->status);

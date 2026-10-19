@@ -11,6 +11,7 @@ enum ProblemType: string
     case InvalidCredentials = 'credenciales-invalidas';
     case Forbidden = 'prohibido';
     case NotFound = 'no-encontrado';
+    case OrderNotFound = 'pedido-no-encontrado';
     case MethodNotAllowed = 'metodo-no-permitido';
     case Conflict = 'conflicto';
     case TransitionNotAllowed = 'transicion-no-permitida';
@@ -34,7 +35,7 @@ enum ProblemType: string
             self::BadRequest => 400,
             self::Unauthenticated, self::InvalidCredentials => 401,
             self::Forbidden => 403,
-            self::NotFound => 404,
+            self::NotFound, self::OrderNotFound => 404,
             self::MethodNotAllowed => 405,
             self::Conflict, self::TransitionNotAllowed, self::OrderNotPaid, self::PortionsSoldOut, self::InsufficientPoints, self::DishUnavailable, self::SodaClosed => 409,
             self::InvalidData, self::OrderEmpty, self::QuantityInvalid, self::DishNotOfSoda => 422,
