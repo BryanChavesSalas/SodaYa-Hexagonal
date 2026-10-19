@@ -7,6 +7,8 @@ namespace Src\Catalog\Dishes\Domain\Contracts;
 use Src\Catalog\Dishes\Domain\Entities\Dish;
 use Src\Catalog\Dishes\Domain\Exceptions\DishNameAlreadyInUseException;
 use Src\Catalog\Dishes\Domain\ValueObjects\DishId;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 
 interface DishRepository
@@ -25,9 +27,9 @@ interface DishRepository
     public function find(DishId $id, SodaId $sodaId): ?Dish;
 
     /**
-     * List every dish of a soda ordered by name.
+     * List one page of the dishes of a soda ordered by name.
      *
-     * @return list<Dish>
+     * @return Page<Dish>
      */
-    public function allOf(SodaId $sodaId): array;
+    public function pageOf(SodaId $sodaId, PageRequest $page): Page;
 }

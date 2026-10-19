@@ -32,6 +32,7 @@ final readonly class CreateDish
             new PreparationTime($command->preparationMinutes),
             new Portions($command->availablePortions),
             $command->categoryId === null ? null : new CategoryId($command->categoryId),
+            $command->basePortions === null ? null : new Portions($command->basePortions),
         );
 
         $this->dishes->save($dish);

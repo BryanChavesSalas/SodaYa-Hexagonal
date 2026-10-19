@@ -28,7 +28,19 @@
         },
         {
             "name": "Sesiones",
-            "description": "Ingreso con correo y contrase\u00f1a mediante tokens de acceso."
+            "description": "Ingreso con correo y contrase\u00f1a y cierre de sesi\u00f3n mediante tokens de acceso."
+        },
+        {
+            "name": "Puntos",
+            "description": "Saldo y canje de los puntos de lealtad del cliente autenticado."
+        },
+        {
+            "name": "Pedidos de la cocina",
+            "description": "Avance y cancelaci\u00f3n de los pedidos por el personal de la soda."
+        },
+        {
+            "name": "Reportes",
+            "description": "Reportes de ventas de la soda, solo para el due\u00f1o."
         },
         {
             "name": "Cierres excepcionales",
@@ -37,6 +49,10 @@
         {
             "name": "Horario de la soda",
             "description": "Franjas de atenci\u00f3n por d\u00eda de la semana; el d\u00eda 1 es lunes y el 7 es domingo."
+        },
+        {
+            "name": "Perfil de la soda",
+            "description": "Datos p\u00fablicos de la soda que administra el due\u00f1o."
         }
     ],
     "security": [
@@ -52,6 +68,27 @@
                 "tags": [
                     "Categor\u00edas de la soda"
                 ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Array of `Categoria`",
@@ -65,14 +102,41 @@
                                             "items": {
                                                 "$ref": "#/components/schemas/Categoria"
                                             }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "meta"
                                     ]
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -116,6 +180,9 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -176,6 +243,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -211,6 +281,9 @@
                     "204": {
                         "description": "No content"
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -230,6 +303,27 @@
                 "tags": [
                     "Cierres excepcionales"
                 ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Array of `Cierre`",
@@ -243,14 +337,41 @@
                                             "items": {
                                                 "$ref": "#/components/schemas/Cierre"
                                             }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "meta"
                                     ]
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -294,6 +415,9 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -342,6 +466,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -375,6 +502,9 @@
                 "responses": {
                     "204": {
                         "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -430,6 +560,27 @@
                 "tags": [
                     "Horario de la soda"
                 ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Array of `Franja`",
@@ -443,14 +594,41 @@
                                             "items": {
                                                 "$ref": "#/components/schemas/Franja"
                                             }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "meta"
                                     ]
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -496,6 +674,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -529,6 +710,9 @@
                 "responses": {
                     "204": {
                         "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -640,12 +824,204 @@
                 "security": []
             }
         },
+        "/cocina/pedidos/{pedido}/estado": {
+            "patch": {
+                "operationId": "ordering.kitchen-orders.status.update",
+                "description": "El pedido avanza un paso: pendiente, confirmado, listo, entregado. Un salto o un retroceso responde 409 `transicion-no-permitida`, y confirmar un pedido sin pago aprobado responde 409 `pedido-sin-pago`.",
+                "summary": "Avanzar el estado de un pedido",
+                "tags": [
+                    "Pedidos de la cocina"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CambioDeEstado"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Pedido`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Pedido"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "cocina"
+                ]
+            }
+        },
+        "/cocina/pedidos/{pedido}/cancelacion": {
+            "post": {
+                "operationId": "ordering.kitchen-orders.cancellation.store",
+                "description": "Cancela un pedido pendiente o confirmado y registra que la cancelaci\u00f3n la origin\u00f3 la cocina. Las porciones vuelven al men\u00fa y, si el pedido estaba pagado, se solicita el reembolso. Un pedido listo o entregado responde 409 `transicion-no-permitida`. Cancelar un pedido ya cancelado no lo cambia.",
+                "summary": "Cancelar un pedido desde la cocina",
+                "tags": [
+                    "Pedidos de la cocina"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`Pedido`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Pedido"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "cocina"
+                ]
+            }
+        },
+        "/cocina/logo": {
+            "post": {
+                "operationId": "sodas.profile.logo.store",
+                "description": "Acepta JPG, PNG o WebP de hasta 2 MB y 4000 \u00d7 4000 p\u00edxeles. El tipo se lee del contenido del archivo y el servidor genera el nombre con que se guarda.",
+                "summary": "Subir el logo de la soda",
+                "tags": [
+                    "Perfil de la soda"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LogoDeLaSoda"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Soda`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Soda"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            }
+        },
         "/cocina/platos": {
             "get": {
                 "operationId": "catalog.dishes.index",
                 "summary": "Listar los platos de la soda",
                 "tags": [
                     "Platos de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -660,14 +1036,41 @@
                                             "items": {
                                                 "$ref": "#/components/schemas/Plato"
                                             }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "meta"
                                     ]
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -711,6 +1114,9 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -770,6 +1176,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -778,6 +1187,227 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            }
+        },
+        "/cocina/platos/{plato}/foto": {
+            "post": {
+                "operationId": "catalog.dishes.photo.store",
+                "description": "Acepta JPG, PNG o WebP de hasta 2 MB y 4000 \u00d7 4000 p\u00edxeles. El tipo se lee del contenido del archivo y el servidor genera el nombre con que se guarda.",
+                "summary": "Subir la foto de un plato",
+                "tags": [
+                    "Platos de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "plato",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FotoDelPlato"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Plato`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Plato"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            }
+        },
+        "/puntos": {
+            "get": {
+                "operationId": "loyalty.points.show",
+                "description": "Responde el saldo del cliente autenticado y sus \u00faltimos 20 movimientos, del m\u00e1s reciente al m\u00e1s antiguo. Cada cliente solo ve sus propios puntos.",
+                "summary": "Consultar el saldo de puntos",
+                "tags": [
+                    "Puntos"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`Puntos`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Puntos"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
+        "/puntos/canjes": {
+            "post": {
+                "operationId": "loyalty.points.redemptions.store",
+                "description": "Registra un canje de puntos del cliente autenticado y responde el saldo que queda. Un canje mayor que el saldo responde 409 `puntos-insuficientes`. El valor del punto y su aplicaci\u00f3n como descuento est\u00e1n pendientes de definir.",
+                "summary": "Canjear puntos",
+                "tags": [
+                    "Puntos"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Canje"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`MovimientoDePuntos`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/MovimientoDePuntos"
+                                        },
+                                        "saldo": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "saldo"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
+        "/cocina/reportes/ventas-por-hora": {
+            "get": {
+                "operationId": "reporting.sales.hourly",
+                "description": "Cuenta los pedidos entregados de una fecha y suma lo que vendieron, por la hora de Costa Rica en que se crearon. Los totales no incluyen propinas. Solo aparecen las horas con al menos `minimo_pedidos` pedidos.",
+                "summary": "Consultar las ventas por hora",
+                "tags": [
+                    "Reportes"
+                ],
+                "parameters": [
+                    {
+                        "name": "fecha",
+                        "in": "query",
+                        "description": "Fecha del reporte, AAAA-MM-DD. Por defecto, hoy en Costa Rica.",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "minimo_pedidos",
+                        "in": "query",
+                        "description": "Cantidad m\u00ednima de pedidos que debe tener una hora para aparecer. Por defecto, 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1000
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VentasPorHora`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/VentasPorHora"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     }
                 },
                 "x-abilities": [
@@ -827,6 +1457,40 @@
                     }
                 },
                 "security": []
+            },
+            "delete": {
+                "operationId": "identity.tokens.destroy-all",
+                "description": "Revoca todos los tokens de la persona, incluido el de la petici\u00f3n.",
+                "summary": "Cerrar la sesi\u00f3n en todos los dispositivos",
+                "tags": [
+                    "Sesiones"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/tokens/actual": {
+            "delete": {
+                "operationId": "identity.tokens.destroy-current",
+                "description": "Revoca el token con el que se hace la petici\u00f3n. Desde ese momento el token responde 401 `no-autenticado`.",
+                "summary": "Cerrar la sesi\u00f3n en este dispositivo",
+                "tags": [
+                    "Sesiones"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                }
             }
         }
     },
@@ -867,6 +1531,12 @@
                         "minimum": 0,
                         "maximum": 500
                     },
+                    "porciones_base": {
+                        "type": "integer",
+                        "description": "Porciones que la soda prepara en un d\u00eda normal; cambiarlas no toca las disponibles de hoy.",
+                        "minimum": 0,
+                        "maximum": 500
+                    },
                     "categoria_id": {
                         "type": [
                             "string",
@@ -879,6 +1549,38 @@
                     }
                 },
                 "title": "ActualizarPlato"
+            },
+            "CambioDeEstado": {
+                "type": "object",
+                "properties": {
+                    "estado": {
+                        "type": "string",
+                        "enum": [
+                            "confirmado",
+                            "listo",
+                            "entregado"
+                        ]
+                    }
+                },
+                "required": [
+                    "estado"
+                ],
+                "title": "CambioDeEstado"
+            },
+            "Canje": {
+                "type": "object",
+                "properties": {
+                    "puntos": {
+                        "type": "integer",
+                        "description": "Puntos que se canjean, un n\u00famero entero mayor que cero.",
+                        "minimum": 1,
+                        "maximum": 1000000
+                    }
+                },
+                "required": [
+                    "puntos"
+                ],
+                "title": "Canje"
             },
             "Categoria": {
                 "type": "object",
@@ -1023,6 +1725,12 @@
                         "minimum": 0,
                         "maximum": 500
                     },
+                    "porciones_base": {
+                        "type": "integer",
+                        "description": "Porciones que la soda prepara en un d\u00eda normal. Por defecto, las disponibles.",
+                        "minimum": 0,
+                        "maximum": 500
+                    },
                     "categoria_id": {
                         "type": [
                             "string",
@@ -1062,6 +1770,21 @@
                 ],
                 "title": "Credenciales"
             },
+            "FotoDelPlato": {
+                "type": "object",
+                "properties": {
+                    "foto": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "description": "Maximum file size: 2048 kilobytes."
+                    }
+                },
+                "required": [
+                    "foto"
+                ],
+                "title": "FotoDelPlato"
+            },
             "Franja": {
                 "type": "object",
                 "properties": {
@@ -1086,6 +1809,21 @@
                 ],
                 "title": "Franja"
             },
+            "LogoDeLaSoda": {
+                "type": "object",
+                "properties": {
+                    "logo": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "description": "Maximum file size: 2048 kilobytes."
+                    }
+                },
+                "required": [
+                    "logo"
+                ],
+                "title": "LogoDeLaSoda"
+            },
             "MenuPublico": {
                 "type": "object",
                 "properties": {
@@ -1097,11 +1835,18 @@
                             },
                             "nombre": {
                                 "type": "string"
+                            },
+                            "logo": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             }
                         },
                         "required": [
                             "id",
-                            "nombre"
+                            "nombre",
+                            "logo"
                         ]
                     },
                     "abierta": {
@@ -1120,6 +1865,145 @@
                     "categorias"
                 ],
                 "title": "MenuPublico"
+            },
+            "MovimientoDePuntos": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "motivo": {
+                        "type": "string",
+                        "enum": [
+                            "compra",
+                            "canje"
+                        ]
+                    },
+                    "puntos": {
+                        "type": "integer"
+                    },
+                    "pedido_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "creado_en": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "motivo",
+                    "puntos",
+                    "pedido_id",
+                    "creado_en"
+                ],
+                "title": "MovimientoDePuntos"
+            },
+            "Pedido": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "estado": {
+                        "type": "string",
+                        "enum": [
+                            "pendiente",
+                            "confirmado",
+                            "listo",
+                            "entregado",
+                            "cancelado"
+                        ]
+                    },
+                    "cancelado_por": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "cliente",
+                            "cocina",
+                            "falta_de_pago",
+                            "falta_de_confirmacion",
+                            null
+                        ]
+                    },
+                    "pago": {
+                        "type": "object",
+                        "properties": {
+                            "estado": {
+                                "type": "string",
+                                "enum": [
+                                    "aprobado",
+                                    "pendiente"
+                                ]
+                            },
+                            "aprobado_en": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "estado",
+                            "aprobado_en"
+                        ]
+                    },
+                    "lineas": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "creado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "confirmado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "listo_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "entregado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cancelado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "estado",
+                    "cancelado_por",
+                    "pago",
+                    "lineas",
+                    "total",
+                    "creado_en",
+                    "confirmado_en",
+                    "listo_en",
+                    "entregado_en",
+                    "cancelado_en"
+                ],
+                "title": "Pedido"
             },
             "Plato": {
                 "type": "object",
@@ -1145,6 +2029,9 @@
                     "porciones_disponibles": {
                         "type": "integer"
                     },
+                    "porciones_base": {
+                        "type": "integer"
+                    },
                     "categoria_id": {
                         "type": [
                             "string",
@@ -1156,6 +2043,12 @@
                     },
                     "agotado": {
                         "type": "boolean"
+                    },
+                    "foto": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
@@ -1165,9 +2058,11 @@
                     "precio",
                     "minutos_preparacion",
                     "porciones_disponibles",
+                    "porciones_base",
                     "categoria_id",
                     "activo",
-                    "agotado"
+                    "agotado",
+                    "foto"
                 ],
                 "title": "Plato"
             },
@@ -1200,6 +2095,12 @@
                     },
                     "actualizado_en": {
                         "type": "string"
+                    },
+                    "foto": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
@@ -1210,9 +2111,27 @@
                     "minutos_preparacion",
                     "porciones_disponibles",
                     "agotado",
-                    "actualizado_en"
+                    "actualizado_en",
+                    "foto"
                 ],
                 "title": "PlatoDelMenu"
+            },
+            "Puntos": {
+                "type": "object",
+                "properties": {
+                    "saldo": {
+                        "type": "integer"
+                    },
+                    "movimientos": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "saldo",
+                    "movimientos"
+                ],
+                "title": "Puntos"
             },
             "RegistrarCierre": {
                 "type": "object",
@@ -1247,6 +2166,29 @@
                 ],
                 "title": "RenombrarCategoria"
             },
+            "Soda": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "nombre": {
+                        "type": "string"
+                    },
+                    "logo": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "nombre",
+                    "logo"
+                ],
+                "title": "Soda"
+            },
             "TokenDeAcceso": {
                 "type": "object",
                 "properties": {
@@ -1270,9 +2212,66 @@
                     "abilities"
                 ],
                 "title": "TokenDeAcceso"
+            },
+            "VentasPorHora": {
+                "type": "object",
+                "properties": {
+                    "fecha": {
+                        "type": "string"
+                    },
+                    "minimo_pedidos": {
+                        "type": "integer"
+                    },
+                    "horas": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "fecha",
+                    "minimo_pedidos",
+                    "horas"
+                ],
+                "title": "VentasPorHora"
             }
         },
         "responses": {
+            "Unauthenticated": {
+                "description": "No autenticado",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "title": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "integer"
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string",
+                                    "format": "uri"
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance"
+                            ]
+                        }
+                    }
+                }
+            },
             "NotFound": {
                 "description": "Recurso no encontrado",
                 "content": {

@@ -13,6 +13,10 @@ enum ProblemType: string
     case NotFound = 'no-encontrado';
     case MethodNotAllowed = 'metodo-no-permitido';
     case Conflict = 'conflicto';
+    case TransitionNotAllowed = 'transicion-no-permitida';
+    case OrderNotPaid = 'pedido-sin-pago';
+    case PortionsSoldOut = 'porciones-agotadas';
+    case InsufficientPoints = 'puntos-insuficientes';
     case InvalidData = 'datos-invalidos';
     case TooManyRequests = 'demasiadas-solicitudes';
     case InternalError = 'error-interno';
@@ -27,7 +31,7 @@ enum ProblemType: string
             self::Forbidden => 403,
             self::NotFound => 404,
             self::MethodNotAllowed => 405,
-            self::Conflict => 409,
+            self::Conflict, self::TransitionNotAllowed, self::OrderNotPaid, self::PortionsSoldOut, self::InsufficientPoints => 409,
             self::InvalidData => 422,
             self::TooManyRequests => 429,
             self::InternalError => 500,

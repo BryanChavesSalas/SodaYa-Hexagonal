@@ -43,6 +43,22 @@ final class RowLevelSecurityTest extends TestCase
         }
     }
 
+    /** Every view with a soda_id column runs with the permissions of whoever queries it, so the policies of its tables apply. */
+    public function test_every_view_of_a_soda_is_security_invoker(): void
+    {
+        $views = $this->relationsWithASodaColumn('VIEW');
+
+        $this->assertContains('v_hourly_sales', $views);
+
+        foreach ($views as $view) {
+            $this->assertSame(
+                'security_invoker=true',
+                DB::scalar("select array_to_string(reloptions, ',') from pg_class where oid = ?::regclass", [$view]),
+                "The view {$view} is not security_invoker.",
+            );
+        }
+    }
+
     /** The tests run as the application role, the same one the requests use. */
     public function test_queries_run_as_the_application_role(): void
     {
@@ -52,10 +68,7 @@ final class RowLevelSecurityTest extends TestCase
     /** Every table with a soda_id column, except users, has row-level security enabled, forced and one isolation policy. */
     public function test_every_table_of_a_soda_is_protected_by_its_policy(): void
     {
-        $tables = array_column(DB::select(
-            "select table_name from information_schema.columns
-             where table_schema = 'public' and column_name = 'soda_id' and table_name <> 'users'",
-        ), 'table_name');
+        $tables = $this->relationsWithASodaColumn('BASE TABLE');
 
         foreach (self::tables() as [$table]) {
             $this->assertContains($table, $tables);
@@ -189,5 +202,20 @@ final class RowLevelSecurityTest extends TestCase
             $this->assertSame('42501', $exception->getCode());
             $this->assertStringContainsString('violates row-level security policy', $exception->getMessage());
         }
+    }
+
+    /**
+     * Tables or views of the public schema with a soda_id column, except users.
+     *
+     * @return list<string>
+     */
+    private function relationsWithASodaColumn(string $type): array
+    {
+        return array_column(DB::select(
+            "select c.table_name from information_schema.columns c
+             join information_schema.tables t on t.table_schema = c.table_schema and t.table_name = c.table_name
+             where c.table_schema = 'public' and c.column_name = 'soda_id' and c.table_name <> 'users' and t.table_type = ?",
+            [$type],
+        ), 'table_name');
     }
 }

@@ -8,6 +8,7 @@ use Dedoc\Scramble\Attributes\SchemaName;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Src\Catalog\Menu\Application\DTOs\PublicMenu;
+use Src\Shared\Domain\Contracts\ImageStorage;
 
 /**
  * @property-read PublicMenu $resource
@@ -22,7 +23,7 @@ final class PublicMenuResource extends JsonResource
     }
 
     /**
-     * Expose the soda, whether it is open and its dishes grouped by category.
+     * Expose the soda with its logo, whether it is open and its dishes grouped by category.
      *
      * @return array<string, mixed>
      */
@@ -32,6 +33,7 @@ final class PublicMenuResource extends JsonResource
             'soda' => [
                 'id' => $this->menu->sodaId,
                 'nombre' => $this->menu->sodaName,
+                'logo' => $this->menu->sodaLogoPath === null ? null : app(ImageStorage::class)->url($this->menu->sodaLogoPath),
             ],
             'abierta' => $this->menu->open,
             'categorias' => MenuCategoryResource::collection($this->menu->categories),

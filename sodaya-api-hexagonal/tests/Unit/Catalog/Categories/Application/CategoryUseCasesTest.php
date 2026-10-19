@@ -13,6 +13,7 @@ use Src\Catalog\Categories\Application\UseCases\ListCategories;
 use Src\Catalog\Categories\Application\UseCases\RenameCategory;
 use Src\Catalog\Categories\Domain\Exceptions\CategoryNameAlreadyInUseException;
 use Src\Catalog\Categories\Domain\Exceptions\CategoryNotFoundException;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Tests\Support\Catalog\InMemoryCategoryRepository;
 
@@ -66,7 +67,7 @@ final class CategoryUseCasesTest extends TestCase
             new CreateCategoryCommand(self::OTHER_SODA_ID, 'Extranjera'),
         );
 
-        $categories = $list->execute(self::SODA_ID);
+        $categories = $list->execute(self::SODA_ID, new PageRequest)->items;
 
         $names = array_map(
             fn ($category): string => $category->name->value,

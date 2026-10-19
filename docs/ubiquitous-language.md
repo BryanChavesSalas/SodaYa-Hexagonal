@@ -28,8 +28,11 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Precio | `Price` | `price` | `precio` |
 | Tiempo de preparación | `PreparationTime` | `preparation_minutes` | `minutos_preparacion` |
 | Porciones disponibles | `Portions` | `available_portions` | `porciones_disponibles` |
+| Porciones base | `basePortions` | `base_portions` | `porciones_base` |
 | Plato activo | `active` | `is_active` | `activo` |
 | Plato agotado | `isSoldOut()` | — | `agotado` |
+| Foto del plato | `photoPath` | `photo_path` | `foto` |
+| Logo de la soda | `logoPath` | `logo_path` | `logo` |
 | Horario | `WeeklySchedule` | `schedules` | `horario` |
 | Franja | `TimeSlot` | fila de `schedules` | `franja` |
 | Día de la semana | `DayOfWeek` | `day_of_week` | `dia` |
@@ -42,7 +45,32 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Pedido | `Order` | `orders` | `pedidos` |
 | Línea del pedido | `OrderLine` | `order_lines` | `lineas` |
 | Estado del pedido | `OrderStatus` | `status` | `estado` |
+| Pendiente | `OrderStatus::Pending` | `pending` | `pendiente` |
+| Confirmado | `OrderStatus::Confirmed` | `confirmed` | `confirmado` |
+| Listo | `OrderStatus::Ready` | `ready` | `listo` |
+| Entregado | `OrderStatus::Delivered` | `delivered` | `entregado` |
+| Cancelado | `OrderStatus::Cancelled` | `cancelled` | `cancelado` |
+| Origen de la cancelación | `CancellationOrigin` | `cancellation_origin` | `cancelado_por` |
+| Plazo de pago | `paymentDeadline()` | — | — |
+| Plazo de confirmación | `confirmationDeadline()` | — | — |
+| Cantidad | `Quantity` | `quantity` | `cantidad` |
+| Precio unitario | `unitPrice` | `unit_price` | `precio_unitario` |
 | Pago | `Payment` | `payments` | `pago` |
+| Estado del pago | `PaymentStatus` | `payment_status` | `pago.estado` |
+| Pago aprobado | `PaymentStatus::Approved` | `approved` | `aprobado` |
+| Reembolso | `RefundRequests`, `RequestRefundJob` | — | — |
+| Aviso al cliente | `CustomerNotices`, `NotifyCustomerJob` | — | — |
+| Trabajo en cola | `ShouldQueue` | `jobs`, `failed_jobs` | — |
+| Ventas por hora | `HourlySales` | `v_hourly_sales`, `fn_hourly_sales` | `ventas-por-hora`, `horas` |
+| Mínimo de pedidos | `minimumOrders` | `p_min_orders` | `minimo_pedidos` |
+| Reserva de porciones | `PortionStock::reserve()` | `fn_reserve_portions` | — |
+| Porciones agotadas | `PortionsSoldOutException` | — | `porciones-agotadas` |
+| Movimiento de puntos | `PointMovement` | `point_movements` | `movimientos` |
+| Compra | `MovementReason::Purchase` | `purchase` | `compra` |
+| Canje | `MovementReason::Redemption` | `redemption` | `canje` |
+| Saldo | `balanceOf()` | suma de `points` | `saldo` |
+| Puntos insuficientes | `InsufficientPointsException` | — | `puntos-insuficientes` |
+| Página | `PageRequest`, `Page` | — | `pagina`, `por_pagina`, `meta` |
 | Usuario | `User` | `users` | — |
 | Correo | `Email` | `email` | `correo` |
 | Contraseña | `PlainPassword` | `password`, solo el hash | `contrasena` |
@@ -56,7 +84,14 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Cliente | `Role::Customer` | `customer` | — |
 | Visitante | `Visitor` | — | — |
 
-Los términos de los contextos que aún no existen (pedidos, pagos) quedan reservados para que se usen así cuando se construyan.
+Los términos de los contextos que aún no existen (pagos) quedan reservados para que se usen así cuando se construyan.
+
+## Porciones
+
+- Las **porciones base** son las que la soda prepara en un día normal. Las **porciones disponibles** son las que quedan hoy: bajan con cada venta y suben cuando un pedido se cancela.
+- Cambiar las porciones base no toca las disponibles del día en curso.
+- Cada mañana, a las 5:00, el **restablecimiento diario** devuelve las porciones disponibles de cada plato a su base.
+- Hacer un pedido **reserva** sus porciones: se descuentan todas o ninguna. Si un plato no alcanza, el pedido no se crea y la respuesta es **porciones agotadas**.
 
 ## Horario y cierres
 
@@ -64,6 +99,25 @@ Los términos de los contextos que aún no existen (pedidos, pagos) quedan reser
 - Un día puede tener varias franjas, siempre que no se traslapen. El día 1 es lunes y el 7 es domingo (ISO 8601).
 - Un **cierre excepcional** es una fecha en la que la soda no atiende aunque el horario diga lo contrario. Solo hay uno por soda y fecha.
 - La soda está **abierta** en un momento si ese día no tiene un cierre excepcional y alguna franja contiene la hora. No se guarda: se calcula en cada respuesta.
+
+## Pedidos
+
+- Un **pedido** pertenece a una soda y a un cliente, y tiene de 1 a 20 líneas, una por plato, con cantidades de 1 a 20.
+- La **línea** congela el nombre y el precio que tenía el plato al pedirlo: un cambio posterior del menú no altera un pedido hecho.
+- El pedido avanza en un solo sentido: **pendiente**, **confirmado**, **listo** y **entregado**. Se puede **cancelar** mientras está pendiente o confirmado, y la cancelación registra quién la originó: el cliente, la cocina, la falta de pago o la falta de confirmación.
+- Entregado y cancelado son estados finales.
+- Un pedido tiene 10 minutos para que se apruebe su **pago**. Si al cumplirse el **plazo de pago** sigue pendiente y sin pago, se cancela por **falta de pago**: sus porciones vuelven al menú y el cliente recibe un aviso.
+- Con el pago aprobado, la cocina tiene 10 minutos para **confirmar** el pedido. Si al cumplirse el **plazo de confirmación** nadie lo confirmó, se cancela por **falta de confirmación** y el cliente recibe el **reembolso**.
+- La cocina solo **confirma** un pedido con el **pago aprobado**. Mientras el pago esté pendiente, el pedido espera.
+- Cancelar un pedido pagado genera un **reembolso**: se le devuelve al cliente lo que pagó.
+
+## Puntos
+
+- Los **puntos** se llevan en un **libro de movimientos**. Una **compra** agrega puntos y un **canje** los quita; el **saldo** es la suma de los movimientos.
+- Un movimiento no se corrige ni se borra: un error se compensa con otro movimiento.
+- Un pedido **entregado** acredita 1 punto por cada ₡1000 completos del total de sus líneas, sin la propina. Un pedido de ₡6600 acredita 6 puntos; uno de ₡999, ninguno.
+- Un pedido acredita sus puntos una sola vez.
+- Un **canje** nunca supera el saldo; si lo supera, la respuesta es **puntos insuficientes**.
 
 ## Roles
 

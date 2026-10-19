@@ -17,6 +17,7 @@ final readonly class MenuDish
         public int $preparationMinutes,
         public int $availablePortions,
         public DateTimeImmutable $updatedAt,
+        public ?string $photoPath = null,
     ) {}
 
     /** Tell whether no portions are left to sell. */

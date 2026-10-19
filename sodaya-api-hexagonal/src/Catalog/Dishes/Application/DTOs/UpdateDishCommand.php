@@ -15,6 +15,7 @@ final readonly class UpdateDishCommand
      *     price?: int,
      *     preparation_minutes?: int,
      *     available_portions?: int,
+     *     base_portions?: int,
      *     category_id?: string|null,
      *     active?: bool,
      * } $changes

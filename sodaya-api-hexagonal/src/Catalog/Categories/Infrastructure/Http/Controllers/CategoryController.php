@@ -16,6 +16,8 @@ use Src\Catalog\Categories\Infrastructure\Http\Requests\StoreCategoryRequest;
 use Src\Catalog\Categories\Infrastructure\Http\Requests\UpdateCategoryRequest;
 use Src\Catalog\Categories\Infrastructure\Http\Resources\CategoryResource;
 use Src\Shared\Domain\Contracts\SodaContext;
+use Src\Shared\Infrastructure\Http\Requests\ListRequest;
+use Src\Shared\Infrastructure\Http\Resources\PageMeta;
 use Symfony\Component\HttpFoundation\Response;
 
 #[Group(
@@ -29,11 +31,11 @@ final readonly class CategoryController
 
     /** List every category of the current soda. */
     #[Endpoint(title: 'Listar las categorías de la soda')]
-    public function index(ListCategories $listCategories): AnonymousResourceCollection
+    public function index(ListRequest $request, ListCategories $listCategories): AnonymousResourceCollection
     {
-        return CategoryResource::collection(
-            $listCategories->execute($this->sodaContext->current()->value),
-        );
+        $page = $listCategories->execute($this->sodaContext->current()->value, $request->page());
+
+        return CategoryResource::collection($page->items)->additional(PageMeta::of($page));
     }
 
     /** Register a category for the current soda. */

@@ -36,6 +36,21 @@ return [
             'timezone' => env('APP_TIMEZONE', 'America/Costa_Rica'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
+
+        'pgsql_maintenance' => [
+            'driver' => 'pgsql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'sodaya_hexagonal'),
+            'username' => env('DB_MAINTENANCE_USERNAME', 'sodaya_maintenance'),
+            'password' => env('DB_MAINTENANCE_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'timezone' => env('APP_TIMEZONE', 'America/Costa_Rica'),
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
     ],
 
     'migrations' => [

@@ -8,7 +8,10 @@ use Src\Catalog\Dishes\Domain\Contracts\DishRepository;
 use Src\Catalog\Dishes\Domain\Entities\Dish;
 use Src\Catalog\Dishes\Domain\Exceptions\DishNameAlreadyInUseException;
 use Src\Catalog\Dishes\Domain\ValueObjects\DishId;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
+use Tests\Support\Shared\Pages;
 
 final class InMemoryDishRepository implements DishRepository
 {
@@ -47,16 +50,16 @@ final class InMemoryDishRepository implements DishRepository
     }
 
     /**
-     * List the dishes of the soda ordered by name.
+     * List one page of the dishes of the soda ordered by name.
      *
-     * @return list<Dish>
+     * @return Page<Dish>
      */
-    public function allOf(SodaId $sodaId): array
+    public function pageOf(SodaId $sodaId, PageRequest $page): Page
     {
         $dishes = array_filter($this->dishes, fn (Dish $dish): bool => $dish->sodaId->equals($sodaId));
 
         usort($dishes, fn (Dish $a, Dish $b): int => $a->name->value <=> $b->name->value);
 
-        return $dishes;
+        return Pages::slice($dishes, $page);
     }
 }

@@ -2,7 +2,7 @@
 
 El esquema está en tercera forma normal. Este documento describe las tablas que ya existen con todo su detalle y las entidades previstas a nivel de relación; cada módulo completa las suyas en el pull request que agrega su migración.
 
-Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md). Las tablas `categories`, `dishes`, `schedules` y `closures` tienen seguridad a nivel de fila forzada: cada transacción solo alcanza las filas de su soda. El detalle y las excepciones están en la sección «Seguridad a nivel de fila» de ese documento.
+Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md). Las tablas `categories`, `dishes`, `schedules`, `closures`, `orders`, `order_lines` y `order_status_history` tienen seguridad a nivel de fila forzada: cada transacción solo alcanza las filas de su soda. El detalle y las excepciones están en la sección «Seguridad a nivel de fila» de ese documento.
 
 ## Diagrama
 
@@ -17,6 +17,8 @@ erDiagram
     users ||--o{ personal_access_tokens : "ingresa con"
     sodas ||--o{ orders : "recibe"
     users ||--o{ orders : "hace"
+    users ||--o{ point_movements : "acumula"
+    orders ||--o| point_movements : "acredita"
     orders ||--|{ order_lines : "contiene"
     dishes ||--o{ order_lines : "se vende en"
     orders ||--o{ order_status_history : "pasa por"
@@ -64,6 +66,37 @@ erDiagram
         uuid tokenable_id
         varchar token
     }
+    point_movements {
+        uuid id PK
+        uuid customer_id FK
+        uuid order_id FK
+        varchar reason
+        integer points
+    }
+    orders {
+        uuid id PK
+        uuid soda_id FK
+        uuid customer_id FK
+        varchar status
+        varchar cancellation_origin
+        varchar payment_status
+    }
+    order_lines {
+        uuid id PK
+        uuid order_id FK
+        uuid soda_id FK
+        uuid dish_id FK
+        varchar dish_name
+        integer unit_price
+        smallint quantity
+    }    order_status_history {
+        uuid id PK
+        uuid order_id FK
+        uuid soda_id FK
+        varchar from_status
+        varchar to_status
+        timestamptz changed_at
+    }
 ```
 
 Las tablas sin columnas en el diagrama están previstas y todavía no existen.
@@ -77,6 +110,7 @@ Las tablas sin columnas en el diagrama están previstas y todavía no existen.
 | `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
 | `name` | `varchar(120)` | Obligatoria |
 | `payment_account_id` | `varchar(255)` | Opcional; identificador de la cuenta de pago de la soda |
+| `logo_path` | `varchar(255)` | Opcional; ruta del logo en el disco de imágenes, con un nombre generado por el servidor |
 | `created_at`, `updated_at` | `timestamptz` | |
 
 ### categories
@@ -101,11 +135,15 @@ Llaves candidatas: `id`, `(soda_id, name)` y `(id, soda_id)`. La última existe 
 | `description` | `varchar(500)` | Opcional |
 | `price` | `integer` | Colones enteros, `CHECK` entre 100 y 100 000 |
 | `preparation_minutes` | `smallint` | `CHECK` entre 1 y 120 |
-| `available_portions` | `smallint` | `CHECK` entre 0 y 500 |
+| `available_portions` | `smallint` | `CHECK` entre 0 y 500; las que quedan hoy |
+| `base_portions` | `smallint` | `CHECK` entre 0 y 500; las que la soda prepara en un día normal, por defecto 0 |
 | `is_active` | `boolean` | Por defecto `true` |
+| `photo_path` | `varchar(255)` | Opcional; ruta de la foto en el disco de imágenes, con un nombre generado por el servidor |
 | `created_at`, `updated_at` | `timestamptz` | |
 
 Al borrar una categoría, `category_id` de sus platos queda en nulo y el plato se conserva.
+
+`base_portions` llegó con una migración compatible: la columna se agrega con un valor por defecto, así el código anterior sigue insertando platos sin conocerla, y los platos que ya existían toman como base sus porciones del momento. Para ese relleno la migración quita y vuelve a poner `FORCE ROW LEVEL SECURITY` dentro de su transacción, porque el dueño de la tabla también está sujeto a la política y sin soda no vería ninguna fila.
 
 ## Tablas de la soda
 
@@ -139,6 +177,82 @@ Días en que la soda no abre, aunque su horario diga lo contrario.
 | `created_at`, `updated_at` | `timestamptz` | |
 
 Llaves candidatas: `id` y `(soda_id, closed_on)`. La segunda garantiza un solo cierre por soda y fecha. «Cerrar por el resto del día» no se guarda aparte: es un cierre con la fecha de hoy.
+
+## Tablas de pedidos
+
+### orders
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `customer_id` | `uuid` | Llave foránea a `users`; una cuenta con pedidos no se puede borrar |
+| `status` | `varchar(20)` | `pending`, `confirmed`, `ready`, `delivered` o `cancelled`; por defecto `pending` |
+| `cancellation_origin` | `varchar(30)` | `customer`, `kitchen`, `payment_timeout` o `confirmation_timeout` |
+| `confirmed_at`, `ready_at`, `delivered_at`, `cancelled_at` | `timestamptz` | Momento en que el pedido llegó a cada estado |
+| `payment_status` | `varchar(20)` | `pending` o `approved`; por defecto `pending` |
+| `paid_at` | `timestamptz` | Momento en que se aprobó el pago; existe solo si el pago está aprobado |
+| `created_at`, `updated_at` | `timestamptz` | `created_at` es el momento en que se hizo el pedido |
+
+Índices: `customer_id` y `(soda_id, status, created_at)`, que sirve a la lista de cocina y al reporte de ventas.
+
+Llaves candidatas: `id` y `(id, soda_id)`; la segunda existe para que las líneas referencien el pedido junto con su soda. `orders_cancellation_check` exige que un pedido cancelado tenga origen y momento de cancelación, y que ningún otro los tenga. `orders_paid_at_check` exige que `paid_at` exista exactamente cuando el pago está aprobado.
+
+### order_lines
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `order_id` | `uuid` | Llave foránea compuesta `(order_id, soda_id)` a `orders`, borrado en cascada |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `dish_id` | `uuid` | Llave foránea compuesta `(dish_id, soda_id)` a `dishes`; un plato pedido no se puede borrar |
+| `dish_name` | `varchar(120)` | Nombre del plato al momento de pedir |
+| `unit_price` | `integer` | Precio del plato al momento de pedir, `CHECK` entre 100 y 100 000 |
+| `quantity` | `smallint` | `CHECK` entre 1 y 20 |
+
+Un plato aparece una sola vez en cada pedido: `(order_id, dish_id)` es única. Las dos llaves foráneas compuestas impiden una línea con el pedido o el plato de otra soda, aunque el identificador exista. Para eso `dishes` gana la llave única `(id, soda_id)`.
+
+### order_status_history
+
+Una fila por cada cambio de estado de un pedido. La escribe el trigger `trg_orders_status_history`, no la aplicación.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `order_id` | `uuid` | Llave foránea compuesta `(order_id, soda_id)` a `orders`, borrado en cascada |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `from_status` | `varchar(20)` | Estado anterior |
+| `to_status` | `varchar(20)` | Estado nuevo |
+| `changed_at` | `timestamptz` | Hora del cambio, `DEFAULT now()` |
+
+El rol de la aplicación no puede actualizar ni borrar sus filas.
+
+### v_hourly_sales
+
+Vista, no tabla: una fila por pedido entregado. La describe la sección «Ventas por hora» de [database.md](database.md).
+
+| Columna | Origen |
+| --- | --- |
+| `soda_id`, `order_id`, `created_at` | `orders` |
+| `sale_hour` | Hora de Costa Rica de `created_at`, de 0 a 23 |
+| `total` | Suma de `unit_price × quantity` de las líneas |
+
+## Tablas de puntos
+
+### point_movements
+
+El libro de puntos de cada cliente. Solo se agregan filas: el saldo es la suma de `points` y no se guarda en ninguna columna.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `customer_id` | `uuid` | Llave foránea a `users`; un cliente con movimientos no se puede borrar |
+| `order_id` | `uuid` | Llave foránea a `orders`; obligatoria en una compra, opcional en un canje |
+| `reason` | `varchar(20)` | `purchase` o `redemption` |
+| `points` | `integer` | Positivo en una compra y negativo en un canje |
+| `created_at` | `timestamptz` | Momento del movimiento |
+
+`point_movements_points_check` exige que el signo coincida con el motivo y que una compra tenga pedido. El índice único parcial `point_movements_purchase_order_unique`, sobre `order_id` solo en las filas de compra, deja un pedido acreditar puntos una sola vez sin impedir que un pedido se pague con puntos. La tabla no tiene `soda_id`: los puntos son del cliente en toda la plataforma.
 
 ## Tablas de identidad
 
@@ -192,7 +306,10 @@ La crea Laravel Sanctum. Cada fila es un token de acceso emitido para un disposi
 | Excepción | Por qué es correcta |
 | --- | --- |
 | `soda_id` se repite en `dishes` aunque la categoría ya lo implica | El plato pertenece a la soda aunque no tenga categoría. La llave foránea compuesta `(category_id, soda_id)` impide que los dos valores discrepen |
-| La línea del pedido guardará el nombre y el precio del plato | No es un dato derivado: es el hecho histórico de a cuánto se vendió. Cambiar el precio del plato no debe alterar pedidos pasados |
+| `soda_id` se repite en `order_lines` aunque el pedido ya lo implica | La seguridad a nivel de fila filtra cada tabla por su propia columna, y las llaves compuestas `(order_id, soda_id)` y `(dish_id, soda_id)` impiden que los valores discrepen |
+| El saldo de puntos no se guarda | Se calcula sumando los movimientos; un saldo guardado podría descuadrarse con ellos y nadie sabría cuál vale |
+| El total del pedido no se guarda | Se calcula sumando las líneas; guardarlo crearía un dato que puede contradecirlas |
+| La línea del pedido guarda el nombre y el precio del plato | No es un dato derivado: es el hecho histórico de a cuánto se vendió. Cambiar el precio del plato no debe alterar pedidos pasados |
 | `personal_access_tokens.id` es `bigint` y no `uuid` | La tabla pertenece a Sanctum: el token que recibe el cliente tiene la forma `<id>\|<secreto>` y Sanctum busca la fila por ese número. No es un identificador del negocio |
 | `personal_access_tokens` no tiene llave foránea a `users` | Sanctum define una relación polimórfica (`tokenable_type`, `tokenable_id`). Un token cuya cuenta ya no existe no autentica a nadie, porque Sanctum no encuentra a su dueño |
 

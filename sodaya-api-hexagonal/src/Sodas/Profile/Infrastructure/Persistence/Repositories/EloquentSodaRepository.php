@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Domain\Contracts\SodaRepository;
 use Src\Sodas\Profile\Domain\Entities\Soda;
+use Src\Sodas\Profile\Domain\ValueObjects\PaymentAccountId;
+use Src\Sodas\Profile\Domain\ValueObjects\SodaName;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 
 final readonly class EloquentSodaRepository implements SodaRepository
@@ -27,7 +29,21 @@ final readonly class EloquentSodaRepository implements SodaRepository
             [
                 'name' => $soda->name->value,
                 'payment_account_id' => $soda->paymentAccountId?->value,
+                'logo_path' => $soda->logoPath,
             ],
         ));
+    }
+
+    /** Find the soda and rebuild it from its stored state. */
+    public function find(SodaId $id): ?Soda
+    {
+        $model = SodaModel::query()->find($id->value);
+
+        return $model === null ? null : Soda::reconstitute(
+            new SodaId($model->id),
+            new SodaName($model->name),
+            $model->payment_account_id === null ? null : new PaymentAccountId($model->payment_account_id),
+            $model->logo_path,
+        );
     }
 }

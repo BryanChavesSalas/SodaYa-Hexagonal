@@ -32,6 +32,22 @@ return [
         'title' => 'Conflicto',
         'detail' => 'La solicitud choca con el estado actual del recurso.',
     ],
+    'transicion-no-permitida' => [
+        'title' => 'Transición no permitida',
+        'detail' => 'El pedido no puede pasar a ese estado.',
+    ],
+    'pedido-sin-pago' => [
+        'title' => 'Pedido sin pago',
+        'detail' => 'El pedido no se puede confirmar hasta que su pago esté aprobado.',
+    ],
+    'porciones-agotadas' => [
+        'title' => 'Porciones agotadas',
+        'detail' => 'No quedan suficientes porciones de un plato del pedido.',
+    ],
+    'puntos-insuficientes' => [
+        'title' => 'Puntos insuficientes',
+        'detail' => 'El saldo de puntos no alcanza para el canje.',
+    ],
     'datos-invalidos' => [
         'title' => 'Datos inválidos',
         'detail' => 'Los datos enviados no son válidos.',

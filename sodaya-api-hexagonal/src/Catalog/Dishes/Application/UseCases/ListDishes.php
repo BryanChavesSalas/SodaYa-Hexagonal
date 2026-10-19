@@ -6,6 +6,8 @@ namespace Src\Catalog\Dishes\Application\UseCases;
 
 use Src\Catalog\Dishes\Domain\Contracts\DishRepository;
 use Src\Catalog\Dishes\Domain\Entities\Dish;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 
 final readonly class ListDishes
@@ -14,12 +16,12 @@ final readonly class ListDishes
     public function __construct(private DishRepository $dishes) {}
 
     /**
-     * List every dish of the soda, active or not.
+     * List one page of the dishes of the soda, active or not.
      *
-     * @return list<Dish>
+     * @return Page<Dish>
      */
-    public function execute(string $sodaId): array
+    public function execute(string $sodaId, PageRequest $page): Page
     {
-        return $this->dishes->allOf(new SodaId($sodaId));
+        return $this->dishes->pageOf(new SodaId($sodaId), $page);
     }
 }
