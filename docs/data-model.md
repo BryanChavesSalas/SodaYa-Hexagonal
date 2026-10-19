@@ -2,7 +2,7 @@
 
 El esquema está en tercera forma normal. Este documento describe las tablas que ya existen con todo su detalle y las entidades previstas a nivel de relación; cada módulo completa las suyas en el pull request que agrega su migración.
 
-Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md). Las tablas `categories`, `dishes`, `schedules`, `closures`, `orders`, `order_lines`, `order_status_history`, `pickup_counters` y `payments` tienen seguridad a nivel de fila forzada: cada transacción solo alcanza las filas de su soda. El detalle y las excepciones están en la sección «Seguridad a nivel de fila» de ese documento.
+Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md). Las tablas `categories`, `dishes`, `schedules`, `closures`, `promotions`, `orders`, `order_lines`, `order_status_history`, `pickup_counters` y `payments` tienen seguridad a nivel de fila forzada: cada transacción solo alcanza las filas de su soda. El detalle y las excepciones están en la sección «Seguridad a nivel de fila» de ese documento.
 
 ## Diagrama
 
@@ -13,6 +13,7 @@ erDiagram
     categories |o--o{ dishes : "agrupa"
     sodas ||--o{ schedules : "atiende en"
     sodas ||--o{ closures : "cierra en"
+    sodas ||--o{ promotions : "descuenta en"
     sodas |o--o{ users : "emplea"
     users ||--o{ personal_access_tokens : "ingresa con"
     sodas ||--o{ orders : "recibe"
@@ -56,6 +57,14 @@ erDiagram
         uuid soda_id FK
         date closed_on
         varchar reason
+    }
+    promotions {
+        uuid id PK
+        uuid soda_id FK
+        smallint weekday
+        time starts_at
+        time ends_at
+        smallint percentage
     }
     users {
         uuid id PK
@@ -198,6 +207,22 @@ Días en que la soda no abre, aunque su horario diga lo contrario.
 | `created_at`, `updated_at` | `timestamptz` | |
 
 Llaves candidatas: `id` y `(soda_id, closed_on)`. La segunda garantiza un solo cierre por soda y fecha. «Cerrar por el resto del día» no se guarda aparte: es un cierre con la fecha de hoy.
+
+### promotions
+
+Cada fila es una hora feliz: un descuento para todos los platos de la soda en un día de la semana, dentro de una franja.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `weekday` | `smallint` | `CHECK` entre 1 (lunes) y 7 (domingo), según ISO 8601 |
+| `starts_at` | `time` | Hora de inicio, incluida en la promoción |
+| `ends_at` | `time` | Hora de fin, excluida de la promoción; `CHECK (starts_at < ends_at)` |
+| `percentage` | `smallint` | Descuento en porcentaje, `CHECK` entre 1 y 90 |
+| `created_at`, `updated_at` | `timestamptz` | |
+
+La restricción de exclusión `promotions_no_overlap_excl` impide que dos promociones de la misma soda y del mismo día compartan un minuto, con el mismo rango `timerange` del horario: `14:00-15:00` y `15:00-16:00` conviven porque el fin no pertenece a la promoción. Otra soda puede tener la misma franja. El precio vigente no se guarda: se calcula al responder con la promoción activa (RF-EXT-03).
 
 ## Tablas de pedidos
 

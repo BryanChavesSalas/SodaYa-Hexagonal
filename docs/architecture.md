@@ -279,6 +279,14 @@ El cliente consulta su saldo y sus últimos 20 movimientos con `GetPointsStateme
 
 `Loyalty` tiene sus propios `CustomerId` y `OrderId`: el dominio de un módulo no depende del de otro, aunque los dos identifiquen las mismas filas.
 
+### Hora feliz
+
+El módulo `Catalog/Promotions` guarda las promociones de la soda: un descuento de 1 % a 90 % para todos los platos, por día de la semana y franja horaria. El agregado `Promotion` reúne sus objetos de valor, `Weekday`, `TimeWindow` (dos `TimeOfDay` con el inicio antes del fin) y `DiscountPercentage`; son propios del contexto `Catalog` aunque se parezcan a los del horario, porque un contexto no importa el dominio de otro.
+
+La regla de que dos promociones del mismo día no se traslapan vive solo en PostgreSQL. `DefinePromotion` no la revisa: dos solicitudes en el mismo instante pasarían cualquier `if` en PHP y las dos se insertarían. La restricción `EXCLUDE` de la tabla rechaza la segunda con el SQLSTATE `23P01`, que `EloquentPromotionRepository` traduce a `PromotionOverlapsException`, una regla de negocio que la API publica como 409 `promocion-traslapada`. El Form Request valida solo la forma; el rango del descuento y el orden de las horas los deciden los objetos de valor, con 422 `datos-invalidos`.
+
+Las rutas `/api/v1/cocina/promociones` piden la ability `administrar` en las tres operaciones, como el reporte de ventas: la cocina no ve ni cambia los precios de la soda.
+
 ### Reportes
 
 El contexto `Reporting` solo lee. Su módulo `Reporting/Sales` no tiene dominio propio: el caso de uso `GetHourlySales` pide los datos al puerto de lectura `SalesReport` y devuelve un DTO. El adaptador `PostgresSalesReport` llama a la función `fn_hourly_sales` de la base, que hace la agrupación. No pasa por los modelos de Eloquent de `Ordering`: un reporte agrega miles de filas y conviene que lo haga PostgreSQL, y así el contexto de reportes no depende de las clases de otro contexto.
@@ -329,7 +337,7 @@ Toda respuesta de error sigue RFC 9457 (`application/problem+json`). `ProblemDet
 | `AuthenticationFailedException`, como un correo o una contraseña incorrectos | `credenciales-invalidas` | 401 |
 | Ruta protegida sin un token válido (`AuthenticationException` del framework) | `no-autenticado` | 401 |
 | Persona autenticada sin permiso: un token sin la ability que pide la ruta (`MissingAbilityException` de Sanctum) o un cliente en una ruta del personal. Ambas son `AuthorizationException` del framework | `prohibido` | 403 |
-| `BusinessRuleException`, una regla de negocio con nombre propio: `transicion-no-permitida` si el pedido no puede pasar al estado pedido, `pedido-sin-pago` si se confirma sin pago aprobado, `porciones-agotadas` si un plato no tiene las porciones que el pedido pide, `puntos-insuficientes` si un canje supera el saldo, `pedido-ya-pagado` si se paga un pedido con pago aprobado y `pedido-no-pagable` si el pedido ya no está pendiente | El tipo que nombra la regla; `conflicto` si el catálogo no lo tiene | 409 |
+| `BusinessRuleException`, una regla de negocio con nombre propio: `transicion-no-permitida` si el pedido no puede pasar al estado pedido, `pedido-sin-pago` si se confirma sin pago aprobado, `porciones-agotadas` si un plato no tiene las porciones que el pedido pide, `puntos-insuficientes` si un canje supera el saldo, `pedido-ya-pagado` si se paga un pedido con pago aprobado, `pedido-no-pagable` si el pedido ya no está pendiente y `promocion-traslapada` si una hora feliz comparte un minuto con otra del mismo día | El tipo que nombra la regla; `conflicto` si el catálogo no lo tiene | 409 |
 | `PaymentRejectedException`, también una `BusinessRuleException`: el banco no autorizó la tarjeta | `pago-rechazado`, con el código del banco en `detail` | 402 |
 | Otra excepción del dominio, como una franja traslapada o un cierre repetido | `conflicto` | 409 |
 | `ServiceUnavailableException`, un servicio externo que no responde: `GatewayUnavailableException` si el proveedor de pagos no contesta o falla | `servicio-no-disponible`, con el encabezado `Retry-After: 30` | 503 |

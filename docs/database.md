@@ -203,6 +203,8 @@ PostgreSQL 18 agrega `WITHOUT OVERLAPS` para llaves primarias y únicas, pero ex
 
 `php artisan migrate:fresh` borra las tablas pero no los tipos. Por eso la migración elimina `timerange` antes de crearlo.
 
+La tabla `promotions` repite el patrón con `promotions_no_overlap_excl` sobre `(soda_id, weekday, timerange(starts_at, ends_at))`: dos horas felices de la misma soda y día no comparten un minuto. El traslape no se valida en PHP, porque dos solicitudes simultáneas pasarían la misma validación; la base lo garantiza y el repositorio traduce el `23P01` a `promocion-traslapada`.
+
 ## Seguridad a nivel de fila
 
 Es la segunda barrera del aislamiento entre sodas. La primera está en el código: cada repositorio filtra por `soda_id`. Si una consulta olvida ese filtro, PostgreSQL igual devuelve solo las filas de la soda en curso.

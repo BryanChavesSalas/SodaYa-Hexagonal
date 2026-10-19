@@ -111,6 +111,11 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Plato de otra soda | `DishNotOfSodaException` | — | `plato-no-pertenece-a-la-soda` |
 | Plato no disponible | `DishUnavailableException` | — | `plato-no-disponible` |
 | Soda cerrada | `SodaClosedException` | — | `soda-cerrada` |
+| Promoción, hora feliz | `Promotion` | `promotions` | `promociones` |
+| Día de la promoción | `Weekday` | `weekday` | `dia` |
+| Franja de la promoción | `TimeWindow` | `starts_at`, `ends_at` | `inicio`, `fin` |
+| Descuento | `DiscountPercentage` | `percentage` | `porcentaje` |
+| Promoción traslapada | `PromotionOverlapsException` | `promotions_no_overlap_excl` | `promocion-traslapada` |
 | Plato del catálogo para pedir | `OrderableDish` | — | `plato_id` |
 | Clave de idempotencia | `IdempotencyKey` | `idempotency_key`, `request_fingerprint` | encabezado `Idempotency-Key` |
 | Clave reutilizada | `IdempotencyKeyReusedException` | — | `conflicto` |
@@ -141,6 +146,12 @@ Los términos de los contextos que aún no existen quedan reservados para que se
 - Cambiar las porciones base no toca las disponibles del día en curso.
 - Cada mañana, a las 5:00, el **restablecimiento diario** devuelve las porciones disponibles de cada plato a su base.
 - Hacer un pedido **reserva** sus porciones: se descuentan todas o ninguna. Si un plato no alcanza, el pedido no se crea y la respuesta es **porciones agotadas**.
+
+## Hora feliz
+
+- Una **promoción** u **hora feliz** es un **descuento** de 1 % a 90 % para todos los platos de la soda, en un día de la semana y una **franja** horaria. El inicio pertenece a la franja y el fin no: una promoción de 14:00 a 15:00 aplica a las 14:59 y ya no a las 15:00.
+- Dos promociones de la misma soda y el mismo día no comparten un minuto; si se traslapan, la respuesta es **promoción traslapada**. Otra soda puede tener la misma franja.
+- Solo el dueño define y elimina promociones.
 
 ## Horario y cierres
 

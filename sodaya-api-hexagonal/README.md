@@ -149,6 +149,9 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | POST | `/api/v1/puntos/canjes` | Cliente | Canjea puntos del cliente autenticado; responde el movimiento y el `saldo` que queda. |
 | GET | `/api/v1/cocina/reportes/ventas-por-hora` | Dueño | Pedidos entregados y total vendido por hora de una fecha (`fecha`, por defecto hoy), con un mínimo de pedidos por hora (`minimo_pedidos`, por defecto 1). |
 | GET | `/api/v1/cocina/reportes/ventas-diarias` | Dueño | Pedidos entregados y total vendido por día entre dos fechas (`desde` y `hasta`, 366 días como máximo), desde un resumen precalculado; `actualizado_en` dice cuándo se calculó. |
+| GET | `/api/v1/cocina/promociones` | Dueño | Horas felices de la soda, ordenadas por día y hora de inicio. |
+| POST | `/api/v1/cocina/promociones` | Dueño | Define una hora feliz: `dia` (1 es lunes y 7 es domingo), `inicio` y `fin` en `HH:MM` y `porcentaje` de 1 a 90. Responde 409 `promocion-traslapada` si comparte un minuto con otra del mismo día. |
+| DELETE | `/api/v1/cocina/promociones/{promocion}` | Dueño | Elimina una hora feliz. |
 
 Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 
