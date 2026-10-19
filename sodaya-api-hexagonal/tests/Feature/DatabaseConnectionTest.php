@@ -20,7 +20,7 @@ class DatabaseConnectionTest extends TestCase
         $this->assertSame(1, DB::scalar('select 1'));
     }
 
-    public function test_server_is_postgresql_18_or_owner(): void
+    public function test_server_is_postgresql_18_or_newer(): void
     {
         $this->assertGreaterThanOrEqual(180000, (int) DB::scalar('show server_version_num'));
     }
