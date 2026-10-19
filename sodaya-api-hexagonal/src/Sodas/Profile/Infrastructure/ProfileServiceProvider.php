@@ -23,9 +23,11 @@ final class ProfileServiceProvider extends ServiceProvider
         SodaRepository::class => EloquentSodaRepository::class,
     ];
 
-    /** Register the console command of the module. */
+    /** Register the console commands of the module. */
     public function boot(): void
     {
-        $this->commands([RegisterSodaConsoleCommand::class]);
+        if ($this->app->runningInConsole()) {
+            $this->commands([RegisterSodaConsoleCommand::class]);
+        }
     }
 }
