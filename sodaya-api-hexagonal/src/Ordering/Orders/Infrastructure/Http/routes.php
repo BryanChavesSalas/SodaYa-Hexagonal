@@ -21,6 +21,10 @@ Route::prefix('pedidos')
             Route::get('/', 'index')->name('index');
             Route::get('{pedido}', 'show')->name('show');
         });
+
+        Route::middleware('soda:order')->group(function (): void {
+            Route::post('{pedido}/cancelacion', 'cancel')->name('cancellation.store');
+        });
     });
 
 Route::prefix('cocina/pedidos')

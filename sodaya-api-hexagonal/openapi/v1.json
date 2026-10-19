@@ -1147,6 +1147,59 @@
                 ]
             }
         },
+        "/pedidos/{pedido}/cancelacion": {
+            "post": {
+                "operationId": "ordering.orders.cancellation.store",
+                "description": "Cancela un pedido pendiente o confirmado del cliente autenticado y registra que la cancelaci\u00f3n la origin\u00f3 el cliente. Las porciones vuelven al men\u00fa y, si el pedido estaba pagado, se solicita el reembolso. Un pedido listo o entregado responde 409 `transicion-no-permitida`; uno ajeno o inexistente, 404 `pedido-no-encontrado`. Cancelar un pedido ya cancelado no lo cambia.",
+                "summary": "Cancelar mi pedido",
+                "tags": [
+                    "Pedidos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PedidoDelCliente`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PedidoDelCliente"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
         "/cocina/logo": {
             "post": {
                 "operationId": "sodas.profile.logo.store",

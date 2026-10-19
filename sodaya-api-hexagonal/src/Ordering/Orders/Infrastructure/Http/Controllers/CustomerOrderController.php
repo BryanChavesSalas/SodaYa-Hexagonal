@@ -9,14 +9,18 @@ use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Src\Ordering\Orders\Application\DTOs\CancelOrderCommand;
+use Src\Ordering\Orders\Application\UseCases\CancelOrder;
 use Src\Ordering\Orders\Application\UseCases\GetCustomerOrder;
 use Src\Ordering\Orders\Application\UseCases\ListCustomerOrders;
 use Src\Ordering\Orders\Application\UseCases\PlaceOrder;
+use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
 use Src\Ordering\Orders\Infrastructure\Http\Requests\PlaceOrderRequest;
 use Src\Ordering\Orders\Infrastructure\Http\Resources\CustomerOrderResource;
 use Src\Ordering\Orders\Infrastructure\Http\Resources\OrderResource;
 use Src\Shared\Infrastructure\Http\Requests\ListRequest;
 use Src\Shared\Infrastructure\Http\Resources\PageMeta;
+use Src\Shared\Infrastructure\Tenancy\ScopeRequestToSoda;
 use Symfony\Component\HttpFoundation\Response;
 
 #[Group('Pedidos del cliente', 'Pedidos para llevar que hace el cliente autenticado.')]
@@ -42,6 +46,19 @@ final readonly class CustomerOrderController
     public function show(Request $request, string $pedido, GetCustomerOrder $getOrder): CustomerOrderResource
     {
         return new CustomerOrderResource($getOrder->execute($pedido, (string) $request->user()?->getAuthIdentifier()));
+    }
+
+    /** Cancel an order of the authenticated customer; the soda of the order was fixed by the middleware. */
+    #[Endpoint(
+        title: 'Cancelar mi pedido',
+        description: 'Cancela un pedido pendiente o confirmado del cliente autenticado y registra que la cancelación la originó el cliente. Las porciones vuelven al menú y, si el pedido estaba pagado, se solicita el reembolso. Un pedido listo o entregado responde 409 `transicion-no-permitida`; uno ajeno o inexistente, 404 `pedido-no-encontrado`. Cancelar un pedido ya cancelado no lo cambia.',
+    )]
+    public function cancel(Request $request, string $pedido, CancelOrder $cancelOrder): CustomerOrderResource
+    {
+        $sodaId = (string) $request->attributes->get(ScopeRequestToSoda::SODA_ATTRIBUTE);
+        $command = new CancelOrderCommand($pedido, $sodaId, CancellationOrigin::Customer->value);
+
+        return new CustomerOrderResource($cancelOrder->execute($command, now()->toDateTimeImmutable()));
     }
 
     /** Place an order at the soda of the URL on behalf of the authenticated customer, once per Idempotency-Key. */
