@@ -890,6 +890,57 @@
                 "x-abilities": [
                     "pedidos"
                 ]
+            },
+            "get": {
+                "operationId": "billing.payments.show",
+                "description": "Responde el \u00faltimo pago de un pedido propio. Si sigue pendiente y el proveedor ya lo conoce, se le consulta y la respuesta se registra en el pago y en el pedido: el estado nunca lo decide el navegador. Un pedido sin pagos, ajeno o inexistente responde 404.",
+                "summary": "Consultar el pago de un pedido",
+                "tags": [
+                    "Pagos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`Pago`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Pago"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
             }
         },
         "/cocina/pedidos": {

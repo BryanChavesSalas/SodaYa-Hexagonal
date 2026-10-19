@@ -7,6 +7,9 @@ namespace Src\Billing\Payments\Infrastructure\Http\Controllers;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Src\Billing\Payments\Application\DTOs\ConfirmPaymentCommand;
+use Src\Billing\Payments\Application\UseCases\ConfirmPayment;
 use Src\Billing\Payments\Application\UseCases\PayOrder;
 use Src\Billing\Payments\Infrastructure\Http\Requests\PayOrderRequest;
 use Src\Billing\Payments\Infrastructure\Http\Resources\PaymentResource;
@@ -27,5 +30,17 @@ final readonly class OrderPaymentController
         return new PaymentResource($payment)
             ->response()
             ->setStatusCode($payment->isApproved() ? Response::HTTP_CREATED : Response::HTTP_ACCEPTED);
+    }
+
+    /** Answer the real state of the latest payment of the order, asking the provider when it is still pending. */
+    #[Endpoint(
+        title: 'Consultar el pago de un pedido',
+        description: 'Responde el último pago de un pedido propio. Si sigue pendiente y el proveedor ya lo conoce, se le consulta y la respuesta se registra en el pago y en el pedido: el estado nunca lo decide el navegador. Un pedido sin pagos, ajeno o inexistente responde 404.',
+    )]
+    public function show(Request $request, string $pedido, ConfirmPayment $confirmPayment): PaymentResource
+    {
+        $command = new ConfirmPaymentCommand($pedido, (string) $request->user()?->getAuthIdentifier());
+
+        return new PaymentResource($confirmPayment->execute($command, now()->toDateTimeImmutable()));
     }
 }
