@@ -14,6 +14,7 @@ return [
     'order_not_found' => 'El pedido no existe.',
     'order_not_payable' => 'Solo se puede pagar un pedido pendiente.',
     'payment_method_invalid' => 'El método de pago es obligatorio.',
+    'payment_not_found' => 'El pedido no tiene pagos.',
     'provider_invalid' => 'El proveedor de pago no es válido.',
     'rejected' => 'El proveedor rechazó el pago (:code). Puede intentar de nuevo mientras el pedido siga pendiente.',
 
