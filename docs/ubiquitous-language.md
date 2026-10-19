@@ -65,6 +65,7 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Acciones disponibles | `CustomerOrderResource` | — | `acciones`: `pagar`, `cancelar` |
 | Pedido no encontrado | `OrderNotFoundException` | — | `pedido-no-encontrado` |
 | Cancelación por el cliente | `CancellationOrigin::Customer` | `customer` | `POST /api/v1/pedidos/{pedido}/cancelacion`, `cancelado_por: cliente` |
+| Lista de la cocina | `ListKitchenOrders` | índice `(soda_id, status, created_at)` | `GET /api/v1/cocina/pedidos`, filtro `estado` |
 | Pago | `Payment` | `payments` | `pago` |
 | Estado del pago | `PaymentStatus` | `payment_status` | `pago.estado` |
 | Pago aprobado | `PaymentStatus::Approved` | `approved` | `aprobado` |
@@ -158,7 +159,7 @@ El **personal** es la cocina y el dueño: siempre pertenece a una soda. Un clien
 
 Las abilities determinan qué operaciones puede realizar cada miembro del personal:
 
-- `cocina`: permite consultar los recursos del área de cocina, como platos, categorías, horario y cierres.
+- `cocina`: permite consultar los recursos del área de cocina, como platos, categorías, horario y cierres, y trabajar los pedidos: la **lista de la cocina** muestra los pedidos de la soda por estado, del más antiguo al más reciente, cada uno con su número de retiro, su hora estimada y sus líneas.
 - `administrar`: permite crear, editar o eliminar recursos administrativos de la soda.
 
 El rol de cocina recibe únicamente la ability `cocina`, por lo que puede consultar la información pero no modificarla. El dueño recibe las abilities `cocina` y `administrar`, por lo que puede consultar y también realizar operaciones de creación, edición y eliminación.

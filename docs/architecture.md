@@ -167,6 +167,14 @@ La **hora estimada de retiro** la calcula el agregado: `estimatedPickupAt()` es 
 
 Cuando la cancelación ya quedó confirmada en la base y el pedido estaba pagado, `CancelOrder` solicita el reembolso por el puerto `RefundRequests`. Se solicita después de la transacción para no reembolsar una cancelación que terminó deshaciéndose. Si la cancelación no la hizo el cliente, también le avisa por el puerto `CustomerNotices`. Los dos adaptadores despachan un trabajo a la cola; la sección «Trabajos en cola» los describe.
 
+### La lista de la cocina
+
+`GET /api/v1/cocina/pedidos` lista los pedidos de la soda del personal autenticado, con la ability `cocina`, que tienen la cocina y el dueño. `estado` filtra por `pendiente`, `confirmado`, `listo`, `entregado` o `cancelado`; sin él se listan todos. Cada pedido se responde con `OrderResource`: su número de retiro, su hora estimada de retiro, sus líneas y su total.
+
+El orden es siempre del más antiguo al más reciente, porque el orden en que llegaron los pedidos es el orden en que se preparan: con el filtro por estado, que es como trabaja la cocina, la consulta `WHERE soda_id = ? AND status = ? ORDER BY created_at` sale del índice `(soda_id, status, created_at)` ya ordenada, sin un paso de ordenamiento, y `OrderIndexesTest` lo comprueba con `EXPLAIN ANALYZE` sobre la consulta que el repositorio ejecuta de verdad. Sin filtro, PostgreSQL ordena los pedidos de la soda; es una lectura para revisar, no para preparar. No hay un orden distinto para los estados finales: una sola regla es más fácil de entender y de probar, y para ver lo último entregado basta la última página.
+
+`ListKitchenOrdersRequest` extiende `ListRequest`, la base de todo listado, y le agrega la regla de `estado`: el Form Request valida que el valor sea uno de los cinco de la API y lo traduce al vocabulario del dominio; el caso de uso `ListKitchenOrders` recibe el estado ya traducido, o ninguno, y pide la página al repositorio con `pageOfSoda()`. Las líneas de la página se cargan en una sola consulta, y `ListingBudgetTest` exige que el listado corra las mismas consultas con 1 pedido que con 50.
+
 ### Plazos del pedido
 
 Un pedido nuevo tiene 10 minutos para que se apruebe su pago. El agregado conoce la regla: `paymentDeadline()` es el momento en que se hizo más 10 minutos, y `expire($now)` lo cancela con el origen `payment_timeout` si en ese momento sigue pendiente y sin pago. Si no corresponde, responde `false` y no cambia nada.

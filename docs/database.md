@@ -42,7 +42,7 @@ Cada consulta frecuente tiene un índice que cubre su filtro y su orden. Una pru
 | Platos y categorías de una soda por nombre | Las llaves únicas `(soda_id, name)` |
 | Cierres de una soda desde una fecha | La llave única `(soda_id, closed_on)` |
 
-El orden de las columnas importa: primero las que se comparan con `=` (`soda_id`, `status`) y al final la del rango o del orden (`created_at`). La lista de cocina llega con el endpoint de la clase 11 y debe conservar esa forma de consulta.
+El orden de las columnas importa: primero las que se comparan con `=` (`soda_id`, `status`) y al final la del rango o del orden (`created_at`). La lista de cocina, `GET /api/v1/cocina/pedidos?estado=...`, conserva esa forma de consulta: el repositorio ordena solo por `created_at`, sin desempate por `id`, porque un desempate obligaría a un ordenamiento incremental después del índice. `OrderIndexesTest` revisa el plan de la consulta que el repositorio ejecuta.
 
 ## Convenciones del esquema
 
