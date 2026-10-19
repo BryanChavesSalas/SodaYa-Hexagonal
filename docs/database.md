@@ -74,6 +74,7 @@ Las funciones y los procedimientos se crean con `CREATE OR REPLACE`: `migrate:fr
 | Vista               | `v_`                     | `security_invoker = true`, para que apliquen las políticas de quien consulta              |
 | Vista materializada | `mv_`                    | Índice único para refrescar con `CONCURRENTLY`; se consulta a través de una vista         |
 | Política            | `<tabla>_soda_isolation` | Una por tabla de una soda, con la misma expresión en `USING` y `WITH CHECK`               |
+| Política de lectura | `<tabla>_customer_access` | Solo en las tablas de un pedido, `FOR SELECT`: el cliente lee lo suyo sin soda          |
 
 ### Historial de estados del pedido
 
@@ -203,6 +204,33 @@ La soda vive en la variable `app.soda_id` y se fija con `set_config('app.soda_id
 | Menú público, `/api/v1/sodas/{soda}/platos` | `soda:route`                 | La de la URL                 |
 
 Una persona sin soda fija el valor vacío y no alcanza ninguna fila. Como el dueño también está sujeto a las políticas, los sembradores escriben los datos de la soda de demostración dentro de `SodaTransaction`, y en las pruebas cada fábrica fija la soda de su fila antes de insertarla. El comando `sodaya:register-soda` solo escribe en `sodas` y `users`, que no tienen política.
+
+### Los pedidos del cliente
+
+Un cliente no tiene soda y sus rutas no la llevan en la URL, pero debe leer sus pedidos en cualquier soda. Para eso `orders`, `order_lines` y `order_status_history` tienen una segunda política, `<tabla>_customer_access`, que solo cubre `SELECT`:
+
+```sql
+CREATE POLICY orders_customer_access ON orders FOR SELECT
+    USING (customer_id = NULLIF(current_setting('app.customer_id', true), '')::uuid);
+
+CREATE POLICY order_lines_customer_access ON order_lines FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM orders
+        WHERE orders.id = order_lines.order_id
+          AND orders.customer_id = NULLIF(current_setting('app.customer_id', true), '')::uuid
+    ));
+```
+
+PostgreSQL combina las políticas permisivas de una tabla con `OR`: con la soda fijada, el personal ve las filas de su soda; con el cliente fijado, el cliente ve las de sus pedidos; sin ninguna de las dos, nada. La política de aislamiento por soda no cambia, y como la del cliente solo cubre `SELECT`, un `INSERT`, un `UPDATE` o un `DELETE` siguen exigiendo la soda: el cliente lee sin soda, pero no escribe sin ella.
+
+El cliente se fija con `set_config('app.customer_id', ?, true)`, local a la transacción como la soda, desde `SodaTransaction::scopeCustomer()`. El middleware `soda` tiene dos fuentes para él:
+
+| Rutas | Middleware | Soda de la transacción | Cliente |
+| --- | --- | --- | --- |
+| Mis pedidos, `GET /api/v1/pedidos` y `/api/v1/pedidos/{pedido}` | `soda:customer` | Ninguna | El autenticado |
+| Acciones sobre un pedido, `/api/v1/pedidos/{pedido}/...` | `soda:order` | La del pedido de la URL, leída como ese cliente | El autenticado |
+
+Con `soda:order`, la búsqueda del pedido pasa por la política del cliente: un pedido ajeno o inexistente no se ve y responde 404 `pedido-no-encontrado`. Si se ve, su soda queda fijada en la misma transacción y la cancelación o el pago tocan `dishes`, el historial y los pagos con las dos barreras de siempre. `CustomerOrderAccessTest` comprueba la visibilidad y que el cliente no escribe; `RowLevelSecurityTest` exige que solo estas tres tablas tengan una segunda política. La decisión está en el [ADR 0008](adr/0008-customer-access-to-orders-through-a-read-policy.md).
 
 ### Excepciones
 

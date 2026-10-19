@@ -60,7 +60,7 @@ Convenciones de nombres: las interfaces, los objetos de valor, los DTO y los cas
 ## Flujo de una petición
 
 1. La ruta del módulo (`Infrastructure/Http/routes.php`) entrega la petición a un controlador.
-2. En las rutas del personal y del menú público, el middleware `soda` abre una transacción y fija en PostgreSQL la soda de la petición.
+2. El middleware `soda` abre una transacción y fija en PostgreSQL la soda de la petición: la de la persona autenticada, la de la URL o la del pedido; en las rutas del cliente fija también al cliente.
 3. Un Form Request valida la forma de los datos antes de llegar al controlador.
 4. El controlador invoca un caso de uso con un DTO de datos primitivos.
 5. El caso de uso trabaja con el dominio y con los puertos.
@@ -109,6 +109,23 @@ Toda operación del personal se limita a la soda que entrega `SodaContext`. La r
 La suite `tests/Feature/Tenancy/StaffIsolationTest.php` lo comprueba con dos sodas, un caso por cada endpoint del personal. Un endpoint nuevo del personal agrega su caso a esa suite.
 
 PostgreSQL es la segunda barrera. Cada petición del personal o del menú público corre en una transacción que fija su soda, y las políticas de seguridad a nivel de fila ocultan las filas de las demás sodas aunque una consulta olvide el filtro. Los repositorios conservan su filtro por `soda_id`: la política no lo reemplaza. El detalle está en [database.md](database.md).
+
+### El cliente y sus pedidos
+
+Un cliente no pertenece a ninguna soda y sus rutas no la llevan en la URL, pero tiene pedidos en varias sodas y debe ver solo los suyos. Las dos barreras se repiten con otro dueño: el repositorio filtra por `customer_id` en `findOfCustomer()` y `pageOfCustomer()`, y la base tiene una política de lectura por cliente en las tablas del pedido, que se activa con `app.customer_id` en la transacción ([database.md](database.md), «Los pedidos del cliente»).
+
+El middleware `soda` tiene cuatro fuentes, una por cada forma de saber sobre qué filas trabaja la petición:
+
+| Fuente | Rutas | Qué fija en la transacción |
+| --- | --- | --- |
+| `soda:user` | Personal, `/api/v1/cocina` | La soda de la persona autenticada |
+| `soda:route` | Menú público y pedir, `/api/v1/sodas/{soda}/...` | La soda de la URL |
+| `soda:customer` | Mis pedidos, `GET /api/v1/pedidos` y `/api/v1/pedidos/{pedido}` | Ninguna soda y el cliente autenticado |
+| `soda:order` | Acciones sobre un pedido, `/api/v1/pedidos/{pedido}/...` | El cliente autenticado y la soda del pedido de la URL |
+
+`soda:order` busca el pedido como el cliente, por el puerto `SodaOfOrder`, que se declara junto al middleware en `Shared` y que implementa el módulo de pedidos con `EloquentSodaOfOrder`: el núcleo compartido no conoce la tabla `orders`. Si el pedido es visible, su soda queda fijada en la misma transacción y en el atributo `soda_id` de la petición, de donde el controlador la toma para el comando; la cancelación devuelve porciones a `dishes`, el trigger escribe el historial y el pago encontrará su tabla, todo con la soda del pedido. Un pedido ajeno o inexistente no es visible y responde 404 `pedido-no-encontrado`, con el mismo cuerpo en los dos casos: la respuesta no revela que el pedido existe.
+
+`GET /api/v1/pedidos` lista los pedidos del cliente del más reciente al más antiguo, paginados como cualquier listado, y `GET /api/v1/pedidos/{pedido}` responde uno. Los dos usan `CustomerOrderResource`, que reutiliza `OrderResource` y agrega `acciones`: los enlaces de lo que el cliente puede hacer con el pedido en su estado, `pagar` mientras está pendiente y sin pago aprobado y `cancelar` mientras está pendiente o confirmado; en un estado final no hay acciones. El cliente que sigue los enlaces no necesita conocer las reglas de estado: si el enlace está, la acción se puede intentar. La decisión completa está en el [ADR 0008](adr/0008-customer-access-to-orders-through-a-read-policy.md).
 
 ### Alta de una soda con su dueño
 
@@ -224,7 +241,7 @@ Toda respuesta de error sigue RFC 9457 (`application/problem+json`). `ProblemDet
 | --- | --- | --- |
 | Validación de un Form Request | `datos-invalidos`, con `errores` por campo | 422 |
 | `InvalidValueException` | `datos-invalidos` | 422 |
-| `NotFoundException` | `no-encontrado` | 404 |
+| `NotFoundException` | `no-encontrado`, o el tipo que la excepción nombra con `type()`: `pedido-no-encontrado` para un pedido ajeno o inexistente | 404 |
 | `AuthenticationFailedException`, como un correo o una contraseña incorrectos | `credenciales-invalidas` | 401 |
 | Ruta protegida sin un token válido (`AuthenticationException` del framework) | `no-autenticado` | 401 |
 | Persona autenticada sin permiso: un token sin la ability que pide la ruta (`MissingAbilityException` de Sanctum) o un cliente en una ruta del personal. Ambas son `AuthorizationException` del framework | `prohibido` | 403 |
@@ -239,7 +256,7 @@ El campo `instance` repite el identificador de la solicitud, que también viaja 
 
 ## Listados
 
-Todo listado del personal va paginado con `pagina` y `por_pagina`: 15 elementos por defecto y 50 como máximo. La respuesta trae los elementos en `data` y la página en `meta`: `pagina`, `por_pagina`, `total` y `ultima_pagina`. El menú público es la excepción: el visitante recibe todos los platos activos de una vez.
+Todo listado del personal, y el de los pedidos del cliente, va paginado con `pagina` y `por_pagina`: 15 elementos por defecto y 50 como máximo. La respuesta trae los elementos en `data` y la página en `meta`: `pagina`, `por_pagina`, `total` y `ultima_pagina`. El menú público es la excepción: el visitante recibe todos los platos activos de una vez.
 
 | Pieza | Capa | Qué hace |
 | --- | --- | --- |

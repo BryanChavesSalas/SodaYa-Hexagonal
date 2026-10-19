@@ -61,6 +61,9 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Número de retiro | `PickupNumber` | `pickup_number`, `pickup_date` | `numero_retiro` |
 | Contador de números de retiro | `PickupNumbers`, `CounterPickupNumbers` | `pickup_counters` | — |
 | Hora estimada de retiro | `estimatedPickupAt()` | — | `retiro_estimado` |
+| Mis pedidos | `ListCustomerOrders`, `GetCustomerOrder` | `app.customer_id` | `GET /api/v1/pedidos` |
+| Acciones disponibles | `CustomerOrderResource` | — | `acciones`: `pagar`, `cancelar` |
+| Pedido no encontrado | `OrderNotFoundException` | — | `pedido-no-encontrado` |
 | Pago | `Payment` | `payments` | `pago` |
 | Estado del pago | `PaymentStatus` | `payment_status` | `pago.estado` |
 | Pago aprobado | `PaymentStatus::Approved` | `approved` | `aprobado` |
@@ -122,6 +125,8 @@ Los términos de los contextos que aún no existen (pagos) quedan reservados par
 - La **línea** congela el nombre, el precio y los **minutos de preparación** que tenía el plato al pedirlo: un cambio posterior del menú no altera un pedido hecho ni su hora estimada.
 - Cada pedido recibe un **número de retiro**: un número corto, de 1 a 9999, que el mostrador dice en voz alta para entregarlo. Es consecutivo por soda y por día de Costa Rica: el primer pedido de cada día es el 1. Lo entrega el **contador** de la soda y el día; el identificador largo del pedido sigue siendo el UUID.
 - La **hora estimada de retiro** es el momento en que se hizo el pedido más el mayor tiempo de preparación de sus platos. No se guarda: se calcula a partir de las líneas congeladas.
+- El cliente consulta **sus pedidos** en cualquier soda, del más reciente al más antiguo, y el detalle de cada uno. Un pedido ajeno es un **pedido no encontrado**, igual que uno que no existe.
+- Cada pedido del cliente trae sus **acciones disponibles**: **pagar** mientras está pendiente y sin pago aprobado, **cancelar** mientras está pendiente o confirmado. Un pedido listo, entregado o cancelado no tiene acciones.
 - El pedido avanza en un solo sentido: **pendiente**, **confirmado**, **listo** y **entregado**. Se puede **cancelar** mientras está pendiente o confirmado, y la cancelación registra quién la originó: el cliente, la cocina, la falta de pago o la falta de confirmación.
 - Entregado y cancelado son estados finales.
 - Un pedido tiene 10 minutos para que se apruebe su **pago**. Si al cumplirse el **plazo de pago** sigue pendiente y sin pago, se cancela por **falta de pago**: sus porciones vuelven al menú y el cliente recibe un aviso.
