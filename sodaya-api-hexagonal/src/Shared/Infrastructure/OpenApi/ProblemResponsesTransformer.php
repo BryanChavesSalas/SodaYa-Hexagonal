@@ -16,6 +16,7 @@ use Dedoc\Scramble\Support\Generator\Types\ArrayType;
 use Dedoc\Scramble\Support\Generator\Types\IntegerType;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType;
 use Dedoc\Scramble\Support\Generator\Types\StringType;
+use Illuminate\Auth\AuthenticationException;
 use Src\Shared\Infrastructure\Http\Problem\ProblemDetailsRenderer;
 use Src\Shared\Infrastructure\Http\Problem\ProblemType;
 
@@ -26,6 +27,7 @@ final readonly class ProblemResponsesTransformer implements DocumentTransformer
     {
         $document->components->responses = [];
 
+        $unauthenticated = $this->register($document, ProblemType::Unauthenticated, $this->problemSchema());
         $notFound = $this->register($document, ProblemType::NotFound, $this->problemSchema());
         $forbidden = $this->register($document, ProblemType::Forbidden, $this->problemSchema());
 
@@ -36,7 +38,12 @@ final readonly class ProblemResponsesTransformer implements DocumentTransformer
 
         foreach ($document->paths as $path) {
             foreach ($path->operations as $operation) {
+                $requiresToken = array_any($operation->responses ?? [], $this->isAuthenticationFailure(...));
                 $operation->responses = array_filter($operation->responses ?? [], $this->isSuccessful(...));
+
+                if ($requiresToken) {
+                    $operation->addResponse($unauthenticated);
+                }
 
                 if ($operation->hasExtensionProperty('abilities')) {
                     $operation->addResponse($forbidden);
@@ -76,6 +83,12 @@ final readonly class ProblemResponsesTransformer implements DocumentTransformer
             ->addProperty('detail', new StringType)
             ->addProperty('instance', new StringType()->format('uri'))
             ->setRequired(['type', 'title', 'status', 'detail', 'instance']);
+    }
+
+    /** Tell whether Scramble inferred the failure of the authentication middleware. */
+    private function isAuthenticationFailure(Response|Reference $response): bool
+    {
+        return $response instanceof Reference && ltrim($response->fullName, '\\') === AuthenticationException::class;
     }
 
     /** Keep only the success responses inferred from the code. */

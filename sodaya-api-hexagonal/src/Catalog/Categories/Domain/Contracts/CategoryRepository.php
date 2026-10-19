@@ -7,6 +7,8 @@ namespace Src\Catalog\Categories\Domain\Contracts;
 use Src\Catalog\Categories\Domain\Entities\Category;
 use Src\Catalog\Categories\Domain\Exceptions\CategoryNameAlreadyInUseException;
 use Src\Catalog\Shared\Domain\ValueObjects\CategoryId;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 
 interface CategoryRepository
@@ -25,11 +27,11 @@ interface CategoryRepository
     public function find(CategoryId $id, SodaId $sodaId): ?Category;
 
     /**
-     * List every category of a soda ordered by name.
+     * List one page of the categories of a soda ordered by name.
      *
-     * @return list<Category>
+     * @return Page<Category>
      */
-    public function allOf(SodaId $sodaId): array;
+    public function pageOf(SodaId $sodaId, PageRequest $page): Page;
 
     /** Remove a category that belongs to its soda. */
     public function delete(Category $category): void;

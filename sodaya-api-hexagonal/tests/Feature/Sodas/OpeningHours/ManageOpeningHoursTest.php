@@ -38,7 +38,7 @@ final class ManageOpeningHoursTest extends TestCase
                 ['id' => $mondayMorning->id, 'dia' => 1, 'abre' => '08:00', 'cierra' => '12:00'],
                 ['id' => $mondayAfternoon->id, 'dia' => 1, 'abre' => '13:00', 'cierra' => '17:00'],
                 ['id' => $tuesday->id, 'dia' => 2, 'abre' => '08:00', 'cierra' => '12:00'],
-            ]]);
+            ], 'meta' => ['pagina' => 1, 'por_pagina' => 15, 'total' => 3, 'ultima_pagina' => 1]]);
     }
 
     /** A valid slot is stored for the soda and returned. */

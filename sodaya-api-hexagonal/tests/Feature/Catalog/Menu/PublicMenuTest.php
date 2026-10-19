@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Catalog\Menu;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
@@ -46,7 +47,7 @@ final class PublicMenuTest extends TestCase
         $this->getJson($this->endpoint())
             ->assertOk()
             ->assertExactJson(['data' => [
-                'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina'],
+                'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina', 'logo' => null],
                 'abierta' => false,
                 'categorias' => [[
                     'id' => $category->id,
@@ -60,9 +61,24 @@ final class PublicMenuTest extends TestCase
                         'porciones_disponibles' => 10,
                         'agotado' => false,
                         'actualizado_en' => '2026-10-01T12:00:00-06:00',
+                        'foto' => null,
                     ]],
                 ]],
             ]]);
+    }
+
+    /** The menu gives the public address of the logo and of each photo. */
+    public function test_menu_shows_the_logo_and_the_photos(): void
+    {
+        Storage::fake('public');
+        $this->soda->update(['logo_path' => "sodas/{$this->soda->id}/logo/a.webp"]);
+        DishModel::factory()->create(['soda_id' => $this->soda->id, 'photo_path' => "sodas/{$this->soda->id}/platos/b.jpg"]);
+        DishModel::factory()->create(['soda_id' => $this->soda->id, 'photo_path' => null]);
+
+        $this->getJson($this->endpoint())
+            ->assertOk()
+            ->assertJsonPath('data.soda.logo', "/storage/sodas/{$this->soda->id}/logo/a.webp")
+            ->assertJsonPath('data.categorias.0.platos.*.foto', fn (array $photos): bool => in_array("/storage/sodas/{$this->soda->id}/platos/b.jpg", $photos, true) && in_array(null, $photos, true));
     }
 
     /** Categories are sorted by name and uncategorized dishes come last. */
@@ -99,7 +115,7 @@ final class PublicMenuTest extends TestCase
         DishModel::factory()->create();
 
         $this->getJson($this->endpoint())->assertOk()->assertExactJson(['data' => [
-            'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina'],
+            'soda' => ['id' => $this->soda->id, 'nombre' => 'Soda La Esquina', 'logo' => null],
             'abierta' => false,
             'categorias' => [],
         ]]);

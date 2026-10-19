@@ -43,6 +43,8 @@ final class StoreDishRequest extends FormRequest
                 'between:'.PreparationTime::MIN.','.PreparationTime::MAX,
             ],
             'porciones_disponibles' => ['required', 'integer', 'between:'.Portions::MIN.','.Portions::MAX],
+            /** Porciones que la soda prepara en un día normal. Por defecto, las disponibles. */
+            'porciones_base' => ['sometimes', 'integer', 'between:'.Portions::MIN.','.Portions::MAX],
             'categoria_id' => [
                 'bail',
                 'nullable',
@@ -63,6 +65,7 @@ final class StoreDishRequest extends FormRequest
             $this->integer('minutos_preparacion'),
             $this->integer('porciones_disponibles'),
             $this->input('categoria_id'),
+            $this->has('porciones_base') ? $this->integer('porciones_base') : null,
         );
     }
 }

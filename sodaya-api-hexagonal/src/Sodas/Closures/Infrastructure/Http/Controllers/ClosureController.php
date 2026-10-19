@@ -10,6 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Src\Shared\Domain\Contracts\SodaContext;
+use Src\Shared\Infrastructure\Http\Requests\ListRequest;
+use Src\Shared\Infrastructure\Http\Resources\PageMeta;
 use Src\Sodas\Closures\Application\UseCases\CloseForToday;
 use Src\Sodas\Closures\Application\UseCases\DeleteClosure;
 use Src\Sodas\Closures\Application\UseCases\ListClosures;
@@ -27,11 +29,11 @@ final readonly class ClosureController
 
     /** List the closures of the current soda from today onward. */
     #[Endpoint(title: 'Listar los cierres de la soda')]
-    public function index(ListClosures $listClosures): AnonymousResourceCollection
+    public function index(ListRequest $request, ListClosures $listClosures): AnonymousResourceCollection
     {
-        return ClosureResource::collection(
-            $listClosures->execute($this->sodaContext->current()->value, now()->toDateTimeImmutable()),
-        );
+        $page = $listClosures->execute($this->sodaContext->current()->value, now()->toDateTimeImmutable(), $request->page());
+
+        return ClosureResource::collection($page->items)->additional(PageMeta::of($page));
     }
 
     /** Register a closure of the current soda for a date. */

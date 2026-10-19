@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Src\Sodas\OpeningHours\Domain\Contracts;
 
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\OpeningHours\Domain\Entities\TimeSlot;
 use Src\Sodas\OpeningHours\Domain\Exceptions\TimeSlotOverlapsException;
@@ -31,6 +33,13 @@ interface TimeSlotRepository
      * @return list<TimeSlot>
      */
     public function allOf(SodaId $sodaId): array;
+
+    /**
+     * List one page of the slots of a soda ordered by day and opening time.
+     *
+     * @return Page<TimeSlot>
+     */
+    public function pageOf(SodaId $sodaId, PageRequest $page): Page;
 
     /**
      * List the slots of a soda on one day of the week.

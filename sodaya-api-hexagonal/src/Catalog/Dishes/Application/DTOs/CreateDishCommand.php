@@ -6,7 +6,7 @@ namespace Src\Catalog\Dishes\Application\DTOs;
 
 final readonly class CreateDishCommand
 {
-    /** Carry the data needed to register a dish. */
+    /** Carry the data needed to register a dish; without base portions, the available ones become the base. */
     public function __construct(
         public string $sodaId,
         public string $name,
@@ -15,5 +15,6 @@ final readonly class CreateDishCommand
         public int $preparationMinutes,
         public int $availablePortions,
         public ?string $categoryId,
+        public ?int $basePortions = null,
     ) {}
 }

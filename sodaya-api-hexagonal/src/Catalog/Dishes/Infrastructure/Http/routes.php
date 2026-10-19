@@ -20,5 +20,9 @@ Route::prefix('cocina/platos')
             Route::patch('{plato}', 'update')
                 ->name('update')
                 ->whereUuid('plato');
+
+            Route::post('{plato}/foto', 'storePhoto')
+                ->name('photo.store')
+                ->whereUuid('plato');
         });
     });

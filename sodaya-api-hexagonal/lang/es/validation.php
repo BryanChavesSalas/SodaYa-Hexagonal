@@ -177,7 +177,11 @@ return [
         'contrasena' => 'contraseña',
         'descripcion' => 'descripción',
         'dia' => 'día',
+        'minimo_pedidos' => 'mínimo de pedidos',
         'minutos_preparacion' => 'minutos de preparación',
+        'pagina' => 'página',
+        'por_pagina' => 'elementos por página',
+        'porciones_base' => 'porciones base',
         'porciones_disponibles' => 'porciones disponibles',
     ],
 

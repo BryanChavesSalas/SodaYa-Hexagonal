@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Support\Sodas;
 
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\OpeningHours\Domain\Contracts\TimeSlotRepository;
 use Src\Sodas\OpeningHours\Domain\Entities\TimeSlot;
 use Src\Sodas\OpeningHours\Domain\ValueObjects\DayOfWeek;
 use Src\Sodas\OpeningHours\Domain\ValueObjects\TimeSlotId;
+use Tests\Support\Shared\Pages;
 
 final class InMemoryTimeSlotRepository implements TimeSlotRepository
 {
@@ -50,6 +53,16 @@ final class InMemoryTimeSlotRepository implements TimeSlotRepository
             <=> [$b->day->value, $b->opensAt->value]);
 
         return $slots;
+    }
+
+    /**
+     * List one page of the slots of the soda ordered by day and opening time.
+     *
+     * @return Page<TimeSlot>
+     */
+    public function pageOf(SodaId $sodaId, PageRequest $page): Page
+    {
+        return Pages::slice($this->allOf($sodaId), $page);
     }
 
     /**

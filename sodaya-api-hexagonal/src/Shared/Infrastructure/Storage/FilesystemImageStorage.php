@@ -14,7 +14,7 @@ final readonly class FilesystemImageStorage implements ImageStorage
     /** Copy the image to the media disk under a time-ordered UUID; the name sent by the browser is never used. */
     public function store(string $directory, string $sourcePath, string $extension): string
     {
-        $path = trim($directory, '/') . '/' . Str::uuid7() . '.' . $extension;
+        $path = trim($directory, '/').'/'.Str::uuid7().'.'.$extension;
 
         $stream = fopen($sourcePath, 'rb');
         $this->disk()->put($path, $stream === false ? '' : $stream);

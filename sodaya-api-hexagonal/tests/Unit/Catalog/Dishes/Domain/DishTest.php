@@ -66,6 +66,23 @@ final class DishTest extends TestCase
         $this->assertTrue($categoryId->equals($dish->categoryId));
     }
 
+    /** Without base portions, a new dish takes the ones available today as its base. */
+    public function test_new_dish_takes_its_portions_as_the_base(): void
+    {
+        $this->assertSame(10, $this->dish()->basePortions->quantity);
+    }
+
+    /** Changing the base portions leaves the portions available today untouched. */
+    public function test_changing_the_base_keeps_the_portions_of_today(): void
+    {
+        $dish = $this->dish(portions: 3);
+
+        $dish->changeBasePortions(new Portions(25));
+
+        $this->assertSame(25, $dish->basePortions->quantity);
+        $this->assertSame(3, $dish->availablePortions->quantity);
+    }
+
     /** Build a valid dish for the scenarios. */
     private function dish(int $portions = 10): Dish
     {

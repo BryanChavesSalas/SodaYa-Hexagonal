@@ -16,6 +16,7 @@ Ningún patrón se usa por tenerlo. Cada uno resuelve un problema concreto del p
 | Inyección de dependencias | Proveedor de servicios de cada módulo | Elegir el adaptador de cada puerto en un solo lugar |
 | Modelo de lectura (CQRS simple) | Módulos de consulta, en `Infrastructure/Persistence/Queries` | Consultas a la medida de la pantalla sin cargar agregados |
 | Cadena de responsabilidad | Middleware HTTP | Tratar cada petición antes y después del controlador |
+| Estado como enum con transiciones | `OrderStatus`, en `Ordering/Orders` | Impedir un cambio de estado inválido |
 
 ## Patrones previstos
 
@@ -23,7 +24,6 @@ Ningún patrón se usa por tenerlo. Cada uno resuelve un problema concreto del p
 | --- | --- | --- |
 | Policy | Cuentas y roles | Decidir quién puede hacer qué |
 | Transacción y bloqueo pesimista | Pedidos | Que dos pedidos no vendan la misma última porción |
-| Estado como enum con transiciones | Pedidos | Impedir un cambio de estado inválido |
 | Observer (eventos de dominio) | Pedidos y avisos | Avisar a otros contextos sin acoplarlos |
 | Strategy | Avisos y pagos | Cambiar de canal o de pasarela sin tocar el caso de uso |
 | Capa anticorrupción | Pagos | Que el modelo de la pasarela no contamine el dominio |

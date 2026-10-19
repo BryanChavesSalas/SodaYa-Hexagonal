@@ -8,7 +8,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
+use Src\Shared\Infrastructure\Persistence\EloquentPages;
 use Src\Sodas\OpeningHours\Domain\Contracts\TimeSlotRepository;
 use Src\Sodas\OpeningHours\Domain\Entities\TimeSlot;
 use Src\Sodas\OpeningHours\Domain\Exceptions\TimeSlotOverlapsException;
@@ -65,6 +68,16 @@ final readonly class EloquentTimeSlotRepository implements TimeSlotRepository
     public function allOf(SodaId $sodaId): array
     {
         return $this->toDomainList($this->orderedSlotsOf($sodaId));
+    }
+
+    /**
+     * List one page of the slots of the soda ordered by day and opening time.
+     *
+     * @return Page<TimeSlot>
+     */
+    public function pageOf(SodaId $sodaId, PageRequest $page): Page
+    {
+        return EloquentPages::of($this->orderedSlotsOf($sodaId), $page, $this->toDomain(...));
     }
 
     /**

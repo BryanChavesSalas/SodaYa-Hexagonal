@@ -33,6 +33,7 @@ final class DishFactory extends Factory
             'price' => fake()->numberBetween(10, 60) * 100,
             'preparation_minutes' => fake()->numberBetween(5, 30),
             'available_portions' => fake()->numberBetween(1, 40),
+            'base_portions' => fn (array $attributes): int => $attributes['available_portions'],
             'is_active' => true,
         ];
     }

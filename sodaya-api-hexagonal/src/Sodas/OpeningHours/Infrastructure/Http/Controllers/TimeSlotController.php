@@ -10,6 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Src\Shared\Domain\Contracts\SodaContext;
+use Src\Shared\Infrastructure\Http\Requests\ListRequest;
+use Src\Shared\Infrastructure\Http\Resources\PageMeta;
 use Src\Sodas\OpeningHours\Application\UseCases\AddTimeSlot;
 use Src\Sodas\OpeningHours\Application\UseCases\DeleteTimeSlot;
 use Src\Sodas\OpeningHours\Application\UseCases\ListTimeSlots;
@@ -24,9 +26,11 @@ final readonly class TimeSlotController
 
     /** List the schedule of the current soda. */
     #[Endpoint(title: 'Consultar el horario de la soda')]
-    public function index(ListTimeSlots $listTimeSlots): AnonymousResourceCollection
+    public function index(ListRequest $request, ListTimeSlots $listTimeSlots): AnonymousResourceCollection
     {
-        return TimeSlotResource::collection($listTimeSlots->execute($this->sodaContext->current()->value));
+        $page = $listTimeSlots->execute($this->sodaContext->current()->value, $request->page());
+
+        return TimeSlotResource::collection($page->items)->additional(PageMeta::of($page));
     }
 
     /** Add a slot to the schedule of the current soda. */

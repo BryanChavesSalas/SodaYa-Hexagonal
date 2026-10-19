@@ -24,6 +24,7 @@ use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
  * @property int $price
  * @property int $preparation_minutes
  * @property int $available_portions
+ * @property int $base_portions
  * @property bool $is_active
  * @property string|null $photo_path
  * @property CarbonImmutable $updated_at
@@ -39,6 +40,7 @@ use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
     'price',
     'preparation_minutes',
     'available_portions',
+    'base_portions',
     'is_active',
     'photo_path',
 ])]
@@ -69,6 +71,7 @@ final class DishModel extends Model
             'price' => 'integer',
             'preparation_minutes' => 'integer',
             'available_portions' => 'integer',
+            'base_portions' => 'integer',
             'is_active' => 'boolean',
         ];
     }
