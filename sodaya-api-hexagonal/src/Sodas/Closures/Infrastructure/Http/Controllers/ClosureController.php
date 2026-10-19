@@ -21,14 +21,14 @@ use Src\Sodas\Closures\Infrastructure\Http\Requests\CloseForTodayRequest;
 use Src\Sodas\Closures\Infrastructure\Http\Requests\StoreClosureRequest;
 use Src\Sodas\Closures\Infrastructure\Http\Resources\ClosureResource;
 
-#[Group('Cierres excepcionales', 'Días en que la soda no abre aunque su horario diga lo contrario.')]
+#[Group('Cierres excepcionales', 'Fechas en las que la soda no atiende aunque su horario diga lo contrario.')]
 final readonly class ClosureController
 {
     /** Receive the port that identifies the current soda. */
     public function __construct(private SodaContext $sodaContext) {}
 
     /** List the closures of the current soda from today onward. */
-    #[Endpoint(title: 'Listar los cierres de la soda')]
+    #[Endpoint(title: 'Listar los cierres desde hoy')]
     public function index(ListRequest $request, ListClosures $listClosures): AnonymousResourceCollection
     {
         $page = $listClosures->execute($this->sodaContext->current()->value, now()->toDateTimeImmutable(), $request->page());
@@ -37,7 +37,10 @@ final readonly class ClosureController
     }
 
     /** Register a closure of the current soda for a date. */
-    #[Endpoint(title: 'Registrar un cierre')]
+    #[Endpoint(
+        title: 'Registrar un cierre por fecha',
+        description: 'Responde 409 si la soda ya tiene un cierre en esa fecha.',
+    )]
     public function store(StoreClosureRequest $request, RegisterClosure $registerClosure): JsonResponse
     {
         $closure = $registerClosure->execute($request->toCommand($this->sodaContext), now()->toDateTimeImmutable());
@@ -46,7 +49,10 @@ final readonly class ClosureController
     }
 
     /** Close the current soda for the rest of today. */
-    #[Endpoint(title: 'Cerrar por el resto del día')]
+    #[Endpoint(
+        title: 'Cerrar por el resto del día',
+        description: 'Registra un cierre con la fecha de hoy en Costa Rica. Responde 409 si ya existe.',
+    )]
     public function closeForToday(CloseForTodayRequest $request, CloseForToday $closeForToday): JsonResponse
     {
         $closure = $closeForToday->execute(
