@@ -170,13 +170,19 @@ return [
         'fecha' => [
             'after_or_equal' => 'La fecha no puede ser anterior a hoy.',
         ],
+        'hasta' => [
+            'after_or_equal' => 'La fecha final no puede ser anterior a la inicial.',
+            'max_days' => 'El rango no puede abarcar más de :max días.',
+        ],
     ],
 
     'attributes' => [
         'categoria_id' => 'categoría',
         'contrasena' => 'contraseña',
         'descripcion' => 'descripción',
+        'desde' => 'fecha inicial',
         'dia' => 'día',
+        'hasta' => 'fecha final',
         'lineas' => 'líneas',
         'lineas.*.cantidad' => 'cantidad',
         'lineas.*.plato_id' => 'plato',

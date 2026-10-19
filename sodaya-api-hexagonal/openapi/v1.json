@@ -1774,6 +1774,67 @@
                 ]
             }
         },
+        "/cocina/reportes/ventas-diarias": {
+            "get": {
+                "operationId": "reporting.sales.daily",
+                "description": "Cuenta los pedidos entregados de cada d\u00eda del rango, por la fecha de Costa Rica en que se crearon, y suma lo que vendieron sin propinas. Solo aparecen los d\u00edas con pedidos entregados. Los datos salen de un resumen precalculado que se actualiza cada 15 minutos: `actualizado_en` es el momento del \u00faltimo c\u00e1lculo, o es nulo si todav\u00eda no hubo ninguno. El rango abarca 366 d\u00edas como m\u00e1ximo.",
+                "summary": "Consultar las ventas diarias",
+                "tags": [
+                    "Reportes"
+                ],
+                "parameters": [
+                    {
+                        "name": "desde",
+                        "in": "query",
+                        "required": true,
+                        "description": "Primer d\u00eda del rango, AAAA-MM-DD, en fecha de Costa Rica.",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "hasta",
+                        "in": "query",
+                        "required": true,
+                        "description": "\u00daltimo d\u00eda del rango, incluido, AAAA-MM-DD. No puede ser anterior a `desde` ni dejar un rango de m\u00e1s de 366 d\u00edas.",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VentasDiarias`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/VentasDiarias"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            }
+        },
         "/tokens": {
             "post": {
                 "operationId": "identity.tokens.store",
@@ -2744,6 +2805,34 @@
                     "abilities"
                 ],
                 "title": "TokenDeAcceso"
+            },
+            "VentasDiarias": {
+                "type": "object",
+                "properties": {
+                    "desde": {
+                        "type": "string"
+                    },
+                    "hasta": {
+                        "type": "string"
+                    },
+                    "actualizado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "dias": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "desde",
+                    "hasta",
+                    "actualizado_en",
+                    "dias"
+                ],
+                "title": "VentasDiarias"
             },
             "VentasPorHora": {
                 "type": "object",
