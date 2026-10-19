@@ -19,6 +19,7 @@ Ningún patrón se usa por tenerlo. Cada uno resuelve un problema concreto del p
 | Estado como enum con transiciones | `OrderStatus`, en `Ordering/Orders` | Impedir un cambio de estado inválido |
 | Capa anticorrupción | `StripeGateway`, en `Billing/Payments` | Traducir la forma de la API de Stripe a `ChargeResult` para que el núcleo nunca la conozca |
 | Clave de idempotencia | `IdempotencyKey` en `Ordering/Orders`; `Payment::idempotencyKey` y el índice parcial `payments_live_order_unique` en `Billing/Payments` | Que un reintento no cree un segundo pedido ni un segundo cobro: la clave del pedido la elige el cliente; la del cobro se deriva del intento y viaja al proveedor |
+| Strategy | `NoticeChannel` con `LogNoticeChannel` y `MailNoticeChannel`, elegidos en `OrdersServiceProvider` | Cambiar el canal de los avisos al cliente con una variable de configuración, sin tocar quien avisa |
 
 ## Patrones previstos
 
@@ -27,7 +28,7 @@ Ningún patrón se usa por tenerlo. Cada uno resuelve un problema concreto del p
 | Policy | Cuentas y roles | Decidir quién puede hacer qué |
 | Transacción y bloqueo pesimista | Pedidos | Que dos pedidos no vendan la misma última porción |
 | Observer (eventos de dominio) | Pedidos y avisos | Avisar a otros contextos sin acoplarlos |
-| Strategy | Avisos y pagos | Cambiar de canal o de pasarela sin tocar el caso de uso |
+| Strategy | Pagos | Cambiar de pasarela sin tocar el caso de uso, como ya se cambia el canal de los avisos |
 | Decorator | Caché del menú | Agregar caché sin modificar el lector |
 
 ## Descartados

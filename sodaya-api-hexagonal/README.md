@@ -135,11 +135,15 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | POST | `/api/v1/cocina/cierres/hoy` | Dueño | Cierra la soda por el resto del día. |
 | DELETE | `/api/v1/cocina/cierres/{cierre}` | Dueño | Elimina un cierre. |
 | POST | `/api/v1/cocina/logo` | Dueño | Sube el logo de la soda, con las mismas reglas que las fotos. |
-| POST | `/api/v1/sodas/{soda}/pedidos` | Cliente | Hace un pedido en una soda abierta: de 1 a 20 líneas con `plato_id` y `cantidad`; el nombre y el precio salen del catálogo. Exige el encabezado `Idempotency-Key`. Responde 201 con `Location`, o 200 con el mismo pedido si la solicitud se repite. |
+| POST | `/api/v1/sodas/{soda}/pedidos` | Cliente | Hace un pedido en una soda abierta: de 1 a 20 líneas con `plato_id` y `cantidad`; el nombre y el precio salen del catálogo. Exige el encabezado `Idempotency-Key`. Responde 201 con `Location`, o 200 con el mismo pedido si la solicitud se repite. El pedido trae su `numero_retiro` y su `retiro_estimado`. |
+| GET | `/api/v1/pedidos` | Cliente | Pedidos del cliente autenticado en cualquier soda, del más reciente al más antiguo, paginados. Cada uno trae en `acciones` los enlaces para `pagar` o `cancelar` según su estado. |
+| GET | `/api/v1/pedidos/{pedido}` | Cliente | Detalle de un pedido del cliente. Un pedido ajeno responde 404 `pedido-no-encontrado`. |
+| POST | `/api/v1/pedidos/{pedido}/cancelacion` | Cliente | Cancela un pedido propio pendiente o confirmado; las porciones vuelven al menú y un pedido pagado pide su reembolso. En otro estado responde 409 `transicion-no-permitida`. |
 | POST | `/api/v1/pedidos/{pedido}/pago` | Cliente | Cobra un pedido propio pendiente con la pasarela en modo de prueba; solo viaja `metodo_pago`, el monto sale del pedido. Responde 201 aprobado, 202 en proceso, 402 `pago-rechazado` o 503 `servicio-no-disponible` con `Retry-After`; 409 `pedido-ya-pagado` o `pedido-no-pagable`. |
 | GET | `/api/v1/pedidos/{pedido}/pago` | Cliente | Último pago de un pedido propio; si sigue pendiente con referencia, se consulta al proveedor y se registra la respuesta. Sin pagos responde 404. |
-| PATCH | `/api/v1/cocina/pedidos/{pedido}/estado` | Personal | Avanza un pedido al estado siguiente: `confirmado`, `listo` o `entregado`. |
-| POST | `/api/v1/cocina/pedidos/{pedido}/cancelacion` | Personal | Cancela un pedido pendiente o confirmado; las porciones vuelven al menú. |
+| GET | `/api/v1/cocina/pedidos` | Personal | Pedidos de la soda del más antiguo al más reciente, paginados; `estado` filtra por `pendiente`, `confirmado`, `listo`, `entregado` o `cancelado`. |
+| PATCH | `/api/v1/cocina/pedidos/{pedido}/estado` | Personal | Avanza un pedido al estado siguiente: `confirmado`, `listo` o `entregado`. Al quedar listo se avisa al cliente. |
+| POST | `/api/v1/cocina/pedidos/{pedido}/cancelacion` | Personal | Cancela un pedido pendiente o confirmado; las porciones vuelven al menú y se avisa al cliente. |
 | GET | `/api/v1/puntos` | Cliente | Saldo de puntos del cliente autenticado y sus últimos 20 movimientos. |
 | POST | `/api/v1/puntos/canjes` | Cliente | Canjea puntos del cliente autenticado; responde el movimiento y el `saldo` que queda. |
 | GET | `/api/v1/cocina/reportes/ventas-por-hora` | Dueño | Pedidos entregados y total vendido por hora de una fecha (`fecha`, por defecto hoy), con un mínimo de pedidos por hora (`minimo_pedidos`, por defecto 1). |
@@ -163,7 +167,7 @@ Los listados del personal van paginados: `?pagina=2&por_pagina=30` pide la segun
 
 Los endpoints de `/api/v1/cocina` piden un token Bearer; sin él responden 401 `no-autenticado`. Trabajan sobre la soda de la persona autenticada: nunca la toman de la URL, de los parámetros ni del cuerpo. Una persona sin soda, como un cliente, recibe 403 `prohibido`.
 
-Las abilities del token determinan qué puede hacer cada miembro del personal. La ability `cocina` permite consultar platos, categorías, horario y cierres, y avanzar o cancelar los pedidos, mientras que `administrar` permite crear, editar o eliminar esos recursos y consultar los reportes. El personal de cocina recibe solo `cocina`; el dueño recibe `cocina` y `administrar`. El cliente recibe `pedidos`, que piden las rutas de `/api/v1/puntos`; esas rutas toman al cliente del token y nunca de la URL ni del cuerpo.
+Las abilities del token determinan qué puede hacer cada miembro del personal. La ability `cocina` permite consultar platos, categorías, horario y cierres, y listar, avanzar o cancelar los pedidos, mientras que `administrar` permite crear, editar o eliminar esos recursos y consultar los reportes. El personal de cocina recibe solo `cocina`; el dueño recibe `cocina` y `administrar`. El cliente recibe `pedidos`, que piden las rutas de `/api/v1/puntos` y de `/api/v1/pedidos`; esas rutas toman al cliente del token y nunca de la URL ni del cuerpo, y las acciones sobre un pedido, como cancelarlo, trabajan sobre la soda de ese pedido.
 
 Los datos de demostración traen, solo para desarrollo local, dos cuentas de la soda de ejemplo, `duena@sodaya.test` con el rol de dueño y `cocina@sodaya.test` con el rol de cocina, y una cuenta de cliente, `cliente@sodaya.test`, con tres pedidos en esa soda: uno entregado, uno confirmado y uno cancelado. Las tres cuentas usan la contraseña `password`. Para ingresar como la dueña:
 
@@ -192,6 +196,7 @@ curl http://localhost:8000/api/v1/cocina/platos -H 'Accept: application/json' -H
 | `MEDIA_DISK` | Disco de `config/filesystems.php` donde se guardan las fotos y los logos. Por defecto, `public`. |
 | `STRIPE_SECRET` | Llave secreta de Stripe en modo de prueba. Debe empezar por `sk_test_`: el adaptador rechaza cualquier otra. Nunca se versiona. |
 | `STRIPE_BASE_URL` | Dirección de la API de Stripe. Por defecto, `https://api.stripe.com/v1`; solo cambia para apuntar a un simulador local. |
+| `NOTICE_CHANNEL` | Canal por el que salen los avisos al cliente: `log` o `mail`. Por defecto, `log`. Con `mail` el correo sale por el `MAIL_MAILER` configurado. |
 
 El código nunca lee variables de entorno directamente: lo hacen los archivos de `config/`. Una prueba lo verifica.
 

@@ -89,6 +89,10 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Pedido sin pagos | `PaymentNotFoundException` | — | `no-encontrado` |
 | Reembolso | `RefundRequests`, `RequestRefundJob` | — | — |
 | Aviso al cliente | `CustomerNotices`, `NotifyCustomerJob` | — | — |
+| Canal de aviso | `NoticeChannel`, `LogNoticeChannel`, `MailNoticeChannel` | — | `NOTICE_CHANNEL=log\|mail` |
+| Destinatario del aviso | `Recipient`, `Recipients` | `users.email`, `users.name` | — |
+| Pedido listo (aviso) | `orderReady()`, `order_ready` | — | asunto «Su pedido N está listo» |
+| Pedido cancelado (aviso) | `orderCancelled()`, `order_cancelled` | — | asunto «Su pedido N fue cancelado» |
 | Trabajo en cola | `ShouldQueue` | `jobs`, `failed_jobs` | — |
 | Ventas por hora | `HourlySales` | `v_hourly_sales`, `fn_hourly_sales` | `ventas-por-hora`, `horas` |
 | Mínimo de pedidos | `minimumOrders` | `p_min_orders` | `minimo_pedidos` |
@@ -152,6 +156,7 @@ Los términos de los contextos que aún no existen quedan reservados para que se
 - El cliente consulta **sus pedidos** en cualquier soda, del más reciente al más antiguo, y el detalle de cada uno. Un pedido ajeno es un **pedido no encontrado**, igual que uno que no existe.
 - Cada pedido del cliente trae sus **acciones disponibles**: **pagar** mientras está pendiente y sin pago aprobado, **cancelar** mientras está pendiente o confirmado. Un pedido listo, entregado o cancelado no tiene acciones.
 - El cliente **cancela su pedido** mientras está pendiente o confirmado; la cancelación queda registrada con el origen **cliente**, las porciones vuelven al menú y, si ya había pagado, recibe el **reembolso**. Nadie le avisa de una cancelación que hizo él mismo.
+- El cliente recibe un **aviso** cuando su pedido queda **listo** y cuando lo cancela alguien que no es él. El aviso de cancelación dice quién la originó y si hay reembolso. El **canal de aviso** se elige por configuración: el log o el correo.
 - El pedido avanza en un solo sentido: **pendiente**, **confirmado**, **listo** y **entregado**. Se puede **cancelar** mientras está pendiente o confirmado, y la cancelación registra quién la originó: el cliente, la cocina, la falta de pago o la falta de confirmación.
 - Entregado y cancelado son estados finales.
 - Un pedido tiene 10 minutos para que se apruebe su **pago**. Si al cumplirse el **plazo de pago** sigue pendiente y sin pago, se cancela por **falta de pago**: sus porciones vuelven al menú y el cliente recibe un aviso.

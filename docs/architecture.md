@@ -195,7 +195,7 @@ El caso de uso no sabe que existe una cola. Llama a un puerto, como `RefundReque
 
 | Trabajo | Lo despacha | Llega en |
 | --- | --- | --- |
-| `NotifyCustomerJob`, avisos al cliente | `CustomerNotices` al cancelar un pedido | Clase 10 |
+| `NotifyCustomerJob`, avisos al cliente | `CustomerNotices` al marcar listo o al cancelar un pedido | Clase 10; el canal, en la clase 11 |
 | `RequestRefundJob`, reembolsos | `RefundRequests` al cancelar un pedido pagado | Clase 10 |
 | `ExpireOrderJob`, plazos del pedido | `OrderDeadlines` al hacer un pedido | Clase 10 |
 | `AwardPurchasePointsJob`, acreditación de puntos | `LoyaltyRewards` al entregar un pedido | Clase 10 |
@@ -208,7 +208,24 @@ Reglas de todo trabajo, que `tests/Architecture/QueuedJobsTest.php` revisa en ca
 - La conexión `database` tiene `after_commit` activo: un trabajo despachado dentro de una transacción solo entra a la cola si la transacción se confirma. Un reembolso nunca sale por una cancelación que terminó deshaciéndose.
 - Recibe identificadores y valores simples, nunca modelos de Eloquent ni agregados: el trabajo se guarda como texto y puede ejecutarse minutos después, cuando el pedido ya cambió.
 
-Los trabajos actuales dejan su resultado en el log: el cobro y el reembolso reales llegan con el módulo de pagos, y el correo con el de notificaciones. Cuando lleguen, cambia el `handle()` del trabajo y nada más.
+El reembolso deja todavía su resultado en el log: el cobro y el reembolso reales llegan con el módulo de pagos, y cuando lleguen cambia el `handle()` del trabajo y nada más. El aviso al cliente ya sale de verdad, por el canal que elige la configuración; la sección siguiente lo describe.
+
+### Avisos al cliente por canales intercambiables
+
+El cliente recibe un aviso cuando su pedido queda listo y cuando se cancela. Quién avisa y cuándo es cosa de la aplicación: `AdvanceOrder` llama a `CustomerNotices::orderReady()` después de confirmar el paso a listo, y `CancellationEffects` a `orderCancelled()` después de confirmar una cancelación que no hizo el propio cliente. El adaptador `QueuedCustomerNotices` deja en la cola `NotifyCustomerJob` con tres valores simples: el pedido, su soda y lo que pasó, `order_ready` u `order_cancelled`. Nada más viaja en el trabajo: el nombre, el correo, el número de retiro, el origen de la cancelación y el reembolso se leen cuando el trabajo corre, porque para entonces pueden haber cambiado.
+
+Por dónde sale el aviso es cosa de la infraestructura, y es el patrón **Strategy**: el puerto `NoticeChannel`, en `Application/Contracts`, tiene un solo método, `send(Recipient $to, string $subject, string $message)`, y dos estrategias en `Infrastructure/Notices`: `LogNoticeChannel` escribe el aviso en el log y `MailNoticeChannel` lo envía con `Mail` como el `Mailable` `CustomerNoticeMail`, sin plantilla, al correo del cliente. `OrdersServiceProvider` es el único lugar que sabe cuáles canales existen: un `match` sobre `config('sodaya.notice_channel')`, que viene de `NOTICE_CHANNEL`, `log` por defecto, entrega una u otra clase; un valor desconocido lanza `UnhandledMatchError` en el primer aviso, en vez de no avisarle a nadie en silencio. Agregar WhatsApp es agregar una clase y una línea en el `match`.
+
+```
+AdvanceOrder ──▶ CustomerNotices ──▶ QueuedCustomerNotices ──▶ cola ──▶ NotifyCustomerJob::handle(NoticeChannel)
+                                                                                  │
+                                                           ┌──────────────────────┴───────────────┐
+                                                    LogNoticeChannel                      MailNoticeChannel
+```
+
+El trabajo no decide el canal: lo pide en `handle()` y el contenedor del trabajador se lo entrega con la configuración del trabajador, así que cambiar `NOTICE_CHANNEL` cambia el canal de todos los avisos sin tocar ningún trabajo ni caso de uso. Para leer el pedido abre una transacción de su soda, como `ExpireOrderJob`, y para saber a quién escribirle pregunta al puerto `Recipients`, cuyo adaptador `IdentityRecipients` lee el correo y el nombre de la cuenta del cliente en Identity. Los textos están en `lang/es/notices.php`: el asunto nombra el número de retiro, y el aviso de cancelación dice quién canceló y si hay reembolso, con el monto.
+
+Tres pruebas, tres razones para fallar: `NoticeChannelTest` comprueba que la configuración elige la clase y que cada canal hace su trabajo; `CustomerNoticesTest`, que marcar listo deja el trabajo en la cola con el pedido correcto, después de confirmar, y que ejecutarlo con el canal de correo manda el correo al cliente del pedido con el texto esperado. Que el correo llegue de verdad es cosa del proveedor de correo, no de SodaYa.
 
 ### Tareas programadas
 
