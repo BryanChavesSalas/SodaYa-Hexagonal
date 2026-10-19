@@ -136,6 +136,8 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | DELETE | `/api/v1/cocina/cierres/{cierre}` | Dueño | Elimina un cierre. |
 | POST | `/api/v1/cocina/logo` | Dueño | Sube el logo de la soda, con las mismas reglas que las fotos. |
 | POST | `/api/v1/sodas/{soda}/pedidos` | Cliente | Hace un pedido en una soda abierta: de 1 a 20 líneas con `plato_id` y `cantidad`; el nombre y el precio salen del catálogo. Exige el encabezado `Idempotency-Key`. Responde 201 con `Location`, o 200 con el mismo pedido si la solicitud se repite. |
+| POST | `/api/v1/pedidos/{pedido}/pago` | Cliente | Cobra un pedido propio pendiente con la pasarela en modo de prueba; solo viaja `metodo_pago`, el monto sale del pedido. Responde 201 aprobado, 202 en proceso, 402 `pago-rechazado` o 503 `servicio-no-disponible` con `Retry-After`; 409 `pedido-ya-pagado` o `pedido-no-pagable`. |
+| GET | `/api/v1/pedidos/{pedido}/pago` | Cliente | Último pago de un pedido propio; si sigue pendiente con referencia, se consulta al proveedor y se registra la respuesta. Sin pagos responde 404. |
 | PATCH | `/api/v1/cocina/pedidos/{pedido}/estado` | Personal | Avanza un pedido al estado siguiente: `confirmado`, `listo` o `entregado`. |
 | POST | `/api/v1/cocina/pedidos/{pedido}/cancelacion` | Personal | Cancela un pedido pendiente o confirmado; las porciones vuelven al menú. |
 | GET | `/api/v1/puntos` | Cliente | Saldo de puntos del cliente autenticado y sus últimos 20 movimientos. |

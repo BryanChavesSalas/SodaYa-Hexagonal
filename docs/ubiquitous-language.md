@@ -85,6 +85,8 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Método de pago | `paymentMethod` | — | `metodo_pago` |
 | Pedido ya pagado | `OrderAlreadyPaidException` | — | `pedido-ya-pagado` |
 | Pedido no pagable | `OrderNotPayableException` | — | `pedido-no-pagable` |
+| Confirmación del pago | `ConfirmPayment` | — | `GET /pedidos/{pedido}/pago` |
+| Pedido sin pagos | `PaymentNotFoundException` | — | `no-encontrado` |
 | Reembolso | `RefundRequests`, `RequestRefundJob` | — | — |
 | Aviso al cliente | `CustomerNotices`, `NotifyCustomerJob` | — | — |
 | Trabajo en cola | `ShouldQueue` | `jobs`, `failed_jobs` | — |
@@ -183,6 +185,7 @@ Los términos de los contextos que aún no existen quedan reservados para que se
 - El **monto** del pago es la suma de las líneas congeladas del pedido. Lo que el navegador mande se ignora.
 - La **clave de idempotencia del cobro** la deriva el servidor del intento, `pago-{uuid}`, y viaja al proveedor: un reintento con la misma clave recibe el mismo cobro.
 - El **método de pago** es el medio con que paga el cliente; en modo de prueba, `pm_card_visa` aprueba y `pm_card_visa_chargeDeclined` rechaza. Los datos de la tarjeta nunca pasan por SodaYa.
+- La **confirmación del pago** pregunta al proveedor qué pasó con un pago pendiente que tiene referencia y registra la respuesta. El estado que diga el navegador nunca se usa: un pago solo cambia por una respuesta del proveedor.
 
 ## Roles
 
