@@ -101,14 +101,14 @@ final class PublicMenuOpenStatusTest extends TestCase
         $this->assertTrue($this->isOpen());
     }
 
-    /** Two requests around a boundary get different answers and none may be cached. */
+    /** Two requests around a boundary get different answers: the server computes the flag on every request. */
     public function test_open_flag_is_computed_on_every_request(): void
     {
         $this->travelTo('2026-10-05 11:59:59');
 
         $this->getJson($this->endpoint($this->soda))
             ->assertOk()
-            ->assertHeader('Cache-Control', 'no-cache, private')
+            ->assertHeader('Cache-Control', 'max-age=60, public')
             ->assertJsonPath('data.abierta', true);
 
         $this->travel(1)->second();

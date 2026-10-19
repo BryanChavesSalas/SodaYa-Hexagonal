@@ -196,6 +196,26 @@ final class MenuCacheTest extends TestCase
         $this->menu()->assertJsonPath('data.categorias.0.platos.0.precio', 3_000);
     }
 
+    /** A browser may reuse the menu for a minute and, after that, ask whether its copy is still the same. */
+    public function test_the_browser_may_reuse_the_menu_for_a_minute_and_revalidate_it(): void
+    {
+        $first = $this->menu()
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'max-age=60, public');
+        $etag = (string) $first->headers->get('ETag');
+
+        $this->assertNotSame('', $etag);
+        $this->getJson("/api/v1/sodas/{$this->soda->id}/platos", ['If-None-Match' => $etag])
+            ->assertStatus(304)
+            ->assertNoContent(304);
+
+        $this->actAsStaffOf($this->soda);
+        $this->patchJson("/api/v1/cocina/platos/{$this->casado->id}", ['precio' => 3_000])->assertOk();
+
+        $changed = $this->getJson("/api/v1/sodas/{$this->soda->id}/platos", ['If-None-Match' => $etag])->assertOk();
+        $this->assertNotSame($etag, $changed->headers->get('ETag'));
+    }
+
     /** Read the public menu, by default of the scenario soda. */
     private function menu(?SodaModel $soda = null): TestResponse
     {
