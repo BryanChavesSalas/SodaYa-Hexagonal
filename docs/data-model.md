@@ -192,9 +192,11 @@ Llaves candidatas: `id` y `(soda_id, closed_on)`. La segunda garantiza un solo c
 | `confirmed_at`, `ready_at`, `delivered_at`, `cancelled_at` | `timestamptz` | Momento en que el pedido llegó a cada estado |
 | `payment_status` | `varchar(20)` | `pending` o `approved`; por defecto `pending` |
 | `paid_at` | `timestamptz` | Momento en que se aprobó el pago; existe solo si el pago está aprobado |
+| `idempotency_key` | `varchar(100)` | Clave que el cliente envió con la solicitud; única por cliente |
+| `request_fingerprint` | `char(64)` | SHA-256 de las líneas de la solicitud; existe exactamente cuando hay clave |
 | `created_at`, `updated_at` | `timestamptz` | `created_at` es el momento en que se hizo el pedido |
 
-Índices: `customer_id` y `(soda_id, status, created_at)`, que sirve a la lista de cocina y al reporte de ventas.
+Índices: `customer_id`, `(soda_id, status, created_at)`, que sirve a la lista de cocina y al reporte de ventas, y la llave única `(customer_id, idempotency_key)`, que impide que una clave cree dos pedidos.
 
 Llaves candidatas: `id` y `(id, soda_id)`; la segunda existe para que las líneas referencien el pedido junto con su soda. `orders_cancellation_check` exige que un pedido cancelado tenga origen y momento de cancelación, y que ningún otro los tenga. `orders_paid_at_check` exige que `paid_at` exista exactamente cuando el pago está aprobado.
 

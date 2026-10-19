@@ -134,7 +134,7 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | POST | `/api/v1/cocina/cierres/hoy` | Dueño | Cierra la soda por el resto del día. |
 | DELETE | `/api/v1/cocina/cierres/{cierre}` | Dueño | Elimina un cierre. |
 | POST | `/api/v1/cocina/logo` | Dueño | Sube el logo de la soda, con las mismas reglas que las fotos. |
-| POST | `/api/v1/sodas/{soda}/pedidos` | Cliente | Hace un pedido en una soda abierta: de 1 a 20 líneas con `plato_id` y `cantidad`; el nombre y el precio salen del catálogo. Responde 201 con `Location`. |
+| POST | `/api/v1/sodas/{soda}/pedidos` | Cliente | Hace un pedido en una soda abierta: de 1 a 20 líneas con `plato_id` y `cantidad`; el nombre y el precio salen del catálogo. Exige el encabezado `Idempotency-Key`. Responde 201 con `Location`, o 200 con el mismo pedido si la solicitud se repite. |
 | PATCH | `/api/v1/cocina/pedidos/{pedido}/estado` | Personal | Avanza un pedido al estado siguiente: `confirmado`, `listo` o `entregado`. |
 | POST | `/api/v1/cocina/pedidos/{pedido}/cancelacion` | Personal | Cancela un pedido pendiente o confirmado; las porciones vuelven al menú. |
 | GET | `/api/v1/puntos` | Cliente | Saldo de puntos del cliente autenticado y sus últimos 20 movimientos. |
