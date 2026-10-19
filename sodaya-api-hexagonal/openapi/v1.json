@@ -35,6 +35,10 @@
             "description": "Saldo y canje de los puntos de lealtad del cliente autenticado."
         },
         {
+            "name": "Pedidos del cliente",
+            "description": "Pedidos para llevar que hace el cliente autenticado."
+        },
+        {
             "name": "Pedidos de la cocina",
             "description": "Avance y cancelaci\u00f3n de los pedidos por el personal de la soda."
         },
@@ -945,6 +949,72 @@
                 ]
             }
         },
+        "/sodas/{soda}/pedidos": {
+            "post": {
+                "operationId": "ordering.orders.store",
+                "description": "Crea un pedido pendiente con de 1 a 20 l\u00edneas, una por plato, y descuenta sus porciones. El nombre y el precio de cada l\u00ednea salen del cat\u00e1logo de la soda en ese momento: cualquier precio o total enviado se ignora. Responde 422 `pedido-vacio` sin l\u00edneas, 422 `cantidad-invalida` con una cantidad fuera de 1 a 20 y 422 `plato-no-pertenece-a-la-soda` con un plato de otra soda; 409 `plato-no-disponible` con un plato desactivado, 409 `soda-cerrada` fuera del horario o en un cierre y 409 `porciones-agotadas` cuando un plato no alcanza.",
+                "summary": "Hacer un pedido",
+                "tags": [
+                    "Pedidos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "soda",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrearPedido"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`Pedido`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Pedido"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
         "/cocina/logo": {
             "post": {
                 "operationId": "sodas.profile.logo.store",
@@ -1697,6 +1767,36 @@
                     "cierra"
                 ],
                 "title": "CrearFranja"
+            },
+            "CrearPedido": {
+                "type": "object",
+                "properties": {
+                    "lineas": {
+                        "type": "array",
+                        "description": "L\u00edneas del pedido, una por plato: de 1 a 20.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "plato_id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                },
+                                "cantidad": {
+                                    "type": "integer",
+                                    "description": "Porciones del plato, de 1 a 20."
+                                }
+                            },
+                            "required": [
+                                "plato_id",
+                                "cantidad"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "lineas"
+                ],
+                "title": "CrearPedido"
             },
             "CrearPlato": {
                 "type": "object",

@@ -44,7 +44,7 @@ final class ApiRoutingTest extends TestCase
     {
         $routes = collect(Route::getRoutes()->getRoutes());
         $staff = $routes->filter(fn (RouteDefinition $route): bool => str_starts_with($route->uri(), 'api/v1/cocina'));
-        $menu = $routes->filter(fn (RouteDefinition $route): bool => str_starts_with($route->uri(), 'api/v1/sodas'));
+        $menu = $routes->filter(fn (RouteDefinition $route): bool => str_starts_with($route->uri(), 'api/v1/sodas/{soda}/platos'));
 
         $this->assertNotEmpty($staff);
         $this->assertNotEmpty($menu);

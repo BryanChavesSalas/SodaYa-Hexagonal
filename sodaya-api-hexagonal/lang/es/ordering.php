@@ -17,6 +17,7 @@ return [
     'portions_sold_out' => 'No quedan suficientes porciones de un plato del pedido.',
     'quantity_out_of_range' => 'La cantidad de cada línea debe estar entre :min y :max.',
     'soda_closed' => 'La soda no recibe pedidos en este momento.',
+    'soda_not_found' => 'La soda no existe.',
     'transition_not_allowed' => 'El pedido no puede pasar a ese estado.',
     'unit_price_out_of_range' => 'El precio unitario debe estar entre ₡:min y ₡:max.',
 
