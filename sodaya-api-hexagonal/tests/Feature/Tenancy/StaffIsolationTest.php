@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
+use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
 use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
@@ -67,6 +68,7 @@ final class StaffIsolationTest extends TestCase
             'list categories' => ['/api/v1/cocina/categorias', 'category'],
             'list opening hours' => ['/api/v1/cocina/horario', 'slot'],
             'list closures' => ['/api/v1/cocina/cierres', 'closure'],
+            'list orders' => ['/api/v1/cocina/pedidos', 'order'],
         ];
     }
 
@@ -209,7 +211,7 @@ final class StaffIsolationTest extends TestCase
     }
 
     /**
-     * Create a category, a dish in it, a time slot and a closure for a soda.
+     * Create a category, a dish in it, a time slot, a closure and an order for a soda.
      *
      * @return array<string, Model>
      */
@@ -231,6 +233,7 @@ final class StaffIsolationTest extends TestCase
                 'closes_at' => '12:00',
             ]),
             'closure' => ClosureModel::factory()->create(['soda_id' => $soda->id, 'closed_on' => $closedOn]),
+            'order' => OrderModel::factory()->create(['soda_id' => $soda->id]),
         ];
     }
 }

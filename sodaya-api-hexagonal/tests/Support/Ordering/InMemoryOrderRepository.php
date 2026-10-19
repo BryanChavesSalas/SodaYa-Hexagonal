@@ -9,6 +9,7 @@ use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Exceptions\IdempotencyKeyReusedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
+use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Shared\Domain\ValueObjects\Page;
 use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
@@ -85,6 +86,29 @@ final class InMemoryOrderRepository implements OrderRepository
         $orders = array_values(array_filter($this->orders, fn (Order $order): bool => $order->customerId->equals($customerId)));
         usort($orders, fn (Order $a, Order $b): int => [$b->placedAt, $b->id->value] <=> [$a->placedAt, $a->id->value]);
 
+        return $this->pageOf($orders, $page);
+    }
+
+    /** Page the orders of the soda oldest first, in one status or in any, as the database does. */
+    public function pageOfSoda(SodaId $sodaId, ?OrderStatus $status, PageRequest $page): Page
+    {
+        $orders = array_values(array_filter(
+            $this->orders,
+            fn (Order $order): bool => $order->sodaId->equals($sodaId) && ($status === null || $order->status === $status),
+        ));
+        usort($orders, fn (Order $a, Order $b): int => [$a->placedAt, $a->id->value] <=> [$b->placedAt, $b->id->value]);
+
+        return $this->pageOf($orders, $page);
+    }
+
+    /**
+     * Cut one page out of the sorted orders.
+     *
+     * @param  list<Order>  $orders
+     * @return Page<Order>
+     */
+    private function pageOf(array $orders, PageRequest $page): Page
+    {
         return new Page(
             array_map(fn (Order $order): Order => clone $order, array_slice($orders, $page->offset(), $page->size)),
             count($orders),

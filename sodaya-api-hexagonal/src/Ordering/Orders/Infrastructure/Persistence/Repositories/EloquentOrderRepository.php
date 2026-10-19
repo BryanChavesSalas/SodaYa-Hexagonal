@@ -111,6 +111,27 @@ final readonly class EloquentOrderRepository implements OrderRepository
         return EloquentPages::of($query, $page, $this->toDomain(...));
     }
 
+    /**
+     * List one page of the orders of the soda, oldest first, in one status or in any; with a status the index
+     * (soda_id, status, created_at) delivers the rows already in order. The lines of the page come in one more query.
+     *
+     * @return Page<Order>
+     */
+    public function pageOfSoda(SodaId $sodaId, ?OrderStatus $status, PageRequest $page): Page
+    {
+        $query = OrderModel::query()
+            ->with('lines')
+            ->where('soda_id', $sodaId->value);
+
+        if ($status !== null) {
+            $query->where('status', $status->value);
+        }
+
+        $query->orderBy('created_at');
+
+        return EloquentPages::of($query, $page, $this->toDomain(...));
+    }
+
     /** Find the order scoped to its soda. */
     public function find(OrderId $id, SodaId $sodaId): ?Order
     {

@@ -7,7 +7,11 @@ namespace Tests\Feature\Ordering;
 use Illuminate\Support\Facades\DB;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
+use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
+use Src\Ordering\Orders\Infrastructure\Persistence\Repositories\EloquentOrderRepository;
+use Src\Shared\Domain\ValueObjects\PageRequest;
+use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
 use Tests\Support\Shared\ScopesQueriesToSoda;
@@ -54,6 +58,23 @@ final class OrderIndexesTest extends TestCase
 
         $this->assertContains(self::INDEX, $this->indexesIn($plan));
         $this->assertNotContains('Sort', $this->nodeTypesIn($plan));
+    }
+
+    /** The query the repository really runs for the kitchen list of a status keeps that shape: the index, and no sort. */
+    public function test_repository_page_of_a_status_uses_the_index_without_sorting(): void
+    {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        new EloquentOrderRepository()->pageOfSoda(new SodaId($this->soda->id), OrderStatus::Pending, new PageRequest);
+        DB::disableQueryLog();
+
+        $rows = array_find(DB::getQueryLog(), fn (array $query): bool => str_contains((string) $query['query'], 'order by'));
+        $this->assertNotNull($rows, 'The repository did not read the page of orders.');
+
+        $plan = $this->plan($rows['query'], $rows['bindings']);
+
+        $this->assertContains(self::INDEX, $this->indexesIn($plan));
+        $this->assertSame([], array_filter($this->nodeTypesIn($plan), fn (string $type): bool => str_contains($type, 'Sort')));
     }
 
     /**

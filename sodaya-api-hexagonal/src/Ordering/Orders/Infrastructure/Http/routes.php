@@ -33,6 +33,7 @@ Route::prefix('cocina/pedidos')
     ->controller(KitchenOrderController::class)
     ->whereUuid('pedido')
     ->group(function (): void {
+        Route::get('/', 'index')->name('index');
         Route::patch('{pedido}/estado', 'updateStatus')->name('status.update');
         Route::post('{pedido}/cancelacion', 'cancel')->name('cancellation.store');
     });

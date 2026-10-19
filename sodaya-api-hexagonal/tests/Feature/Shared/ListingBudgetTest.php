@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
+use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderLineModel;
+use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
 use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Tests\Support\Catalog\ActsOnSoda;
@@ -67,6 +69,7 @@ final class ListingBudgetTest extends TestCase
             'categories' => ['category', '/api/v1/cocina/categorias?por_pagina=50'],
             'opening hours' => ['slot', '/api/v1/cocina/horario?por_pagina=50'],
             'closures' => ['closure', '/api/v1/cocina/cierres?por_pagina=50'],
+            'kitchen orders' => ['order', '/api/v1/cocina/pedidos?por_pagina=50'],
             'public menu' => ['menu dish', '/api/v1/sodas/{soda}/platos'],
         ];
     }
@@ -88,7 +91,7 @@ final class ListingBudgetTest extends TestCase
         return str_replace('{soda}', $this->soda->id, $endpoint);
     }
 
-    /** Create rows of a kind with their texts at the maximum length; menu dishes each get their own category. */
+    /** Create rows of a kind with their texts at the maximum length; menu dishes each get their own category and orders one line each. */
     private function rows(string $kind, int $count): void
     {
         for ($i = 0; $i < $count; $i++) {
@@ -120,6 +123,9 @@ final class ListingBudgetTest extends TestCase
                     'closed_on' => now()->addDays($n)->toDateString(),
                     'reason' => str_repeat('é', 200),
                 ]),
+                'order' => OrderLineModel::factory()
+                    ->for(OrderModel::factory()->confirmed()->create(['soda_id' => $this->soda->id]), 'order')
+                    ->create(['dish_name' => $name(120), 'quantity' => 20]),
             };
         }
     }

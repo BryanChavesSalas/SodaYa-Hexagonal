@@ -8,6 +8,7 @@ use Src\Ordering\Orders\Domain\Contracts\OrderRepository;
 use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
+use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Shared\Domain\ValueObjects\Page;
 use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
@@ -54,6 +55,12 @@ final class LateIdempotencyLookup implements OrderRepository
     public function pageOfCustomer(CustomerId $customerId, PageRequest $page): Page
     {
         return $this->inner->pageOfCustomer($customerId, $page);
+    }
+
+    /** Delegate. */
+    public function pageOfSoda(SodaId $sodaId, ?OrderStatus $status, PageRequest $page): Page
+    {
+        return $this->inner->pageOfSoda($sodaId, $status, $page);
     }
 
     /** See nothing the first time, as if the other request had not committed yet; afterwards, delegate. */

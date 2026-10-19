@@ -40,7 +40,7 @@
         },
         {
             "name": "Pedidos de la cocina",
-            "description": "Avance y cancelaci\u00f3n de los pedidos por el personal de la soda."
+            "description": "Lista, avance y cancelaci\u00f3n de los pedidos por el personal de la soda."
         },
         {
             "name": "Reportes",
@@ -828,6 +828,108 @@
                     }
                 },
                 "security": []
+            }
+        },
+        "/cocina/pedidos": {
+            "get": {
+                "operationId": "ordering.kitchen-orders.index",
+                "description": "Lista los pedidos de la soda del personal autenticado, del m\u00e1s antiguo al m\u00e1s reciente: el orden en que llegaron es el orden en que se preparan. `estado` filtra por pendiente, confirmado, listo, entregado o cancelado; sin \u00e9l se listan todos. Cada pedido trae su n\u00famero de retiro, su hora estimada de retiro y sus l\u00edneas. Paginado con `pagina` y `por_pagina`: 15 por defecto y 50 como m\u00e1ximo.",
+                "summary": "Listar los pedidos de la soda",
+                "tags": [
+                    "Pedidos de la cocina"
+                ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    },
+                    {
+                        "name": "estado",
+                        "in": "query",
+                        "description": "Estado por el que filtrar: pendiente, confirmado, listo, entregado o cancelado. Sin \u00e9l se listan todos.",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pendiente",
+                                "confirmado",
+                                "listo",
+                                "entregado",
+                                "cancelado"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `Pedido`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Pedido"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "x-abilities": [
+                    "cocina"
+                ]
             }
         },
         "/cocina/pedidos/{pedido}/estado": {

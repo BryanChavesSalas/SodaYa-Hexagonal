@@ -8,6 +8,7 @@ use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Exceptions\IdempotencyKeyReusedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
+use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Shared\Domain\ValueObjects\Page;
 use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
@@ -42,4 +43,11 @@ interface OrderRepository
      * @return Page<Order>
      */
     public function pageOfCustomer(CustomerId $customerId, PageRequest $page): Page;
+
+    /**
+     * List one page of the orders of the soda, in one status or in any, oldest first.
+     *
+     * @return Page<Order>
+     */
+    public function pageOfSoda(SodaId $sodaId, ?OrderStatus $status, PageRequest $page): Page;
 }

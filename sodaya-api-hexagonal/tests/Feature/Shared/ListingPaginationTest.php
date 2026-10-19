@@ -7,6 +7,7 @@ namespace Tests\Feature\Shared;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
+use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
 use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Tests\Support\Catalog\ActsOnSoda;
@@ -29,6 +30,7 @@ final class ListingPaginationTest extends TestCase
             CategoryModel::factory()->create(['soda_id' => $this->soda->id, 'name' => sprintf('Categoría %02d', $i)]);
             DishModel::factory()->create(['soda_id' => $this->soda->id, 'name' => sprintf('Plato %02d', $i)]);
             ClosureModel::factory()->create(['soda_id' => $this->soda->id, 'closed_on' => now()->addDays($i + 1)->toDateString()]);
+            OrderModel::factory()->create(['soda_id' => $this->soda->id, 'created_at' => now()->addMinutes($i)]);
             TimeSlotModel::factory()->create([
                 'soda_id' => $this->soda->id,
                 'day_of_week' => $i % 7 + 1,
@@ -90,6 +92,7 @@ final class ListingPaginationTest extends TestCase
             'categories' => ['/api/v1/cocina/categorias'],
             'opening hours' => ['/api/v1/cocina/horario'],
             'closures' => ['/api/v1/cocina/cierres'],
+            'kitchen orders' => ['/api/v1/cocina/pedidos'],
         ];
     }
 
