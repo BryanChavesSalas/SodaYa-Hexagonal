@@ -14,6 +14,7 @@ return [
     'owner_password_prompt' => 'Contraseña del dueño',
     'payment_account_id_invalid' => 'El identificador de la cuenta de pago no puede estar vacío ni superar los :max caracteres.',
     'register_soda_description' => 'Registra una soda y la cuenta de su dueño.',
+    'soda_not_found' => 'La soda no existe.',
     'soda_registered' => 'Soda registrada: :name (:id). Dueño: :email.',
     'time_of_day_invalid' => 'La hora debe tener el formato HH:MM, entre 00:00 y 23:59.',
     'time_slot_inverted' => 'La hora de apertura debe ser anterior a la de cierre.',

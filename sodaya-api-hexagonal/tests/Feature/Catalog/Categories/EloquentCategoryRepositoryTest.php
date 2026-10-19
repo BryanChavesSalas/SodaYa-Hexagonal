@@ -9,6 +9,7 @@ use Src\Catalog\Categories\Domain\Exceptions\CategoryNameAlreadyInUseException;
 use Src\Catalog\Categories\Domain\ValueObjects\CategoryName;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Categories\Infrastructure\Persistence\Repositories\EloquentCategoryRepository;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
@@ -102,7 +103,7 @@ final class EloquentCategoryRepositoryTest extends TestCase
 
         $names = array_map(
             fn (Category $category): string => $category->name->value,
-            $this->repository->allOf($this->sodaId),
+            $this->repository->pageOf($this->sodaId, new PageRequest)->items,
         );
 
         $this->assertSame(

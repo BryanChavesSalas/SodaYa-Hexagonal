@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use PHPUnit\Framework\TestCase;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Closures\Application\DTOs\RegisterClosureCommand;
 use Src\Sodas\Closures\Application\UseCases\CloseForToday;
@@ -65,7 +66,7 @@ final class ClosureUseCasesTest extends TestCase
             $this->registerClosure->execute($this->command('2026-10-06'), $this->now);
             $this->fail('A past date was accepted.');
         } catch (InvalidValueException) {
-            $this->assertSame([], $this->closures->from(new SodaId(self::SODA_ID), new ClosureDate('2000-01-01')));
+            $this->assertSame([], $this->closures->from(new SodaId(self::SODA_ID), new ClosureDate('2000-01-01'), new PageRequest)->items);
         }
     }
 
@@ -123,8 +124,8 @@ final class ClosureUseCasesTest extends TestCase
         $tomorrow = $this->now->modify('+1 day');
         $listClosures = new ListClosures($this->closures);
 
-        $this->assertSame(['2026-10-07', '2026-11-02', '2026-12-25'], $this->dates($listClosures->execute(self::SODA_ID, $this->now)));
-        $this->assertSame(['2026-11-02', '2026-12-25'], $this->dates($listClosures->execute(self::SODA_ID, $tomorrow)));
+        $this->assertSame(['2026-10-07', '2026-11-02', '2026-12-25'], $this->dates($listClosures->execute(self::SODA_ID, $this->now, new PageRequest)->items));
+        $this->assertSame(['2026-11-02', '2026-12-25'], $this->dates($listClosures->execute(self::SODA_ID, $tomorrow, new PageRequest)->items));
     }
 
     /** A closure of the soda can be deleted. */

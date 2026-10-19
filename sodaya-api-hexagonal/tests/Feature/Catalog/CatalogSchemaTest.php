@@ -48,6 +48,8 @@ final class CatalogSchemaTest extends TestCase
             'preparation time above maximum' => ['preparation_minutes', 121],
             'negative portions' => ['available_portions', -1],
             'portions above maximum' => ['available_portions', 501],
+            'negative base portions' => ['base_portions', -1],
+            'base portions above maximum' => ['base_portions', 501],
         ];
     }
 

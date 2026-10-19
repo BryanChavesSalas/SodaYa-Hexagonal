@@ -46,6 +46,19 @@ final class UpdateDishTest extends TestCase
         $this->assertTrue($updated->active);
     }
 
+    /** The base portions change alone; the portions available today stay. */
+    public function test_base_portions_change_alone(): void
+    {
+        $dish = $this->existingDish('Casado de pollo');
+
+        $updated = $this->updateDish->execute(
+            new UpdateDishCommand($dish->id->value, self::SODA_ID, ['base_portions' => 40]),
+        );
+
+        $this->assertSame(40, $updated->basePortions->quantity);
+        $this->assertSame(10, $updated->availablePortions->quantity);
+    }
+
     /** A null description clears it instead of being ignored. */
     public function test_null_clears_an_optional_field(): void
     {

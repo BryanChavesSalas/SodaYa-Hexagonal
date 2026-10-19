@@ -9,6 +9,7 @@ use Src\Catalog\Dishes\Application\DTOs\CreateDishCommand;
 use Src\Catalog\Dishes\Application\UseCases\CreateDish;
 use Src\Catalog\Dishes\Domain\Exceptions\DishNameAlreadyInUseException;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Tests\Support\Catalog\InMemoryDishRepository;
 
@@ -48,7 +49,7 @@ final class CreateDishTest extends TestCase
             $this->createDish->execute($this->command(price: 50));
             $this->fail('An out-of-range price was accepted.');
         } catch (InvalidValueException) {
-            $this->assertSame([], $this->dishes->allOf(new SodaId(self::SODA_ID)));
+            $this->assertSame([], $this->dishes->pageOf(new SodaId(self::SODA_ID), new PageRequest)->items);
         }
     }
 

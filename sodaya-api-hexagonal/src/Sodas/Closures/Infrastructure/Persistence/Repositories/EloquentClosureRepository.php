@@ -7,7 +7,10 @@ namespace Src\Sodas\Closures\Infrastructure\Persistence\Repositories;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
+use Src\Shared\Infrastructure\Persistence\EloquentPages;
 use Src\Sodas\Closures\Domain\Contracts\ClosureRepository;
 use Src\Sodas\Closures\Domain\Entities\Closure;
 use Src\Sodas\Closures\Domain\Exceptions\ClosureAlreadyExistsException;
@@ -63,19 +66,18 @@ final readonly class EloquentClosureRepository implements ClosureRepository
     }
 
     /**
-     * List the closures of the soda from a date onward, ordered by date.
+     * List one page of the closures of the soda from a date onward, ordered by date.
      *
-     * @return list<Closure>
+     * @return Page<Closure>
      */
-    public function from(SodaId $sodaId, ClosureDate $date): array
+    public function from(SodaId $sodaId, ClosureDate $date, PageRequest $page): Page
     {
-        $closures = ClosureModel::query()
+        $query = ClosureModel::query()
             ->where('soda_id', $sodaId->value)
             ->where('closed_on', '>=', $date->value)
-            ->orderBy('closed_on')
-            ->get();
+            ->orderBy('closed_on');
 
-        return array_values($closures->map($this->toDomain(...))->all());
+        return EloquentPages::of($query, $page, $this->toDomain(...));
     }
 
     /** Delete the closure from its soda. */

@@ -15,17 +15,28 @@ final readonly class Soda
         public SodaId $id,
         public SodaName $name,
         public ?PaymentAccountId $paymentAccountId,
+        public ?string $logoPath,
     ) {}
 
     /** Register a soda, with or without a payment account. */
     public static function create(SodaId $id, SodaName $name, ?PaymentAccountId $paymentAccountId): self
     {
-        return new self($id, $name, $paymentAccountId);
+        return new self($id, $name, $paymentAccountId, null);
     }
 
     /** Rebuild a soda from its stored state. */
-    public static function reconstitute(SodaId $id, SodaName $name, ?PaymentAccountId $paymentAccountId): self
+    public static function reconstitute(
+        SodaId $id,
+        SodaName $name,
+        ?PaymentAccountId $paymentAccountId,
+        ?string $logoPath = null,
+    ): self {
+        return new self($id, $name, $paymentAccountId, $logoPath);
+    }
+
+    /** Return the same soda showing a new logo. */
+    public function withLogo(string $path): self
     {
-        return new self($id, $name, $paymentAccountId);
+        return new self($this->id, $this->name, $this->paymentAccountId, $path);
     }
 }

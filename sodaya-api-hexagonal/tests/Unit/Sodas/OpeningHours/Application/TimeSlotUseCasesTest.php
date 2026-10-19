@@ -6,6 +6,7 @@ namespace Tests\Unit\Sodas\OpeningHours\Application;
 
 use PHPUnit\Framework\TestCase;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Sodas\OpeningHours\Application\DTOs\AddTimeSlotCommand;
 use Src\Sodas\OpeningHours\Application\UseCases\AddTimeSlot;
 use Src\Sodas\OpeningHours\Application\UseCases\DeleteTimeSlot;
@@ -39,7 +40,7 @@ final class TimeSlotUseCasesTest extends TestCase
 
         $schedule = array_map(
             fn (TimeSlot $slot): string => "{$slot->day->value} {$slot->opensAt->value}-{$slot->closesAt->value}",
-            new ListTimeSlots($this->slots)->execute(self::SODA_ID),
+            new ListTimeSlots($this->slots)->execute(self::SODA_ID, new PageRequest)->items,
         );
 
         $this->assertSame(['1 08:00-12:00', '1 12:00-15:00', '2 08:00-12:00'], $schedule);
@@ -54,7 +55,7 @@ final class TimeSlotUseCasesTest extends TestCase
             $this->add(1, '11:00', '15:00');
             $this->fail('An overlapping slot was accepted.');
         } catch (TimeSlotOverlapsException) {
-            $this->assertCount(1, new ListTimeSlots($this->slots)->execute(self::SODA_ID));
+            $this->assertCount(1, new ListTimeSlots($this->slots)->execute(self::SODA_ID, new PageRequest)->items);
         }
     }
 
@@ -66,7 +67,7 @@ final class TimeSlotUseCasesTest extends TestCase
             $this->fail('An inverted slot was accepted.');
         } catch (InvalidValueException $exception) {
             $this->assertSame('sodas.time_slot_inverted', $exception->translationKey());
-            $this->assertSame([], new ListTimeSlots($this->slots)->execute(self::SODA_ID));
+            $this->assertSame([], new ListTimeSlots($this->slots)->execute(self::SODA_ID, new PageRequest)->items);
         }
     }
 
@@ -77,7 +78,7 @@ final class TimeSlotUseCasesTest extends TestCase
 
         new DeleteTimeSlot($this->slots)->execute($slot->id->value, self::SODA_ID);
 
-        $this->assertSame([], new ListTimeSlots($this->slots)->execute(self::SODA_ID));
+        $this->assertSame([], new ListTimeSlots($this->slots)->execute(self::SODA_ID, new PageRequest)->items);
     }
 
     /** A slot of another soda cannot be deleted. */
@@ -89,7 +90,7 @@ final class TimeSlotUseCasesTest extends TestCase
             new DeleteTimeSlot($this->slots)->execute($slot->id->value, self::SODA_ID);
             $this->fail('A slot of another soda was deleted.');
         } catch (TimeSlotNotFoundException) {
-            $this->assertCount(1, new ListTimeSlots($this->slots)->execute(self::OTHER_SODA_ID));
+            $this->assertCount(1, new ListTimeSlots($this->slots)->execute(self::OTHER_SODA_ID, new PageRequest)->items);
         }
     }
 

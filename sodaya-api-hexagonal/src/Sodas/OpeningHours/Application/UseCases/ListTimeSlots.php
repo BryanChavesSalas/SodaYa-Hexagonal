@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Src\Sodas\OpeningHours\Application\UseCases;
 
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\OpeningHours\Domain\Contracts\TimeSlotRepository;
 use Src\Sodas\OpeningHours\Domain\Entities\TimeSlot;
@@ -14,12 +16,12 @@ final readonly class ListTimeSlots
     public function __construct(private TimeSlotRepository $slots) {}
 
     /**
-     * List the schedule of the soda ordered by day and opening time.
+     * List one page of the schedule of the soda ordered by day and opening time.
      *
-     * @return list<TimeSlot>
+     * @return Page<TimeSlot>
      */
-    public function execute(string $sodaId): array
+    public function execute(string $sodaId, PageRequest $page): Page
     {
-        return $this->slots->allOf(new SodaId($sodaId));
+        return $this->slots->pageOf(new SodaId($sodaId), $page);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Sodas\Profile;
 
+use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Domain\Entities\Soda;
 use Src\Sodas\Profile\Domain\ValueObjects\PaymentAccountId;
 use Src\Sodas\Profile\Domain\ValueObjects\SodaName;
@@ -60,6 +61,18 @@ final class EloquentSodaRepositoryTest extends TestCase
         $model = SodaModel::query()->findOrFail($id->value);
         $this->assertSame('Soda El Parque', $model->name);
         $this->assertSame('acct_456', $model->payment_account_id);
+    }
+
+    /** A saved soda is read back with its payment account and its logo. */
+    public function test_saved_soda_is_found_with_its_logo(): void
+    {
+        $soda = Soda::create($this->repository->nextId(), new SodaName('Soda La Esquina'), new PaymentAccountId('acct_123'))
+            ->withLogo('sodas/x/logo/a.png');
+
+        $this->repository->save($soda);
+
+        $this->assertEquals($soda, $this->repository->find($soda->id));
+        $this->assertNull($this->repository->find(new SodaId('0192f0c4-0000-7000-8000-000000000999')));
     }
 
     /** Every new identity is a distinct time-ordered UUID. */

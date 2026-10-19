@@ -9,6 +9,7 @@ use Dedoc\Scramble\Attributes\SchemaName;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Src\Catalog\Menu\Application\DTOs\MenuDish;
+use Src\Shared\Domain\Contracts\ImageStorage;
 
 /**
  * @property-read MenuDish $resource
@@ -38,6 +39,7 @@ final class MenuDishResource extends JsonResource
             'porciones_disponibles' => $this->dish->availablePortions,
             'agotado' => $this->dish->isSoldOut(),
             'actualizado_en' => $this->dish->updatedAt->format(DateTimeInterface::ATOM),
+            'foto' => $this->dish->photoPath === null ? null : app(ImageStorage::class)->url($this->dish->photoPath),
         ];
     }
 }

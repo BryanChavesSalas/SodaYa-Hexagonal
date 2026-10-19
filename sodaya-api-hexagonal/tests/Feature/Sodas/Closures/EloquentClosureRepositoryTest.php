@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Sodas\Closures;
 
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Closures\Domain\Entities\Closure;
 use Src\Sodas\Closures\Domain\Exceptions\ClosureAlreadyExistsException;
@@ -91,7 +92,7 @@ final class EloquentClosureRepositoryTest extends TestCase
 
         $dates = array_map(
             fn (Closure $closure): string => $closure->date->value,
-            $this->repository->from($this->sodaId, new ClosureDate(self::TODAY)),
+            $this->repository->from($this->sodaId, new ClosureDate(self::TODAY), new PageRequest)->items,
         );
 
         $this->assertSame([self::TODAY, '2026-11-02', '2026-12-25'], $dates);

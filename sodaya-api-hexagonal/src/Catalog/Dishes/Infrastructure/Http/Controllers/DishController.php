@@ -8,13 +8,17 @@ use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Src\Catalog\Dishes\Application\UseCases\ChangeDishPhoto;
 use Src\Catalog\Dishes\Application\UseCases\CreateDish;
 use Src\Catalog\Dishes\Application\UseCases\ListDishes;
 use Src\Catalog\Dishes\Application\UseCases\UpdateDish;
+use Src\Catalog\Dishes\Infrastructure\Http\Requests\StoreDishPhotoRequest;
 use Src\Catalog\Dishes\Infrastructure\Http\Requests\StoreDishRequest;
 use Src\Catalog\Dishes\Infrastructure\Http\Requests\UpdateDishRequest;
 use Src\Catalog\Dishes\Infrastructure\Http\Resources\DishResource;
 use Src\Shared\Domain\Contracts\SodaContext;
+use Src\Shared\Infrastructure\Http\Requests\ListRequest;
+use Src\Shared\Infrastructure\Http\Resources\PageMeta;
 use Symfony\Component\HttpFoundation\Response;
 
 #[Group('Platos de la soda', 'Administración de los platos por el personal de la soda.')]
@@ -25,9 +29,11 @@ final readonly class DishController
 
     /** List every dish of the current soda. */
     #[Endpoint(title: 'Listar los platos de la soda')]
-    public function index(ListDishes $listDishes): AnonymousResourceCollection
+    public function index(ListRequest $request, ListDishes $listDishes): AnonymousResourceCollection
     {
-        return DishResource::collection($listDishes->execute($this->sodaContext->current()->value));
+        $page = $listDishes->execute($this->sodaContext->current()->value, $request->page());
+
+        return DishResource::collection($page->items)->additional(PageMeta::of($page));
     }
 
     /** Register a dish for the current soda. */
@@ -47,5 +53,15 @@ final readonly class DishController
     public function update(UpdateDishRequest $request, UpdateDish $updateDish): DishResource
     {
         return new DishResource($updateDish->execute($request->toCommand($this->sodaContext)));
+    }
+
+    /** Replace the photo of a dish of the current soda. */
+    #[Endpoint(
+        title: 'Subir la foto de un plato',
+        description: 'Acepta JPG, PNG o WebP de hasta 2 MB y 4000 × 4000 píxeles. El tipo se lee del contenido del archivo y el servidor genera el nombre con que se guarda.',
+    )]
+    public function storePhoto(StoreDishPhotoRequest $request, ChangeDishPhoto $changeDishPhoto): DishResource
+    {
+        return new DishResource($changeDishPhoto->execute($request->toCommand($this->sodaContext)));
     }
 }

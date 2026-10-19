@@ -57,6 +57,7 @@ final class CatalogSeeder extends Seeder
                             'price' => $price,
                             'preparation_minutes' => $minutes,
                             'available_portions' => $portions,
+                            'base_portions' => $portions,
                         ],
                     );
                 }
@@ -64,7 +65,7 @@ final class CatalogSeeder extends Seeder
 
             DishModel::query()->updateOrCreate(
                 ['soda_id' => $soda->id, 'name' => 'Chifrijo'],
-                ['price' => 3_000, 'preparation_minutes' => 15, 'available_portions' => 0],
+                ['price' => 3_000, 'preparation_minutes' => 15, 'available_portions' => 0, 'base_portions' => 12],
             );
         });
     }

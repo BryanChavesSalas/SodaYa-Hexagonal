@@ -18,7 +18,10 @@ use Src\Catalog\Dishes\Domain\ValueObjects\PreparationTime;
 use Src\Catalog\Dishes\Domain\ValueObjects\Price;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Catalog\Shared\Domain\ValueObjects\CategoryId;
+use Src\Shared\Domain\ValueObjects\Page;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
+use Src\Shared\Infrastructure\Persistence\EloquentPages;
 
 final readonly class EloquentDishRepository implements DishRepository
 {
@@ -42,7 +45,9 @@ final readonly class EloquentDishRepository implements DishRepository
                     'price' => $dish->price->amount,
                     'preparation_minutes' => $dish->preparationTime->minutes,
                     'available_portions' => $dish->availablePortions->quantity,
+                    'base_portions' => $dish->basePortions->quantity,
                     'is_active' => $dish->active,
+                    'photo_path' => $dish->photoPath,
                 ],
             ));
         } catch (UniqueConstraintViolationException) {
@@ -61,18 +66,17 @@ final readonly class EloquentDishRepository implements DishRepository
     }
 
     /**
-     * List the dishes of the soda ordered by name.
+     * List one page of the dishes of the soda ordered by name.
      *
-     * @return list<Dish>
+     * @return Page<Dish>
      */
-    public function allOf(SodaId $sodaId): array
+    public function pageOf(SodaId $sodaId, PageRequest $page): Page
     {
-        $dishes = DishModel::query()
+        $query = DishModel::query()
             ->where('soda_id', $sodaId->value)
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
 
-        return array_values($dishes->map($this->toDomain(...))->all());
+        return EloquentPages::of($query, $page, $this->toDomain(...));
     }
 
     /** Rebuild the aggregate from its stored state. */
@@ -86,8 +90,10 @@ final readonly class EloquentDishRepository implements DishRepository
             new Price($model->price),
             new PreparationTime($model->preparation_minutes),
             new Portions($model->available_portions),
+            new Portions($model->base_portions),
             $model->category_id === null ? null : new CategoryId($model->category_id),
             $model->is_active,
+            $model->photo_path,
         );
     }
 }

@@ -233,6 +233,51 @@ final class StaffPermissionsTest extends TestCase
                 403,
                 404,
             ],
+
+            'upload dish photo' => [
+                'POST',
+                "/api/v1/cocina/platos/{$missingId}/foto",
+                [],
+                403,
+                403,
+                422,
+            ],
+
+            'upload soda logo' => [
+                'POST',
+                '/api/v1/cocina/logo',
+                [],
+                403,
+                403,
+                422,
+            ],
+
+            'advance order' => [
+                'PATCH',
+                "/api/v1/cocina/pedidos/{$missingId}/estado",
+                [],
+                403,
+                422,
+                422,
+            ],
+
+            'cancel order' => [
+                'POST',
+                "/api/v1/cocina/pedidos/{$missingId}/cancelacion",
+                [],
+                403,
+                404,
+                404,
+            ],
+
+            'hourly sales' => [
+                'GET',
+                '/api/v1/cocina/reportes/ventas-por-hora',
+                [],
+                403,
+                403,
+                200,
+            ],
         ];
     }
 
@@ -331,6 +376,36 @@ final class StaffPermissionsTest extends TestCase
             'update dish without token' => [
                 'PATCH',
                 "/api/v1/cocina/platos/{$missingId}",
+                [],
+            ],
+
+            'upload dish photo without token' => [
+                'POST',
+                "/api/v1/cocina/platos/{$missingId}/foto",
+                [],
+            ],
+
+            'upload soda logo without token' => [
+                'POST',
+                '/api/v1/cocina/logo',
+                [],
+            ],
+
+            'advance order without token' => [
+                'PATCH',
+                "/api/v1/cocina/pedidos/{$missingId}/estado",
+                [],
+            ],
+
+            'cancel order without token' => [
+                'POST',
+                "/api/v1/cocina/pedidos/{$missingId}/cancelacion",
+                [],
+            ],
+
+            'hourly sales without token' => [
+                'GET',
+                '/api/v1/cocina/reportes/ventas-por-hora',
                 [],
             ],
         ];
