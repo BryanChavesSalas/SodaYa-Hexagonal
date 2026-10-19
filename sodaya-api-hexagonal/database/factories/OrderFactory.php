@@ -20,7 +20,7 @@ final class OrderFactory extends Factory
     protected $model = OrderModel::class;
 
     /**
-     * Default state of a fictitious pending order of a customer.
+     * Default state of a fictitious pending order of a customer, with a pickup number of its own for today.
      *
      * @return array<string, mixed>
      */
@@ -30,6 +30,8 @@ final class OrderFactory extends Factory
             'soda_id' => SodaModel::factory(),
             'customer_id' => UserModel::factory(),
             'status' => 'pending',
+            'pickup_date' => now()->toDateString(),
+            'pickup_number' => fake()->unique()->numberBetween(1, 9999),
         ];
     }
 

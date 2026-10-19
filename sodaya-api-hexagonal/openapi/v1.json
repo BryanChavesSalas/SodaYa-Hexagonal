@@ -15,6 +15,10 @@
             "name": "General"
         },
         {
+            "name": "Pagos del cliente",
+            "description": "Cobro por adelantado de los pedidos del cliente autenticado, con la pasarela en modo de prueba."
+        },
+        {
             "name": "Categor\u00edas de la soda",
             "description": "Administraci\u00f3n de las categor\u00edas del men\u00fa por el personal de la soda."
         },
@@ -27,6 +31,10 @@
             "description": "Consulta del men\u00fa de una soda sin iniciar sesi\u00f3n."
         },
         {
+            "name": "Promociones de la soda",
+            "description": "Horas felices: un descuento para toda la soda por d\u00eda de la semana y franja horaria, solo para el due\u00f1o."
+        },
+        {
             "name": "Sesiones",
             "description": "Ingreso con correo y contrase\u00f1a y cierre de sesi\u00f3n mediante tokens de acceso."
         },
@@ -35,8 +43,12 @@
             "description": "Saldo y canje de los puntos de lealtad del cliente autenticado."
         },
         {
+            "name": "Pedidos del cliente",
+            "description": "Pedidos para llevar que hace el cliente autenticado."
+        },
+        {
             "name": "Pedidos de la cocina",
-            "description": "Avance y cancelaci\u00f3n de los pedidos por el personal de la soda."
+            "description": "Lista, avance y cancelaci\u00f3n de los pedidos por el personal de la soda."
         },
         {
             "name": "Reportes",
@@ -731,7 +743,7 @@
         "/sodas/{soda}/platos": {
             "get": {
                 "operationId": "catalog.menu.index",
-                "description": "El atributo `abierta` indica si la soda atiende en el momento de la respuesta, seg\u00fan su horario y sus cierres excepcionales, en hora de Costa Rica.",
+                "description": "El atributo `abierta` indica si la soda atiende en el momento de la respuesta, seg\u00fan su horario y sus cierres excepcionales, en hora de Costa Rica. Cada plato trae su `precio` base y su `precio_vigente`, que aplica la hora feliz activa en ese momento; cuando no hay promoci\u00f3n, los dos coinciden.",
                 "summary": "Consultar el men\u00fa de una soda",
                 "tags": [
                     "Men\u00fa p\u00fablico"
@@ -776,6 +788,7 @@
         "/sodas/{soda}/platos/{plato}": {
             "get": {
                 "operationId": "catalog.menu.show",
+                "description": "El `precio_vigente` aplica la hora feliz activa en el momento de la respuesta.",
                 "summary": "Consultar un plato del men\u00fa",
                 "tags": [
                     "Men\u00fa p\u00fablico"
@@ -824,6 +837,217 @@
                     }
                 },
                 "security": []
+            }
+        },
+        "/pedidos/{pedido}/pago": {
+            "post": {
+                "operationId": "billing.payments.store",
+                "description": "Cobra un pedido propio que est\u00e9 pendiente con la pasarela en modo de prueba. El monto sale de las l\u00edneas guardadas del pedido: cualquier monto enviado se ignora. Solo se env\u00eda el m\u00e9todo de pago; en modo de prueba, `pm_card_visa` aprueba y `pm_card_visa_chargeDeclined` rechaza. Aprobado responde 201 con el pago y el pedido queda pagado; rechazado responde 402 `pago-rechazado` y el cliente puede reintentar mientras el pedido siga pendiente; si el proveedor no responde, el pago queda pendiente y la respuesta es 503 `servicio-no-disponible` con `Retry-After`. Repetir la solicitud devuelve el mismo pago: un pedido tiene a lo sumo un pago pendiente o aprobado. Un pedido ya pagado responde 409 `pedido-ya-pagado`; uno que no est\u00e1 pendiente, 409 `pedido-no-pagable`; uno ajeno o inexistente, 404.",
+                "summary": "Pagar un pedido",
+                "tags": [
+                    "Pagos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PagarPedido"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            },
+            "get": {
+                "operationId": "billing.payments.show",
+                "description": "Responde el \u00faltimo pago de un pedido propio. Si sigue pendiente y el proveedor ya lo conoce, se le consulta y la respuesta se registra en el pago y en el pedido: el estado nunca lo decide el navegador. Un pedido sin pagos, ajeno o inexistente responde 404.",
+                "summary": "Consultar el pago de un pedido",
+                "tags": [
+                    "Pagos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`Pago`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Pago"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
+        "/cocina/pedidos": {
+            "get": {
+                "operationId": "ordering.kitchen-orders.index",
+                "description": "Lista los pedidos de la soda del personal autenticado, del m\u00e1s antiguo al m\u00e1s reciente: el orden en que llegaron es el orden en que se preparan. `estado` filtra por pendiente, confirmado, listo, entregado o cancelado; sin \u00e9l se listan todos. Cada pedido trae su n\u00famero de retiro, su hora estimada de retiro y sus l\u00edneas. Paginado con `pagina` y `por_pagina`: 15 por defecto y 50 como m\u00e1ximo.",
+                "summary": "Listar los pedidos de la soda",
+                "tags": [
+                    "Pedidos de la cocina"
+                ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    },
+                    {
+                        "name": "estado",
+                        "in": "query",
+                        "description": "Estado por el que filtrar: pendiente, confirmado, listo, entregado o cancelado. Sin \u00e9l se listan todos.",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pendiente",
+                                "confirmado",
+                                "listo",
+                                "entregado",
+                                "cancelado"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `Pedido`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Pedido"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "x-abilities": [
+                    "cocina"
+                ]
             }
         },
         "/cocina/pedidos/{pedido}/estado": {
@@ -942,6 +1166,257 @@
                 },
                 "x-abilities": [
                     "cocina"
+                ]
+            }
+        },
+        "/sodas/{soda}/pedidos": {
+            "post": {
+                "operationId": "ordering.orders.store",
+                "description": "Crea un pedido pendiente con de 1 a 20 l\u00edneas, una por plato, y descuenta sus porciones. El nombre y el precio de cada l\u00ednea salen del cat\u00e1logo de la soda en ese momento: cualquier precio o total enviado se ignora. Exige el encabezado `Idempotency-Key`, de 1 a 100 caracteres, elegido por el cliente para cada pedido; sin \u00e9l responde 400 `solicitud-invalida`. Repetir la solicitud con la misma clave y las mismas l\u00edneas responde 200 con el pedido ya creado, sin descontar porciones de nuevo; la misma clave con otras l\u00edneas responde 409 `conflicto`. Responde 422 `pedido-vacio` sin l\u00edneas, 422 `cantidad-invalida` con una cantidad fuera de 1 a 20 y 422 `plato-no-pertenece-a-la-soda` con un plato de otra soda; 409 `plato-no-disponible` con un plato desactivado, 409 `soda-cerrada` fuera del horario o en un cierre y 409 `porciones-agotadas` cuando un plato no alcanza.",
+                "summary": "Hacer un pedido",
+                "tags": [
+                    "Pedidos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "soda",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrearPedido"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
+        "/pedidos": {
+            "get": {
+                "operationId": "ordering.orders.index",
+                "description": "Lista los pedidos del cliente autenticado en cualquier soda, del m\u00e1s reciente al m\u00e1s antiguo, paginados con `pagina` y `por_pagina`. Cada pedido trae en `acciones` los enlaces de lo que el cliente puede hacer con \u00e9l en su estado: `pagar` mientras est\u00e1 pendiente y sin pago aprobado y `cancelar` mientras est\u00e1 pendiente o confirmado; en un estado final no hay acciones.",
+                "summary": "Consultar mis pedidos",
+                "tags": [
+                    "Pedidos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `PedidoDelCliente`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PedidoDelCliente"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
+        "/pedidos/{pedido}": {
+            "get": {
+                "operationId": "ordering.orders.show",
+                "description": "Responde un pedido del cliente autenticado con sus l\u00edneas, su n\u00famero de retiro, su hora estimada de retiro y las acciones disponibles en su estado. Un pedido ajeno responde el mismo 404 `pedido-no-encontrado` que uno que no existe.",
+                "summary": "Consultar un pedido m\u00edo",
+                "tags": [
+                    "Pedidos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PedidoDelCliente`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PedidoDelCliente"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
+            }
+        },
+        "/pedidos/{pedido}/cancelacion": {
+            "post": {
+                "operationId": "ordering.orders.cancellation.store",
+                "description": "Cancela un pedido pendiente o confirmado del cliente autenticado y registra que la cancelaci\u00f3n la origin\u00f3 el cliente. Las porciones vuelven al men\u00fa y, si el pedido estaba pagado, se solicita el reembolso. Un pedido listo o entregado responde 409 `transicion-no-permitida`; uno ajeno o inexistente, 404 `pedido-no-encontrado`. Cancelar un pedido ya cancelado no lo cambia.",
+                "summary": "Cancelar mi pedido",
+                "tags": [
+                    "Pedidos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PedidoDelCliente`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PedidoDelCliente"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
                 ]
             }
         },
@@ -1262,6 +1737,180 @@
                 ]
             }
         },
+        "/cocina/promociones": {
+            "get": {
+                "operationId": "catalog.promotions.index",
+                "description": "Ordenadas por d\u00eda y hora de inicio; el d\u00eda 1 es lunes y el 7 es domingo.",
+                "summary": "Consultar las promociones de la soda",
+                "tags": [
+                    "Promociones de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "pagina",
+                        "in": "query",
+                        "description": "N\u00famero de p\u00e1gina, desde 1.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "por_pagina",
+                        "in": "query",
+                        "description": "Elementos por p\u00e1gina, de 1 a 50. Por defecto, 15.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `Promocion`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Promocion"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "por_pagina": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "ultima_pagina": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pagina",
+                                                "por_pagina",
+                                                "total",
+                                                "ultima_pagina"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            },
+            "post": {
+                "operationId": "catalog.promotions.store",
+                "description": "El descuento va de 1 % a 90 % y aplica a todos los platos de la soda desde `inicio`, incluido, hasta `fin`, excluido. Responde 409 `promocion-traslapada` si comparte un minuto con otra promoci\u00f3n del mismo d\u00eda.",
+                "summary": "Definir una promoci\u00f3n",
+                "tags": [
+                    "Promociones de la soda"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrearPromocion"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`Promocion`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Promocion"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            }
+        },
+        "/cocina/promociones/{promocion}": {
+            "delete": {
+                "operationId": "catalog.promotions.destroy",
+                "summary": "Eliminar una promoci\u00f3n",
+                "tags": [
+                    "Promociones de la soda"
+                ],
+                "parameters": [
+                    {
+                        "name": "promocion",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            }
+        },
         "/puntos": {
             "get": {
                 "operationId": "loyalty.points.show",
@@ -1396,6 +2045,67 @@
                                     "properties": {
                                         "data": {
                                             "$ref": "#/components/schemas/VentasPorHora"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "x-abilities": [
+                    "administrar"
+                ]
+            }
+        },
+        "/cocina/reportes/ventas-diarias": {
+            "get": {
+                "operationId": "reporting.sales.daily",
+                "description": "Cuenta los pedidos entregados de cada d\u00eda del rango, por la fecha de Costa Rica en que se crearon, y suma lo que vendieron sin propinas. Solo aparecen los d\u00edas con pedidos entregados. Los datos salen de un resumen precalculado que se actualiza cada 15 minutos: `actualizado_en` es el momento del \u00faltimo c\u00e1lculo, o es nulo si todav\u00eda no hubo ninguno. El rango abarca 366 d\u00edas como m\u00e1ximo.",
+                "summary": "Consultar las ventas diarias",
+                "tags": [
+                    "Reportes"
+                ],
+                "parameters": [
+                    {
+                        "name": "desde",
+                        "in": "query",
+                        "required": true,
+                        "description": "Primer d\u00eda del rango, AAAA-MM-DD, en fecha de Costa Rica.",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "hasta",
+                        "in": "query",
+                        "required": true,
+                        "description": "\u00daltimo d\u00eda del rango, incluido, AAAA-MM-DD. No puede ser anterior a `desde` ni dejar un rango de m\u00e1s de 366 d\u00edas.",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VentasDiarias`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/VentasDiarias"
                                         }
                                     },
                                     "required": [
@@ -1698,6 +2408,36 @@
                 ],
                 "title": "CrearFranja"
             },
+            "CrearPedido": {
+                "type": "object",
+                "properties": {
+                    "lineas": {
+                        "type": "array",
+                        "description": "L\u00edneas del pedido, una por plato: de 1 a 20.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "plato_id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                },
+                                "cantidad": {
+                                    "type": "integer",
+                                    "description": "Porciones del plato, de 1 a 20."
+                                }
+                            },
+                            "required": [
+                                "plato_id",
+                                "cantidad"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "lineas"
+                ],
+                "title": "CrearPedido"
+            },
             "CrearPlato": {
                 "type": "object",
                 "properties": {
@@ -1748,6 +2488,34 @@
                     "porciones_disponibles"
                 ],
                 "title": "CrearPlato"
+            },
+            "CrearPromocion": {
+                "type": "object",
+                "properties": {
+                    "dia": {
+                        "type": "integer",
+                        "description": "D\u00eda de la semana ISO 8601: 1 es lunes y 7 es domingo."
+                    },
+                    "inicio": {
+                        "type": "string",
+                        "description": "Hora de inicio, HH:MM, incluida en la promoci\u00f3n."
+                    },
+                    "fin": {
+                        "type": "string",
+                        "description": "Hora de fin, HH:MM, excluida de la promoci\u00f3n."
+                    },
+                    "porcentaje": {
+                        "type": "integer",
+                        "description": "Descuento en porcentaje, de 1 a 90."
+                    }
+                },
+                "required": [
+                    "dia",
+                    "inicio",
+                    "fin",
+                    "porcentaje"
+                ],
+                "title": "CrearPromocion"
             },
             "Credenciales": {
                 "type": "object",
@@ -1903,11 +2671,90 @@
                 ],
                 "title": "MovimientoDePuntos"
             },
+            "PagarPedido": {
+                "type": "object",
+                "properties": {
+                    "metodo_pago": {
+                        "type": "string",
+                        "description": "M\u00e9todo de pago del proveedor en modo de prueba: `pm_card_visa` aprueba y `pm_card_visa_chargeDeclined` rechaza.",
+                        "pattern": "^pm_[A-Za-z0-9_]{1,80}$"
+                    }
+                },
+                "required": [
+                    "metodo_pago"
+                ],
+                "title": "PagarPedido"
+            },
+            "Pago": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "pedido_id": {
+                        "type": "string"
+                    },
+                    "proveedor": {
+                        "type": "string"
+                    },
+                    "referencia": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "monto": {
+                        "type": "integer"
+                    },
+                    "estado": {
+                        "type": "string",
+                        "enum": [
+                            "pendiente",
+                            "aprobado",
+                            "rechazado"
+                        ]
+                    },
+                    "codigo_rechazo": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "creado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cerrado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "pedido_id",
+                    "proveedor",
+                    "referencia",
+                    "monto",
+                    "estado",
+                    "codigo_rechazo",
+                    "creado_en",
+                    "cerrado_en"
+                ],
+                "title": "Pago"
+            },
             "Pedido": {
                 "type": "object",
                 "properties": {
                     "id": {
                         "type": "string"
+                    },
+                    "numero_retiro": {
+                        "type": "integer",
+                        "description": "N\u00famero corto que el mostrador dice en voz alta; consecutivo por soda y por d\u00eda."
                     },
                     "estado": {
                         "type": "string",
@@ -1967,6 +2814,13 @@
                             "null"
                         ]
                     },
+                    "retiro_estimado": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Hora estimada de retiro: la creaci\u00f3n m\u00e1s el mayor tiempo de preparaci\u00f3n de sus platos."
+                    },
                     "confirmado_en": {
                         "type": [
                             "string",
@@ -1994,18 +2848,150 @@
                 },
                 "required": [
                     "id",
+                    "numero_retiro",
                     "estado",
                     "cancelado_por",
                     "pago",
                     "lineas",
                     "total",
                     "creado_en",
+                    "retiro_estimado",
                     "confirmado_en",
                     "listo_en",
                     "entregado_en",
                     "cancelado_en"
                 ],
                 "title": "Pedido"
+            },
+            "PedidoDelCliente": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "numero_retiro": {
+                        "type": "integer",
+                        "description": "N\u00famero corto que el mostrador dice en voz alta; consecutivo por soda y por d\u00eda."
+                    },
+                    "estado": {
+                        "type": "string",
+                        "enum": [
+                            "pendiente",
+                            "confirmado",
+                            "listo",
+                            "entregado",
+                            "cancelado"
+                        ]
+                    },
+                    "cancelado_por": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "cliente",
+                            "cocina",
+                            "falta_de_pago",
+                            "falta_de_confirmacion",
+                            null
+                        ]
+                    },
+                    "pago": {
+                        "type": "object",
+                        "properties": {
+                            "estado": {
+                                "type": "string",
+                                "enum": [
+                                    "aprobado",
+                                    "pendiente"
+                                ]
+                            },
+                            "aprobado_en": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "estado",
+                            "aprobado_en"
+                        ]
+                    },
+                    "lineas": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "creado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "retiro_estimado": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Hora estimada de retiro: la creaci\u00f3n m\u00e1s el mayor tiempo de preparaci\u00f3n de sus platos."
+                    },
+                    "confirmado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "listo_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "entregado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cancelado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "acciones": {
+                        "type": "object",
+                        "description": "Enlaces a las acciones disponibles seg\u00fan el estado: `pagar` mientras est\u00e1 pendiente y sin pago aprobado, `cancelar` mientras est\u00e1 pendiente o confirmado. Vac\u00edo en un estado final.",
+                        "properties": {
+                            "pagar": {
+                                "type": "string"
+                            },
+                            "cancelar": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "numero_retiro",
+                    "estado",
+                    "cancelado_por",
+                    "pago",
+                    "lineas",
+                    "total",
+                    "creado_en",
+                    "retiro_estimado",
+                    "confirmado_en",
+                    "listo_en",
+                    "entregado_en",
+                    "cancelado_en",
+                    "acciones"
+                ],
+                "title": "PedidoDelCliente"
             },
             "Plato": {
                 "type": "object",
@@ -2086,6 +3072,9 @@
                     "precio": {
                         "type": "integer"
                     },
+                    "precio_vigente": {
+                        "type": "integer"
+                    },
                     "minutos_preparacion": {
                         "type": "integer"
                     },
@@ -2110,6 +3099,7 @@
                     "nombre",
                     "descripcion",
                     "precio",
+                    "precio_vigente",
                     "minutos_preparacion",
                     "porciones_disponibles",
                     "agotado",
@@ -2117,6 +3107,34 @@
                     "foto"
                 ],
                 "title": "PlatoDelMenu"
+            },
+            "Promocion": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "dia": {
+                        "type": "integer"
+                    },
+                    "inicio": {
+                        "type": "string"
+                    },
+                    "fin": {
+                        "type": "string"
+                    },
+                    "porcentaje": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "dia",
+                    "inicio",
+                    "fin",
+                    "porcentaje"
+                ],
+                "title": "Promocion"
             },
             "Puntos": {
                 "type": "object",
@@ -2214,6 +3232,34 @@
                     "abilities"
                 ],
                 "title": "TokenDeAcceso"
+            },
+            "VentasDiarias": {
+                "type": "object",
+                "properties": {
+                    "desde": {
+                        "type": "string"
+                    },
+                    "hasta": {
+                        "type": "string"
+                    },
+                    "actualizado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "dias": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "desde",
+                    "hasta",
+                    "actualizado_en",
+                    "dias"
+                ],
+                "title": "VentasDiarias"
             },
             "VentasPorHora": {
                 "type": "object",

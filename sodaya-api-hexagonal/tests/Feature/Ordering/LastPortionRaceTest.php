@@ -7,6 +7,7 @@ namespace Tests\Feature\Ordering;
 use Illuminate\Support\Facades\DB;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
+use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\CommitsRows;
 use Tests\Support\Concurrency\Race;
@@ -16,15 +17,18 @@ final class LastPortionRaceTest extends TestCase
 {
     use CommitsRows;
 
-    /** Two customers of the same soda ask for its last casado at the same instant. */
+    /** Two customers of a soda open all week ask for its last casado at the same instant. */
     public function test_two_orders_for_the_last_portion_end_with_one_placed_and_one_sold_out(): void
     {
         $soda = SodaModel::factory()->create();
         $customers = UserModel::factory()->count(2)->create();
-        $dish = $this->committedFor($soda->id, fn (): DishModel => DishModel::factory()->create([
-            'soda_id' => $soda->id,
-            'available_portions' => 1,
-        ]));
+        $dish = $this->committedFor($soda->id, function () use ($soda): DishModel {
+            foreach (range(1, 7) as $day) {
+                TimeSlotModel::factory()->create(['soda_id' => $soda->id, 'day_of_week' => $day, 'opens_at' => '00:00', 'closes_at' => '23:59']);
+            }
+
+            return DishModel::factory()->create(['soda_id' => $soda->id, 'available_portions' => 1]);
+        });
 
         $results = Race::run(base_path('tests/Support/Concurrency/place-order.php'), [
             [$soda->id, $customers[0]->id, $dish->id],

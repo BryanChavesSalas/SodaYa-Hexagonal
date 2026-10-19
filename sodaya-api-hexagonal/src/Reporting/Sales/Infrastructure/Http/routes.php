@@ -11,4 +11,5 @@ Route::prefix('cocina/reportes')
     ->controller(SalesReportController::class)
     ->group(function (): void {
         Route::get('ventas-por-hora', 'hourly')->name('hourly');
+        Route::get('ventas-diarias', 'daily')->name('daily');
     });

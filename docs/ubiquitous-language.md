@@ -26,6 +26,9 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Nombre | `DishName`, `CategoryName` | `name` | `nombre` |
 | Descripción | `description` | `description` | `descripcion` |
 | Precio | `Price` | `price` | `precio` |
+| Precio vigente | `MenuDish::currentPrice` | — | `precio_vigente` |
+| Monto en colones | `Money` | `integer` | — |
+| Promoción activa | `ActivePromotion` | — | — |
 | Tiempo de preparación | `PreparationTime` | `preparation_minutes` | `minutos_preparacion` |
 | Porciones disponibles | `Portions` | `available_portions` | `porciones_disponibles` |
 | Porciones base | `basePortions` | `base_portions` | `porciones_base` |
@@ -42,6 +45,10 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Fecha del cierre | `ClosureDate` | `closed_on` | `fecha` |
 | Motivo del cierre | `ClosureReason` | `reason` | `motivo` |
 | Soda abierta | `isOpenAt()` | — | `abierta` |
+| Caché del menú | `CachedPublicMenuReader` | `cache`, llave `menu:{soda}:v{n}` | — |
+| Versión del menú | `MenuCacheKeys::version()` | `cache`, llave `menu:{soda}:version` | — |
+| Invalidación del menú | `MenuCacheInvalidator` | — | — |
+| Menú revalidable | — | — | encabezados `Cache-Control`, `ETag`, `If-None-Match` |
 | Pedido | `Order` | `orders` | `pedidos` |
 | Línea del pedido | `OrderLine` | `order_lines` | `lineas` |
 | Estado del pedido | `OrderStatus` | `status` | `estado` |
@@ -54,17 +61,67 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Plazo de pago | `paymentDeadline()` | — | — |
 | Plazo de confirmación | `confirmationDeadline()` | — | — |
 | Cantidad | `Quantity` | `quantity` | `cantidad` |
-| Precio unitario | `unitPrice` | `unit_price` | `precio_unitario` |
+| Precio unitario, congelado al pedir | `unitPrice` | `unit_price` | `precio_unitario` |
+| Minutos de preparación, congelados al pedir | `preparationMinutes` | `order_lines.preparation_minutes` | — |
+| Subtotal de la línea | `subtotal()` | — | `subtotal` |
+| Total del pedido | `total()` | — | `total` |
+| Número de retiro | `PickupNumber` | `pickup_number`, `pickup_date` | `numero_retiro` |
+| Contador de números de retiro | `PickupNumbers`, `CounterPickupNumbers` | `pickup_counters` | — |
+| Hora estimada de retiro | `estimatedPickupAt()` | — | `retiro_estimado` |
+| Mis pedidos | `ListCustomerOrders`, `GetCustomerOrder` | `app.customer_id` | `GET /api/v1/pedidos` |
+| Acciones disponibles | `CustomerOrderResource` | — | `acciones`: `pagar`, `cancelar` |
+| Pedido no encontrado | `OrderNotFoundException` | — | `pedido-no-encontrado` |
+| Cancelación por el cliente | `CancellationOrigin::Customer` | `customer` | `POST /api/v1/pedidos/{pedido}/cancelacion`, `cancelado_por: cliente` |
+| Lista de la cocina | `ListKitchenOrders` | índice `(soda_id, status, created_at)` | `GET /api/v1/cocina/pedidos`, filtro `estado` |
 | Pago | `Payment` | `payments` | `pago` |
 | Estado del pago | `PaymentStatus` | `payment_status` | `pago.estado` |
 | Pago aprobado | `PaymentStatus::Approved` | `approved` | `aprobado` |
+| Pasarela de pago | `PaymentGateway` | — | — |
+| Proveedor de pago | `provider()`, `StripeGateway` | `provider` | `proveedor` |
+| Solicitud de cobro | `ChargeRequest` | — | — |
+| Desenlace del cobro | `ChargeResult` | — | — |
+| Referencia del proveedor | `ChargeReference` | `reference` | `referencia` |
+| Monto del pago | `Amount` | `amount` | `monto` |
+| Proveedor no disponible | `GatewayUnavailableException` | — | `servicio-no-disponible` |
+| Intento de pago | `Payment::open()` | fila de `payments` | `pago` |
+| Pago pendiente | `PaymentStatus::Pending` | `pending` | `pendiente` |
+| Pago rechazado | `PaymentStatus::Rejected`, `PaymentRejectedException` | `rejected` | `rechazado`, `pago-rechazado` |
+| Código del rechazo | `declineCode` | `decline_code` | `codigo_rechazo` |
+| Pago vivo | `Payment::isLive()` | índice `payments_live_order_unique` | — |
+| Clave de idempotencia del cobro | `Payment::idempotencyKey` | `payments.idempotency_key` | encabezado `Idempotency-Key` hacia el proveedor |
+| Método de pago | `paymentMethod` | — | `metodo_pago` |
+| Pedido ya pagado | `OrderAlreadyPaidException` | — | `pedido-ya-pagado` |
+| Pedido no pagable | `OrderNotPayableException` | — | `pedido-no-pagable` |
+| Confirmación del pago | `ConfirmPayment` | — | `GET /pedidos/{pedido}/pago` |
+| Pedido sin pagos | `PaymentNotFoundException` | — | `no-encontrado` |
 | Reembolso | `RefundRequests`, `RequestRefundJob` | — | — |
 | Aviso al cliente | `CustomerNotices`, `NotifyCustomerJob` | — | — |
+| Canal de aviso | `NoticeChannel`, `LogNoticeChannel`, `MailNoticeChannel` | — | `NOTICE_CHANNEL=log\|mail` |
+| Destinatario del aviso | `Recipient`, `Recipients` | `users.email`, `users.name` | — |
+| Pedido listo (aviso) | `orderReady()`, `order_ready` | — | asunto «Su pedido N está listo» |
+| Pedido cancelado (aviso) | `orderCancelled()`, `order_cancelled` | — | asunto «Su pedido N fue cancelado» |
 | Trabajo en cola | `ShouldQueue` | `jobs`, `failed_jobs` | — |
 | Ventas por hora | `HourlySales` | `v_hourly_sales`, `fn_hourly_sales` | `ventas-por-hora`, `horas` |
 | Mínimo de pedidos | `minimumOrders` | `p_min_orders` | `minimo_pedidos` |
+| Ventas diarias | `DailySales`, `GetDailySales` | `mv_daily_sales`, `v_daily_sales` | `ventas-diarias`, `dias` |
+| Rango de fechas del reporte | `from`, `to` | `day` | `desde`, `hasta`, `fecha` |
+| Resumen diario de ventas | `DailySalesSummary`, `RefreshDailySales` | `mv_daily_sales`, `fn_daily_sales_of_every_soda` | — |
+| Último refresco | `refreshedAt` | `materialized_view_refreshes.refreshed_at` | `actualizado_en` |
 | Reserva de porciones | `PortionStock::reserve()` | `fn_reserve_portions` | — |
 | Porciones agotadas | `PortionsSoldOutException` | — | `porciones-agotadas` |
+| Pedido vacío | `OrderEmptyException` | — | `pedido-vacio` |
+| Cantidad inválida | `QuantityOutOfRangeException` | — | `cantidad-invalida` |
+| Plato de otra soda | `DishNotOfSodaException` | — | `plato-no-pertenece-a-la-soda` |
+| Plato no disponible | `DishUnavailableException` | — | `plato-no-disponible` |
+| Soda cerrada | `SodaClosedException` | — | `soda-cerrada` |
+| Promoción, hora feliz | `Promotion` | `promotions` | `promociones` |
+| Día de la promoción | `Weekday` | `weekday` | `dia` |
+| Franja de la promoción | `TimeWindow` | `starts_at`, `ends_at` | `inicio`, `fin` |
+| Descuento | `DiscountPercentage` | `percentage` | `porcentaje` |
+| Promoción traslapada | `PromotionOverlapsException` | `promotions_no_overlap_excl` | `promocion-traslapada` |
+| Plato del catálogo para pedir | `OrderableDish` | — | `plato_id` |
+| Clave de idempotencia | `IdempotencyKey` | `idempotency_key`, `request_fingerprint` | encabezado `Idempotency-Key` |
+| Clave reutilizada | `IdempotencyKeyReusedException` | — | `conflicto` |
 | Movimiento de puntos | `PointMovement` | `point_movements` | `movimientos` |
 | Compra | `MovementReason::Purchase` | `purchase` | `compra` |
 | Canje | `MovementReason::Redemption` | `redemption` | `canje` |
@@ -84,7 +141,7 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Cliente | `Role::Customer` | `customer` | — |
 | Visitante | `Visitor` | — | — |
 
-Los términos de los contextos que aún no existen (pagos) quedan reservados para que se usen así cuando se construyan.
+Los términos de los contextos que aún no existen quedan reservados para que se usen así cuando se construyan.
 
 ## Porciones
 
@@ -93,6 +150,14 @@ Los términos de los contextos que aún no existen (pagos) quedan reservados par
 - Cada mañana, a las 5:00, el **restablecimiento diario** devuelve las porciones disponibles de cada plato a su base.
 - Hacer un pedido **reserva** sus porciones: se descuentan todas o ninguna. Si un plato no alcanza, el pedido no se crea y la respuesta es **porciones agotadas**.
 
+## Hora feliz
+
+- Una **promoción** u **hora feliz** es un **descuento** de 1 % a 90 % para todos los platos de la soda, en un día de la semana y una **franja** horaria. El inicio pertenece a la franja y el fin no: una promoción de 14:00 a 15:00 aplica a las 14:59 y ya no a las 15:00.
+- Dos promociones de la misma soda y el mismo día no comparten un minuto; si se traslapan, la respuesta es **promoción traslapada**. Otra soda puede tener la misma franja.
+- Solo el dueño define y elimina promociones.
+- El **precio vigente** es el precio base con la promoción activa en el momento de la respuesta. Es un dato derivado: no se guarda ni se pone en caché, se calcula al responder, y sin promoción coincide con el precio.
+- El pedido **congela** el precio vigente del momento en que se hizo: lo que se ve es lo que se paga, aunque la promoción termine antes de que la cocina confirme.
+
 ## Horario y cierres
 
 - Una **franja** es un intervalo de atención dentro de un día de la semana. La apertura pertenece a la franja y el cierre no: una franja de 08:00 a 12:00 atiende a las 11:59 y ya no a las 12:00.
@@ -100,10 +165,26 @@ Los términos de los contextos que aún no existen (pagos) quedan reservados par
 - Un **cierre excepcional** es una fecha en la que la soda no atiende aunque el horario diga lo contrario. Solo hay uno por soda y fecha.
 - La soda está **abierta** en un momento si ese día no tiene un cierre excepcional y alguna franja contiene la hora. No se guarda: se calcula en cada respuesta.
 
+## Caché del menú
+
+- El **menú público** se sirve desde **caché**: categorías, platos activos, nombres, descripciones, precios base y fotos, como arreglos, por soda y por **versión**.
+- La **versión** sube cada vez que el dueño edita un plato, una categoría, el horario, un cierre, una foto o el logo. Las llaves de la versión anterior dejan de usarse y vencen solas a los diez minutos (`MENU_CACHE_SECONDS`).
+- Lo **vivo** nunca va en la caché: las **porciones disponibles**, el indicador **abierta** y el **precio vigente** se completan al responder.
+- Una **estampida** es que muchas peticiones recalculen a la vez una llave vencida; en el último minuto de vida se sirve el valor viejo y se recalcula en segundo plano.
+- El navegador puede reutilizar el menú un minuto y después **revalidarlo** con su `ETag`: si no cambió, la API responde 304 sin cuerpo.
+
 ## Pedidos
 
-- Un **pedido** pertenece a una soda y a un cliente, y tiene de 1 a 20 líneas, una por plato, con cantidades de 1 a 20.
-- La **línea** congela el nombre y el precio que tenía el plato al pedirlo: un cambio posterior del menú no altera un pedido hecho.
+- Un **pedido** pertenece a una soda y a un cliente, y tiene de 1 a 20 líneas, una por plato, con cantidades de 1 a 20. Sin líneas es un **pedido vacío**; con una cantidad fuera del rango, una **cantidad inválida**.
+- Solo se pide en una soda **abierta** y solo platos **activos** de esa soda: un plato de otra soda se trata como un plato que no existe.
+- Cada solicitud de pedido lleva una **clave de idempotencia** elegida por el cliente. Repetirla con las mismas líneas devuelve el pedido ya hecho; repetirla con otras líneas es un **conflicto**.
+- La **línea** congela el nombre, el precio y los **minutos de preparación** que tenía el plato al pedirlo: un cambio posterior del menú no altera un pedido hecho ni su hora estimada.
+- Cada pedido recibe un **número de retiro**: un número corto, de 1 a 9999, que el mostrador dice en voz alta para entregarlo. Es consecutivo por soda y por día de Costa Rica: el primer pedido de cada día es el 1. Lo entrega el **contador** de la soda y el día; el identificador largo del pedido sigue siendo el UUID.
+- La **hora estimada de retiro** es el momento en que se hizo el pedido más el mayor tiempo de preparación de sus platos. No se guarda: se calcula a partir de las líneas congeladas.
+- El cliente consulta **sus pedidos** en cualquier soda, del más reciente al más antiguo, y el detalle de cada uno. Un pedido ajeno es un **pedido no encontrado**, igual que uno que no existe.
+- Cada pedido del cliente trae sus **acciones disponibles**: **pagar** mientras está pendiente y sin pago aprobado, **cancelar** mientras está pendiente o confirmado. Un pedido listo, entregado o cancelado no tiene acciones.
+- El cliente **cancela su pedido** mientras está pendiente o confirmado; la cancelación queda registrada con el origen **cliente**, las porciones vuelven al menú y, si ya había pagado, recibe el **reembolso**. Nadie le avisa de una cancelación que hizo él mismo.
+- El cliente recibe un **aviso** cuando su pedido queda **listo** y cuando lo cancela alguien que no es él. El aviso de cancelación dice quién la originó y si hay reembolso. El **canal de aviso** se elige por configuración: el log o el correo.
 - El pedido avanza en un solo sentido: **pendiente**, **confirmado**, **listo** y **entregado**. Se puede **cancelar** mientras está pendiente o confirmado, y la cancelación registra quién la originó: el cliente, la cocina, la falta de pago o la falta de confirmación.
 - Entregado y cancelado son estados finales.
 - Un pedido tiene 10 minutos para que se apruebe su **pago**. Si al cumplirse el **plazo de pago** sigue pendiente y sin pago, se cancela por **falta de pago**: sus porciones vuelven al menú y el cliente recibe un aviso.
@@ -119,6 +200,26 @@ Los términos de los contextos que aún no existen (pagos) quedan reservados par
 - Un pedido acredita sus puntos una sola vez.
 - Un **canje** nunca supera el saldo; si lo supera, la respuesta es **puntos insuficientes**.
 
+## Reportes
+
+- Las **ventas por hora** y las **ventas diarias** cuentan solo los pedidos **entregados**, por la hora o la fecha de Costa Rica en que se crearon, y suman las líneas de cada pedido **sin propinas**.
+- Las ventas diarias salen del **resumen diario de ventas**, una copia precalculada que se recalcula cada 15 minutos. El reporte dice la hora del **último refresco**; mientras no haya habido ninguno, está vacío y lo indica con un valor nulo.
+- El dueño de una soda nunca ve el resumen de otra.
+
+## Pagos
+
+- La **pasarela de pago** es el proveedor externo que cobra; hoy, Stripe en modo de prueba. El resto del sistema habla con ella en sus propios términos: una **solicitud de cobro** y un **desenlace del cobro**.
+- Un cobro tiene tres desenlaces: **aprobado**, el proveedor cobró; **rechazado**, el banco no autorizó la tarjeta y dice por qué con un código; y **pendiente**, el proveedor todavía no decidió o no respondió.
+- La **referencia del proveedor** es el identificador que la pasarela le da al cobro, como `pi_…` en Stripe. Con ella se le pregunta después qué pasó.
+- El monto viaja a cada proveedor en su unidad: Stripe quiere céntimos de colón, ₡5600 son 560000. La conversión vive en el adaptador; el resto del sistema sigue en colones enteros.
+- Un **proveedor no disponible** no es un rechazo: la API responde 503 con `Retry-After` y el cliente vuelve a intentar.
+- Un **pago** es un intento de pagar un pedido. Nace **pendiente** y el proveedor lo deja **aprobado** o **rechazado**; un pago cerrado no cambia. El **pago vivo** de un pedido es el pendiente o aprobado: hay a lo sumo uno, así que oprimir «pagar» dos veces devuelve el mismo pago. Un pago rechazado no es vivo: el cliente puede intentar de nuevo mientras el pedido siga pendiente.
+- Solo se paga un pedido **pendiente** y propio. Pagar uno que ya tiene el pago aprobado es un **pedido ya pagado**; pagar uno confirmado, listo, entregado o cancelado es un **pedido no pagable**.
+- El **monto** del pago es la suma de las líneas congeladas del pedido. Lo que el navegador mande se ignora.
+- La **clave de idempotencia del cobro** la deriva el servidor del intento, `pago-{uuid}`, y viaja al proveedor: un reintento con la misma clave recibe el mismo cobro.
+- El **método de pago** es el medio con que paga el cliente; en modo de prueba, `pm_card_visa` aprueba y `pm_card_visa_chargeDeclined` rechaza. Los datos de la tarjeta nunca pasan por SodaYa.
+- La **confirmación del pago** pregunta al proveedor qué pasó con un pago pendiente que tiene referencia y registra la respuesta. El estado que diga el navegador nunca se usa: un pago solo cambia por una respuesta del proveedor.
+
 ## Roles
 
 La lista de roles es cerrada. Cada rol define a qué soda pertenece la cuenta y qué abilities llevan sus tokens.
@@ -133,7 +234,7 @@ El **personal** es la cocina y el dueño: siempre pertenece a una soda. Un clien
 
 Las abilities determinan qué operaciones puede realizar cada miembro del personal:
 
-- `cocina`: permite consultar los recursos del área de cocina, como platos, categorías, horario y cierres.
+- `cocina`: permite consultar los recursos del área de cocina, como platos, categorías, horario y cierres, y trabajar los pedidos: la **lista de la cocina** muestra los pedidos de la soda por estado, del más antiguo al más reciente, cada uno con su número de retiro, su hora estimada y sus líneas.
 - `administrar`: permite crear, editar o eliminar recursos administrativos de la soda.
 
 El rol de cocina recibe únicamente la ability `cocina`, por lo que puede consultar la información pero no modificarla. El dueño recibe las abilities `cocina` y `administrar`, por lo que puede consultar y también realizar operaciones de creación, edición y eliminación.
@@ -141,5 +242,6 @@ El rol de cocina recibe únicamente la ability `cocina`, por lo que puede consul
 ## Dinero y fechas
 
 - Los montos son colones enteros. Nunca se usan decimales ni punto flotante.
+- Un descuento se redondea al colón más cercano, con el medio colón hacia arriba, con aritmética de enteros: 995 con 10 % son 896 y 999 con 10 % son 899.
 - Las fechas se guardan con zona horaria y viajan en ISO 8601. La aplicación opera en `America/Costa_Rica`.
 - Las horas del horario viajan como `HH:MM` y las fechas de los cierres como `AAAA-MM-DD`; ambas se leen en hora de Costa Rica.

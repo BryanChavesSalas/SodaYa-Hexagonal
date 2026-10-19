@@ -2,7 +2,7 @@
 
 El esquema está en tercera forma normal. Este documento describe las tablas que ya existen con todo su detalle y las entidades previstas a nivel de relación; cada módulo completa las suyas en el pull request que agrega su migración.
 
-Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md). Las tablas `categories`, `dishes`, `schedules`, `closures`, `orders`, `order_lines` y `order_status_history` tienen seguridad a nivel de fila forzada: cada transacción solo alcanza las filas de su soda. El detalle y las excepciones están en la sección «Seguridad a nivel de fila» de ese documento.
+Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md). Las tablas `categories`, `dishes`, `schedules`, `closures`, `promotions`, `orders`, `order_lines`, `order_status_history`, `pickup_counters` y `payments` tienen seguridad a nivel de fila forzada: cada transacción solo alcanza las filas de su soda. El detalle y las excepciones están en la sección «Seguridad a nivel de fila» de ese documento.
 
 ## Diagrama
 
@@ -13,6 +13,7 @@ erDiagram
     categories |o--o{ dishes : "agrupa"
     sodas ||--o{ schedules : "atiende en"
     sodas ||--o{ closures : "cierra en"
+    sodas ||--o{ promotions : "descuenta en"
     sodas |o--o{ users : "emplea"
     users ||--o{ personal_access_tokens : "ingresa con"
     sodas ||--o{ orders : "recibe"
@@ -22,8 +23,10 @@ erDiagram
     orders ||--|{ order_lines : "contiene"
     dishes ||--o{ order_lines : "se vende en"
     orders ||--o{ order_status_history : "pasa por"
-    orders ||--o| payments : "se paga con"
-    users ||--o{ point_movements : "acumula"
+    sodas ||--o{ pickup_counters : "numera con"
+    orders ||--o{ payments : "se intenta pagar con"
+    sodas ||--o{ payments : "cobra"
+    users ||--o{ payments : "paga"
 
     sodas {
         uuid id PK
@@ -55,6 +58,14 @@ erDiagram
         date closed_on
         varchar reason
     }
+    promotions {
+        uuid id PK
+        uuid soda_id FK
+        smallint weekday
+        time starts_at
+        time ends_at
+        smallint percentage
+    }
     users {
         uuid id PK
         uuid soda_id FK
@@ -80,6 +91,8 @@ erDiagram
         varchar status
         varchar cancellation_origin
         varchar payment_status
+        date pickup_date
+        smallint pickup_number
     }
     order_lines {
         uuid id PK
@@ -89,7 +102,14 @@ erDiagram
         varchar dish_name
         integer unit_price
         smallint quantity
-    }    order_status_history {
+        smallint preparation_minutes
+    }
+    pickup_counters {
+        uuid soda_id PK, FK
+        date pickup_date PK
+        smallint last_number
+    }
+    order_status_history {
         uuid id PK
         uuid order_id FK
         uuid soda_id FK
@@ -97,9 +117,19 @@ erDiagram
         varchar to_status
         timestamptz changed_at
     }
+    payments {
+        uuid id PK
+        uuid order_id FK
+        uuid soda_id FK
+        uuid customer_id FK
+        varchar provider
+        varchar reference
+        integer amount
+        varchar status
+        varchar decline_code
+        varchar idempotency_key
+    }
 ```
-
-Las tablas sin columnas en el diagrama están previstas y todavía no existen.
 
 ## Tablas del catálogo
 
@@ -178,6 +208,22 @@ Días en que la soda no abre, aunque su horario diga lo contrario.
 
 Llaves candidatas: `id` y `(soda_id, closed_on)`. La segunda garantiza un solo cierre por soda y fecha. «Cerrar por el resto del día» no se guarda aparte: es un cierre con la fecha de hoy.
 
+### promotions
+
+Cada fila es una hora feliz: un descuento para todos los platos de la soda en un día de la semana, dentro de una franja.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `weekday` | `smallint` | `CHECK` entre 1 (lunes) y 7 (domingo), según ISO 8601 |
+| `starts_at` | `time` | Hora de inicio, incluida en la promoción |
+| `ends_at` | `time` | Hora de fin, excluida de la promoción; `CHECK (starts_at < ends_at)` |
+| `percentage` | `smallint` | Descuento en porcentaje, `CHECK` entre 1 y 90 |
+| `created_at`, `updated_at` | `timestamptz` | |
+
+La restricción de exclusión `promotions_no_overlap_excl` impide que dos promociones de la misma soda y del mismo día compartan un minuto, con el mismo rango `timerange` del horario: `14:00-15:00` y `15:00-16:00` conviven porque el fin no pertenece a la promoción. Otra soda puede tener la misma franja. El precio vigente no se guarda: se calcula al responder con la promoción activa (RF-EXT-03).
+
 ## Tablas de pedidos
 
 ### orders
@@ -192,11 +238,17 @@ Llaves candidatas: `id` y `(soda_id, closed_on)`. La segunda garantiza un solo c
 | `confirmed_at`, `ready_at`, `delivered_at`, `cancelled_at` | `timestamptz` | Momento en que el pedido llegó a cada estado |
 | `payment_status` | `varchar(20)` | `pending` o `approved`; por defecto `pending` |
 | `paid_at` | `timestamptz` | Momento en que se aprobó el pago; existe solo si el pago está aprobado |
+| `idempotency_key` | `varchar(100)` | Clave que el cliente envió con la solicitud; única por cliente |
+| `request_fingerprint` | `char(64)` | SHA-256 de las líneas de la solicitud; existe exactamente cuando hay clave |
+| `pickup_date` | `date` | Día de Costa Rica en que se hizo el pedido; el día al que pertenece su número |
+| `pickup_number` | `smallint` | Número de retiro, `CHECK` entre 1 y 9999; consecutivo dentro de la soda y el día |
 | `created_at`, `updated_at` | `timestamptz` | `created_at` es el momento en que se hizo el pedido |
 
-Índices: `customer_id` y `(soda_id, status, created_at)`, que sirve a la lista de cocina y al reporte de ventas.
+Índices: `customer_id`, `(soda_id, status, created_at)`, que sirve a la lista de cocina y al reporte de ventas, la llave única `(customer_id, idempotency_key)`, que impide que una clave cree dos pedidos, y la llave única `(soda_id, pickup_date, pickup_number)`, que impide que dos pedidos de una soda compartan número el mismo día.
 
-Llaves candidatas: `id` y `(id, soda_id)`; la segunda existe para que las líneas referencien el pedido junto con su soda. `orders_cancellation_check` exige que un pedido cancelado tenga origen y momento de cancelación, y que ningún otro los tenga. `orders_paid_at_check` exige que `paid_at` exista exactamente cuando el pago está aprobado.
+Llaves candidatas: `id`, `(id, soda_id)` y `(soda_id, pickup_date, pickup_number)`; la segunda existe para que las líneas referencien el pedido junto con su soda. `orders_cancellation_check` exige que un pedido cancelado tenga origen y momento de cancelación, y que ningún otro los tenga. `orders_paid_at_check` exige que `paid_at` exista exactamente cuando el pago está aprobado.
+
+`pickup_date` se guarda aunque se derive de `created_at`: la llave única necesita el día de Costa Rica como columna, y una expresión con zona horaria dentro de la llave la volvería ilegible. La hora estimada de retiro no se guarda: se calcula con la creación y los minutos de las líneas.
 
 ### order_lines
 
@@ -209,8 +261,21 @@ Llaves candidatas: `id` y `(id, soda_id)`; la segunda existe para que las línea
 | `dish_name` | `varchar(120)` | Nombre del plato al momento de pedir |
 | `unit_price` | `integer` | Precio del plato al momento de pedir, `CHECK` entre 100 y 100 000 |
 | `quantity` | `smallint` | `CHECK` entre 1 y 20 |
+| `preparation_minutes` | `smallint` | Minutos de preparación del plato al momento de pedir, `CHECK` entre 1 y 120 |
 
 Un plato aparece una sola vez en cada pedido: `(order_id, dish_id)` es única. Las dos llaves foráneas compuestas impiden una línea con el pedido o el plato de otra soda, aunque el identificador exista. Para eso `dishes` gana la llave única `(id, soda_id)`.
+
+### pickup_counters
+
+Una fila por soda y día con el último número de retiro entregado. La avanza `CounterPickupNumbers` con `INSERT ... ON CONFLICT DO UPDATE`; la describe la sección «Contador de números de retiro» de [database.md](database.md).
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `pickup_date` | `date` | Día de Costa Rica |
+| `last_number` | `smallint` | Último número entregado ese día; por defecto 0 |
+
+La llave primaria es `(soda_id, pickup_date)`: no hay `id` porque la fila no tiene identidad propia, es el contador de ese día. No tiene marcas de tiempo porque cambia con cada pedido y su historia es la de los pedidos.
 
 ### order_status_history
 
@@ -237,6 +302,32 @@ Vista, no tabla: una fila por pedido entregado. La describe la sección «Ventas
 | `sale_hour` | Hora de Costa Rica de `created_at`, de 0 a 23 |
 | `total` | Suma de `unit_price × quantity` de las líneas |
 
+## Tablas de reportes
+
+### mv_daily_sales
+
+Vista materializada: una fila por soda y día de Costa Rica con pedidos entregados, calculada por `fn_daily_sales_of_every_soda()` y refrescada cada 15 minutos. La describe la sección «Resumen diario de ventas» de [database.md](database.md). El rol de la aplicación la consulta a través de `v_daily_sales`, que tiene las mismas columnas y muestra solo la soda de la transacción.
+
+| Columna | Tipo | Origen |
+| --- | --- | --- |
+| `soda_id` | `uuid` | `orders` |
+| `day` | `date` | Fecha de Costa Rica de `created_at` del pedido |
+| `orders` | `bigint` | Cantidad de pedidos entregados ese día |
+| `total` | `bigint` | Suma de `unit_price × quantity` de las líneas de esos pedidos, sin propinas |
+
+Índice único `mv_daily_sales_soda_id_day_unique` sobre `(soda_id, day)`: lo exige `REFRESH MATERIALIZED VIEW CONCURRENTLY` y sirve a la consulta por rango de fechas.
+
+### materialized_view_refreshes
+
+Una fila por vista materializada con el momento de su último refresco. La escribe el rol de mantenimiento en la misma transacción que el refresco; el rol de la aplicación solo la lee.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `view_name` | `varchar(63)` | Llave primaria; nombre de la vista materializada, como `mv_daily_sales` |
+| `refreshed_at` | `timestamptz` | Momento del último refresco |
+
+No tiene `soda_id`: el refresco recalcula todas las sodas a la vez. La llave primaria es el nombre de la vista, un identificador de PostgreSQL de 63 caracteres como máximo, y no un `uuid`: la fila se busca siempre por ese nombre y nunca se referencia desde otra tabla.
+
 ## Tablas de puntos
 
 ### point_movements
@@ -253,6 +344,31 @@ El libro de puntos de cada cliente. Solo se agregan filas: el saldo es la suma d
 | `created_at` | `timestamptz` | Momento del movimiento |
 
 `point_movements_points_check` exige que el signo coincida con el motivo y que una compra tenga pedido. El índice único parcial `point_movements_purchase_order_unique`, sobre `order_id` solo en las filas de compra, deja un pedido acreditar puntos una sola vez sin impedir que un pedido se pague con puntos. La tabla no tiene `soda_id`: los puntos son del cliente en toda la plataforma.
+
+## Tablas de pagos
+
+### payments
+
+Cada fila es un intento de pagar un pedido. Un pedido puede tener varios intentos rechazados, pero a lo sumo uno pendiente o aprobado.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `order_id` | `uuid` | Llave foránea compuesta `(order_id, soda_id)` a `orders`, borrado en cascada |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `customer_id` | `uuid` | Llave foránea a `users`; una cuenta con pagos no se puede borrar |
+| `provider` | `varchar(20)` | Proveedor que cobra: `stripe` |
+| `reference` | `varchar(255)` | Opcional; identificador que el proveedor le dio al cobro, como `pi_…`; única por proveedor |
+| `amount` | `integer` | Colones enteros, `CHECK (amount > 0)`; la suma de las líneas del pedido al abrir el intento |
+| `status` | `varchar(20)` | `pending`, `approved` o `rejected`; por defecto `pending` |
+| `decline_code` | `varchar(60)` | Opcional; código del banco, solo en un pago rechazado |
+| `idempotency_key` | `varchar(100)` | Clave enviada al proveedor, `pago-{id}`; única |
+| `settled_at` | `timestamptz` | Momento en que el proveedor decidió; existe exactamente cuando el pago no está pendiente |
+| `created_at`, `updated_at` | `timestamptz` | `created_at` es el momento en que se abrió el intento |
+
+El índice único parcial `payments_live_order_unique`, sobre `order_id` solo en las filas con `status IN ('pending', 'approved')`, es el que impide dos pagos vivos para un pedido: el repositorio inserta el intento y, si el índice lo rechaza, responde el pago que ya existe. Un pago rechazado no entra en el índice, así que el cliente puede volver a intentar. `payments_settled_at_check` exige el momento en todo pago cerrado y lo prohíbe en uno pendiente; `payments_decline_code_check` solo admite el código del banco en un pago rechazado. El índice `(order_id, created_at)` sirve para leer el último intento de un pedido.
+
+La llave foránea compuesta a `orders` impide que un pago apunte al pedido de otra soda aunque el identificador exista, igual que en `order_lines`.
 
 ## Tablas de identidad
 
@@ -309,7 +425,12 @@ La crea Laravel Sanctum. Cada fila es un token de acceso emitido para un disposi
 | `soda_id` se repite en `order_lines` aunque el pedido ya lo implica | La seguridad a nivel de fila filtra cada tabla por su propia columna, y las llaves compuestas `(order_id, soda_id)` y `(dish_id, soda_id)` impiden que los valores discrepen |
 | El saldo de puntos no se guarda | Se calcula sumando los movimientos; un saldo guardado podría descuadrarse con ellos y nadie sabría cuál vale |
 | El total del pedido no se guarda | Se calcula sumando las líneas; guardarlo crearía un dato que puede contradecirlas |
-| La línea del pedido guarda el nombre y el precio del plato | No es un dato derivado: es el hecho histórico de a cuánto se vendió. Cambiar el precio del plato no debe alterar pedidos pasados |
+| La línea del pedido guarda el nombre, el precio y los minutos del plato | No son datos derivados: son el hecho histórico de a cuánto se vendió y cuánto tardaba. Cambiar el plato no debe alterar pedidos pasados ni su hora estimada de retiro |
+| `orders.pickup_date` repite el día de `created_at` | La llave única por soda, día y número necesita el día de Costa Rica como columna; el repositorio escribe los dos a la vez a partir del mismo momento |
+| `pickup_counters` guarda el último número aunque sea el máximo de `orders` | Es la fila que se bloquea para numerar: sin ella, dos pedidos simultáneos leerían el mismo máximo y chocarían con la llave única |
+| `mv_daily_sales` guarda totales que salen de las líneas | Es un dato derivado a propósito: una copia precalculada que se recalcula entera cada 15 minutos y nunca se edita, y el reporte dice de cuándo es. Ninguna regla del negocio la lee; solo el reporte |
+| `payments.amount` se guarda aunque sea la suma de las líneas del pedido | Es lo que se le pidió cobrar al proveedor en ese momento: si mañana el pedido admitiera propina o descuento, los pagos ya hechos conservan su monto |
+| `payments.idempotency_key` se guarda aunque se derive de `id` | Es la clave que viajó al proveedor, un hecho. Si la derivación cambiara, los intentos ya enviados conservan la clave con que el proveedor los reconoce |
 | `personal_access_tokens.id` es `bigint` y no `uuid` | La tabla pertenece a Sanctum: el token que recibe el cliente tiene la forma `<id>\|<secreto>` y Sanctum busca la fila por ese número. No es un identificador del negocio |
 | `personal_access_tokens` no tiene llave foránea a `users` | Sanctum define una relación polimórfica (`tokenable_type`, `tokenable_id`). Un token cuya cuenta ya no existe no autentica a nadie, porque Sanctum no encuentra a su dueño |
 

@@ -13,6 +13,8 @@ use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 use Src\Shared\Domain\Exceptions\AuthenticationFailedException;
 use Src\Shared\Domain\Exceptions\BusinessRuleException;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
+use Src\Shared\Domain\Exceptions\NotFoundException;
+use Src\Shared\Domain\Exceptions\ServiceUnavailableException;
 use Tests\Support\RefreshDatabaseAsOwner;
 use Tests\TestCase;
 
@@ -73,6 +75,27 @@ final class ProblemDetailsTest extends TestCase
                         return 'regla-desconocida';
                     }
                 },
+            );
+
+            Route::post(
+                'proveedor-caido',
+                fn () => throw new class('payments.gateway_unreachable') extends ServiceUnavailableException {},
+            );
+
+            Route::get(
+                'ausente',
+                fn () => throw new class('ordering.order_not_found') extends NotFoundException
+                {
+                    public function type(): string
+                    {
+                        return 'pedido-no-encontrado';
+                    }
+                },
+            );
+
+            Route::get(
+                'ausente-sin-tipo',
+                fn () => throw new class('ordering.order_not_found') extends NotFoundException {},
             );
 
             Route::get(
@@ -186,12 +209,44 @@ final class ProblemDetailsTest extends TestCase
             ->assertJsonPath('detail', 'El pedido no puede pasar a ese estado.');
     }
 
+    /** A missing resource that names its own problem type answers it, with 404 and its translated message. */
+    public function test_missing_resource_answers_its_own_problem_type(): void
+    {
+        $this->getJson('/api/v1/pruebas/ausente')
+            ->assertNotFound()
+            ->assertHeader('Content-Type', self::CONTENT_TYPE)
+            ->assertJsonPath('type', 'http://localhost/problemas/pedido-no-encontrado')
+            ->assertJsonPath('title', 'Pedido no encontrado')
+            ->assertJsonPath('detail', 'El pedido no existe.');
+    }
+
+    /** A missing resource without a type of its own falls back to the generic not found. */
+    public function test_missing_resource_without_a_type_answers_the_generic_not_found(): void
+    {
+        $this->getJson('/api/v1/pruebas/ausente-sin-tipo')
+            ->assertNotFound()
+            ->assertJsonPath('type', 'http://localhost/problemas/no-encontrado')
+            ->assertJsonPath('detail', 'El pedido no existe.');
+    }
+
     /** A rule that is not in the catalog falls back to the generic conflict. */
     public function test_unknown_business_rule_answers_a_conflict(): void
     {
         $this->postJson('/api/v1/pruebas/regla-sin-tipo')
             ->assertConflict()
             ->assertJsonPath('type', 'http://localhost/problemas/conflicto');
+    }
+
+    /** An external service that does not answer is a 503 with its translated message and the seconds to wait before retrying. */
+    public function test_unavailable_service_answers_a_service_unavailable_problem_with_retry_after(): void
+    {
+        $this->postJson('/api/v1/pruebas/proveedor-caido')
+            ->assertServiceUnavailable()
+            ->assertHeader('Content-Type', self::CONTENT_TYPE)
+            ->assertHeader('Retry-After', '30')
+            ->assertJsonPath('type', 'http://localhost/problemas/servicio-no-disponible')
+            ->assertJsonPath('title', 'Servicio no disponible')
+            ->assertJsonPath('detail', 'El proveedor de pagos no respondió. Intente de nuevo en unos segundos.');
     }
 
     /** A protected route without a token answers an unauthenticated problem, even without an Accept header. */

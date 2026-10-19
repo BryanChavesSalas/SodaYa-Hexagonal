@@ -61,6 +61,13 @@ final class OpenApiContractTest extends TestCase
             'get /cocina/platos' => ['cocina'],
             'post /cocina/platos' => ['administrar'],
             'patch /cocina/platos/{plato}' => ['administrar'],
+
+            'get /cocina/pedidos' => ['cocina'],
+            'patch /cocina/pedidos/{pedido}/estado' => ['cocina'],
+            'post /cocina/pedidos/{pedido}/cancelacion' => ['cocina'],
+            'get /cocina/promociones' => ['administrar'],
+            'post /cocina/promociones' => ['administrar'],
+            'delete /cocina/promociones/{promocion}' => ['administrar'],
         ];
 
         foreach ($expected as $operation => $abilities) {

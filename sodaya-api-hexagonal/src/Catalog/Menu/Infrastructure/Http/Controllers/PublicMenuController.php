@@ -17,7 +17,7 @@ final readonly class PublicMenuController
     /** Show the menu of a soda to any visitor. */
     #[Endpoint(
         title: 'Consultar el menú de una soda',
-        description: 'El atributo `abierta` indica si la soda atiende en el momento de la respuesta, según su horario y sus cierres excepcionales, en hora de Costa Rica.',
+        description: 'El atributo `abierta` indica si la soda atiende en el momento de la respuesta, según su horario y sus cierres excepcionales, en hora de Costa Rica. Cada plato trae su `precio` base y su `precio_vigente`, que aplica la hora feliz activa en ese momento; cuando no hay promoción, los dos coinciden.',
     )]
     public function index(string $soda, GetPublicMenu $getPublicMenu): PublicMenuResource
     {
@@ -25,9 +25,9 @@ final readonly class PublicMenuController
     }
 
     /** Show one dish of the menu to any visitor. */
-    #[Endpoint(title: 'Consultar un plato del menú')]
+    #[Endpoint(title: 'Consultar un plato del menú', description: 'El `precio_vigente` aplica la hora feliz activa en el momento de la respuesta.')]
     public function show(string $soda, string $plato, GetPublicDish $getPublicDish): MenuDishResource
     {
-        return new MenuDishResource($getPublicDish->execute($soda, $plato));
+        return new MenuDishResource($getPublicDish->execute($soda, $plato, now()->toDateTimeImmutable()));
     }
 }

@@ -24,6 +24,10 @@ return [
         'title' => 'Recurso no encontrado',
         'detail' => 'El recurso solicitado no existe.',
     ],
+    'pedido-no-encontrado' => [
+        'title' => 'Pedido no encontrado',
+        'detail' => 'El pedido no existe.',
+    ],
     'metodo-no-permitido' => [
         'title' => 'Método no permitido',
         'detail' => 'La ruta no acepta el método HTTP usado.',
@@ -48,9 +52,45 @@ return [
         'title' => 'Puntos insuficientes',
         'detail' => 'El saldo de puntos no alcanza para el canje.',
     ],
+    'pedido-ya-pagado' => [
+        'title' => 'Pedido ya pagado',
+        'detail' => 'El pedido ya tiene un pago aprobado.',
+    ],
+    'pedido-no-pagable' => [
+        'title' => 'Pedido no pagable',
+        'detail' => 'Solo se puede pagar un pedido pendiente.',
+    ],
+    'pago-rechazado' => [
+        'title' => 'Pago rechazado',
+        'detail' => 'El proveedor rechazó el pago. Puede intentar de nuevo mientras el pedido siga pendiente.',
+    ],
     'datos-invalidos' => [
         'title' => 'Datos inválidos',
         'detail' => 'Los datos enviados no son válidos.',
+    ],
+    'pedido-vacio' => [
+        'title' => 'Pedido vacío',
+        'detail' => 'El pedido debe tener al menos una línea.',
+    ],
+    'cantidad-invalida' => [
+        'title' => 'Cantidad inválida',
+        'detail' => 'La cantidad de cada línea debe estar entre 1 y 20.',
+    ],
+    'plato-no-pertenece-a-la-soda' => [
+        'title' => 'Plato de otra soda',
+        'detail' => 'Un plato del pedido no pertenece a la soda.',
+    ],
+    'plato-no-disponible' => [
+        'title' => 'Plato no disponible',
+        'detail' => 'Un plato del pedido no está disponible.',
+    ],
+    'soda-cerrada' => [
+        'title' => 'Soda cerrada',
+        'detail' => 'La soda no recibe pedidos en este momento.',
+    ],
+    'promocion-traslapada' => [
+        'title' => 'Promoción traslapada',
+        'detail' => 'La promoción se traslapa con otra del mismo día.',
     ],
     'demasiadas-solicitudes' => [
         'title' => 'Demasiadas solicitudes',

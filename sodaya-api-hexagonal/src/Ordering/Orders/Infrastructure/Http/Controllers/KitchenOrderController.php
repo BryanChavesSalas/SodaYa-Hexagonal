@@ -6,19 +6,35 @@ namespace Src\Ordering\Orders\Infrastructure\Http\Controllers;
 
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Src\Ordering\Orders\Application\DTOs\CancelOrderCommand;
 use Src\Ordering\Orders\Application\UseCases\AdvanceOrder;
 use Src\Ordering\Orders\Application\UseCases\CancelOrder;
+use Src\Ordering\Orders\Application\UseCases\ListKitchenOrders;
 use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
+use Src\Ordering\Orders\Infrastructure\Http\Requests\ListKitchenOrdersRequest;
 use Src\Ordering\Orders\Infrastructure\Http\Requests\UpdateOrderStatusRequest;
 use Src\Ordering\Orders\Infrastructure\Http\Resources\OrderResource;
 use Src\Shared\Domain\Contracts\SodaContext;
+use Src\Shared\Infrastructure\Http\Resources\PageMeta;
 
-#[Group('Pedidos de la cocina', 'Avance y cancelación de los pedidos por el personal de la soda.')]
+#[Group('Pedidos de la cocina', 'Lista, avance y cancelación de los pedidos por el personal de la soda.')]
 final readonly class KitchenOrderController
 {
     /** Receive the port that identifies the current soda. */
     public function __construct(private SodaContext $sodaContext) {}
+
+    /** List the orders of the current soda, in one status or in any, oldest first. */
+    #[Endpoint(
+        title: 'Listar los pedidos de la soda',
+        description: 'Lista los pedidos de la soda del personal autenticado, del más antiguo al más reciente: el orden en que llegaron es el orden en que se preparan. `estado` filtra por pendiente, confirmado, listo, entregado o cancelado; sin él se listan todos. Cada pedido trae su número de retiro, su hora estimada de retiro y sus líneas. Paginado con `pagina` y `por_pagina`: 15 por defecto y 50 como máximo.',
+    )]
+    public function index(ListKitchenOrdersRequest $request, ListKitchenOrders $listOrders): AnonymousResourceCollection
+    {
+        $page = $listOrders->execute($this->sodaContext->current()->value, $request->status(), $request->page());
+
+        return OrderResource::collection($page->items)->additional(PageMeta::of($page));
+    }
 
     /** Move an order of the current soda one step forward. */
     #[Endpoint(

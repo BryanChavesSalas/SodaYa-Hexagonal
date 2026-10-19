@@ -7,16 +7,21 @@ namespace Tests\Unit\Ordering\Orders\Domain;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Src\Ordering\Orders\Domain\Entities\Order;
+use Src\Ordering\Orders\Domain\Exceptions\OrderEmptyException;
+use Src\Ordering\Orders\Domain\Exceptions\OrderNotFoundException;
 use Src\Ordering\Orders\Domain\Exceptions\OrderNotPaidException;
+use Src\Ordering\Orders\Domain\Exceptions\QuantityOutOfRangeException;
 use Src\Ordering\Orders\Domain\Exceptions\TransitionNotAllowedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
+use Src\Ordering\Orders\Domain\ValueObjects\PickupNumber;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Tests\Support\Ordering\Orders;
+use Throwable;
 
 final class OrderTest extends TestCase
 {
@@ -33,9 +38,9 @@ final class OrderTest extends TestCase
         $this->assertNull($order->cancellationOrigin);
     }
 
-    /** An order needs between 1 and 20 lines. */
+    /** An order needs between 1 and 20 lines: none is an empty order, more than 20 is invalid data. */
     #[DataProvider('lineCounts')]
-    public function test_number_of_lines_is_limited(int $count, bool $valid): void
+    public function test_number_of_lines_is_limited(int $count, ?string $exception): void
     {
         $lines = [];
 
@@ -43,28 +48,73 @@ final class OrderTest extends TestCase
             $lines[] = Orders::line(sprintf('0192f0c4-0000-7000-8000-%012d', $i));
         }
 
-        if (! $valid) {
-            $this->expectException(InvalidValueException::class);
+        if ($exception !== null) {
+            $this->expectException($exception);
         }
 
-        $order = Order::place(new OrderId(Orders::ORDER_ID), new SodaId(Orders::SODA_ID), new CustomerId(Orders::CUSTOMER_ID), $lines, Orders::at('12:00'));
+        $order = Order::place(new OrderId(Orders::ORDER_ID), new SodaId(Orders::SODA_ID), new CustomerId(Orders::CUSTOMER_ID), $lines, Orders::at('12:00'), new PickupNumber(1));
 
         $this->assertCount($count, $order->lines);
     }
 
+    /** The order keeps the pickup number it was given and is ready when its slowest dish is: placed at 12:00, casado of 15 minutes, 12:15. */
+    public function test_order_keeps_its_pickup_number_and_estimates_its_pickup_time(): void
+    {
+        $order = Orders::pending();
+
+        $this->assertSame(1, $order->pickupNumber->value);
+        $this->assertSame(15, $order->lines[0]->preparationMinutes);
+        $this->assertSame(5, $order->lines[1]->preparationMinutes);
+        $this->assertEquals(Orders::at('12:15'), $order->estimatedPickupAt());
+    }
+
+    /** The preparation minutes of a line keep the range of the catalog, from 1 to 120. */
+    #[DataProvider('preparationMinutes')]
+    public function test_preparation_minutes_are_limited(int $minutes, bool $valid): void
+    {
+        if (! $valid) {
+            $this->expectException(InvalidValueException::class);
+        }
+
+        $this->assertSame($minutes, Orders::line(minutes: $minutes)->preparationMinutes);
+    }
+
     /**
-     * Line counts at and beyond the limits.
+     * Minutes at and beyond the limits.
      *
      * @return array<string, array{int, bool}>
+     */
+    public static function preparationMinutes(): array
+    {
+        return [
+            'zero' => [0, false],
+            'one' => [1, true],
+            'two hours' => [120, true],
+            'beyond two hours' => [121, false],
+        ];
+    }
+
+    /**
+     * Line counts at and beyond the limits, with the exception each one raises.
+     *
+     * @return array<string, array{int, class-string<Throwable>|null}>
      */
     public static function lineCounts(): array
     {
         return [
-            'no lines' => [0, false],
-            'one line' => [1, true],
-            'twenty lines' => [20, true],
-            'twenty-one lines' => [21, false],
+            'no lines' => [0, OrderEmptyException::class],
+            'one line' => [1, null],
+            'twenty lines' => [20, null],
+            'twenty-one lines' => [21, InvalidValueException::class],
         ];
+    }
+
+    /** The rules the API publishes with their own problem type carry a stable name. */
+    public function test_named_rules_keep_their_problem_type(): void
+    {
+        $this->assertSame('pedido-vacio', OrderEmptyException::create()->rule());
+        $this->assertSame('cantidad-invalida', QuantityOutOfRangeException::create()->rule());
+        $this->assertSame('pedido-no-encontrado', OrderNotFoundException::create()->type());
     }
 
     /** The same dish cannot appear in two lines. */
@@ -78,32 +128,33 @@ final class OrderTest extends TestCase
             new CustomerId(Orders::CUSTOMER_ID),
             [Orders::line(), Orders::line(quantity: 3)],
             Orders::at('12:00'),
+            new PickupNumber(1),
         );
     }
 
-    /** Quantities go from 1 to 20 and prices keep the range of the catalog. */
+    /** Quantities go from 1 to 20, with a rule of their own, and prices keep the range of the catalog. */
     #[DataProvider('invalidLines')]
-    public function test_invalid_lines_are_rejected(int $quantity, int $price, string $name): void
+    public function test_invalid_lines_are_rejected(int $quantity, int $price, string $name, string $exception): void
     {
-        $this->expectException(InvalidValueException::class);
+        $this->expectException($exception);
 
         Orders::line(quantity: $quantity, price: $price, name: $name);
     }
 
     /**
-     * Lines that break one rule each.
+     * Lines that break one rule each, with the exception each one raises.
      *
-     * @return array<string, array{int, int, string}>
+     * @return array<string, array{int, int, string, class-string<Throwable>}>
      */
     public static function invalidLines(): array
     {
         return [
-            'zero portions' => [0, 2_800, 'Casado'],
-            'twenty-one portions' => [21, 2_800, 'Casado'],
-            'price below the minimum' => [1, 99, 'Casado'],
-            'price above the maximum' => [1, 100_001, 'Casado'],
-            'blank name' => [1, 2_800, '  '],
-            'name too long' => [1, 2_800, str_repeat('a', 121)],
+            'zero portions' => [0, 2_800, 'Casado', QuantityOutOfRangeException::class],
+            'twenty-one portions' => [21, 2_800, 'Casado', QuantityOutOfRangeException::class],
+            'price below the minimum' => [1, 99, 'Casado', InvalidValueException::class],
+            'price above the maximum' => [1, 100_001, 'Casado', InvalidValueException::class],
+            'blank name' => [1, 2_800, '  ', InvalidValueException::class],
+            'name too long' => [1, 2_800, str_repeat('a', 121), InvalidValueException::class],
         ];
     }
 

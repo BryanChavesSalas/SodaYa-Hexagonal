@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Src\Ordering\Orders\Domain\Entities;
 
 use DateTimeImmutable;
+use Src\Ordering\Orders\Domain\Exceptions\OrderEmptyException;
 use Src\Ordering\Orders\Domain\Exceptions\OrderNotPaidException;
 use Src\Ordering\Orders\Domain\Exceptions\TransitionNotAllowedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
+use Src\Ordering\Orders\Domain\ValueObjects\IdempotencyKey;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
+use Src\Ordering\Orders\Domain\ValueObjects\PickupNumber;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Src\Shared\Domain\ValueObjects\SodaId;
 
@@ -40,14 +43,18 @@ final class Order
         public readonly array $lines,
         public private(set) OrderStatus $status,
         public readonly DateTimeImmutable $placedAt,
+        public readonly PickupNumber $pickupNumber,
         public private(set) array $statusChanges,
         public private(set) ?CancellationOrigin $cancellationOrigin,
         public private(set) PaymentStatus $paymentStatus,
         public private(set) ?DateTimeImmutable $paidAt,
+        public readonly ?IdempotencyKey $idempotencyKey,
     ) {}
 
     /**
-     * Place a new order: it starts pending, with between 1 and 20 lines and one line per dish.
+     * Place a new order: it starts pending, with at least one line, at most 20, and one line per dish,
+     * and gets the pickup number the counter of the soda handed out for the day.
+     * The key of the request, when there is one, lets the same request be recognized if it arrives again.
      *
      * @param  list<OrderLine>  $lines
      */
@@ -57,8 +64,14 @@ final class Order
         CustomerId $customerId,
         array $lines,
         DateTimeImmutable $placedAt,
+        PickupNumber $pickupNumber,
+        ?IdempotencyKey $idempotencyKey = null,
     ): self {
-        if (count($lines) < self::MIN_LINES || count($lines) > self::MAX_LINES) {
+        if (count($lines) < self::MIN_LINES) {
+            throw OrderEmptyException::create();
+        }
+
+        if (count($lines) > self::MAX_LINES) {
             throw new InvalidValueException('ordering.lines_out_of_range', ['min' => self::MIN_LINES, 'max' => self::MAX_LINES]);
         }
 
@@ -68,7 +81,7 @@ final class Order
             throw new InvalidValueException('ordering.dish_repeated');
         }
 
-        return new self($id, $sodaId, $customerId, $lines, OrderStatus::Pending, $placedAt, [], null, PaymentStatus::Pending, null);
+        return new self($id, $sodaId, $customerId, $lines, OrderStatus::Pending, $placedAt, $pickupNumber, [], null, PaymentStatus::Pending, null, $idempotencyKey);
     }
 
     /**
@@ -84,12 +97,14 @@ final class Order
         array $lines,
         OrderStatus $status,
         DateTimeImmutable $placedAt,
+        PickupNumber $pickupNumber,
         array $statusChanges,
         ?CancellationOrigin $cancellationOrigin,
         PaymentStatus $paymentStatus = PaymentStatus::Pending,
         ?DateTimeImmutable $paidAt = null,
+        ?IdempotencyKey $idempotencyKey = null,
     ): self {
-        return new self($id, $sodaId, $customerId, $lines, $status, $placedAt, $statusChanges, $cancellationOrigin, $paymentStatus, $paidAt);
+        return new self($id, $sodaId, $customerId, $lines, $status, $placedAt, $pickupNumber, $statusChanges, $cancellationOrigin, $paymentStatus, $paidAt, $idempotencyKey);
     }
 
     /** Record that the payment of the order was approved; approving it again keeps the first moment and answers false. */
@@ -152,6 +167,14 @@ final class Order
     public function confirmationDeadline(): ?DateTimeImmutable
     {
         return $this->paidAt?->modify('+'.self::MINUTES_TO_CONFIRM.' minutes');
+    }
+
+    /** Moment the order should be ready: when it was placed plus the longest preparation among its dishes. */
+    public function estimatedPickupAt(): DateTimeImmutable
+    {
+        $longest = array_reduce($this->lines, fn (int $longest, OrderLine $line): int => max($longest, $line->preparationMinutes), 0);
+
+        return $this->placedAt->modify("+{$longest} minutes");
     }
 
     /**

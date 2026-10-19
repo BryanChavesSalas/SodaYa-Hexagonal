@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
+use Src\Catalog\Promotions\Infrastructure\Persistence\Models\PromotionModel;
 use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
@@ -23,6 +24,18 @@ final class RowLevelSecurityTest extends TestCase
     use RefreshDatabaseAsOwner, ScopesQueriesToSoda;
 
     private const string POLICY_EXPRESSION = "(soda_id = (NULLIF(current_setting('app.soda_id'::text, true), ''::text))::uuid)";
+
+    private const string CUSTOMER_EXPRESSION = "(customer_id = (NULLIF(current_setting('app.customer_id'::text, true), ''::text))::uuid)";
+
+    /**
+     * Tables of an order, which the customer who placed it may also read.
+     *
+     * @var list<string>
+     */
+    private const array ORDER_TABLES = ['orders', 'order_lines', 'order_status_history'];
+
+    /** Views over mv_daily_sales: a materialized view cannot have policies, so they filter by the soda of the transaction themselves. */
+    private const array BARRIER_VIEWS = ['v_daily_sales'];
 
     private SodaModel $soda;
 
@@ -43,18 +56,22 @@ final class RowLevelSecurityTest extends TestCase
         }
     }
 
-    /** Every view with a soda_id column runs with the permissions of whoever queries it, so the policies of its tables apply. */
-    public function test_every_view_of_a_soda_is_security_invoker(): void
+    /**
+     * Every view with a soda_id column runs with the permissions of whoever queries it, so the policies of its tables
+     * apply; the views over a materialized view, which has no policies, filter by the soda themselves behind a security barrier.
+     */
+    public function test_every_view_of_a_soda_runs_as_its_caller_or_filters_behind_a_security_barrier(): void
     {
         $views = $this->relationsWithASodaColumn('VIEW');
 
         $this->assertContains('v_hourly_sales', $views);
+        $this->assertContains('v_daily_sales', $views);
 
         foreach ($views as $view) {
             $this->assertSame(
-                'security_invoker=true',
+                in_array($view, self::BARRIER_VIEWS, true) ? 'security_barrier=true' : 'security_invoker=true',
                 DB::scalar("select array_to_string(reloptions, ',') from pg_class where oid = ?::regclass", [$view]),
-                "The view {$view} is not security_invoker.",
+                "The view {$view} does not have the security option it needs.",
             );
         }
     }
@@ -65,7 +82,10 @@ final class RowLevelSecurityTest extends TestCase
         $this->assertSame(config('database.connections.pgsql.username'), DB::scalar('select current_user'));
     }
 
-    /** Every table with a soda_id column, except users, has row-level security enabled, forced and one isolation policy. */
+    /**
+     * Every table with a soda_id column, except users, has row-level security enabled, forced and its isolation policy;
+     * only the tables of an order have a second policy, the one that lets its customer read it.
+     */
     public function test_every_table_of_a_soda_is_protected_by_its_policy(): void
     {
         $tables = $this->relationsWithASodaColumn('BASE TABLE');
@@ -86,13 +106,45 @@ final class RowLevelSecurityTest extends TestCase
 
             $this->assertTrue($security->relrowsecurity, "Row-level security is not enabled on {$table}.");
             $this->assertTrue($security->relforcerowsecurity, "Row-level security is not forced on {$table}.");
-            $this->assertEquals([(object) [
+            $this->assertContainsEquals((object) [
                 'policyname' => "{$table}_soda_isolation",
                 'cmd' => 'ALL',
                 'qual' => self::POLICY_EXPRESSION,
                 'with_check' => self::POLICY_EXPRESSION,
-            ]], $policies, "The isolation policy of {$table} is missing or different.");
+            ], $policies, "The isolation policy of {$table} is missing or different.");
+            $this->assertCount(in_array($table, self::ORDER_TABLES, true) ? 2 : 1, $policies, "{$table} has a policy nobody expects.");
         }
+    }
+
+    /** The tables of an order let the customer who placed it read them, and only read them: the policy covers SELECT and nothing else. */
+    #[DataProvider('orderTables')]
+    public function test_tables_of_an_order_let_their_customer_read_them(string $table, string $expression): void
+    {
+        $policy = DB::selectOne(
+            "select cmd, qual, with_check from pg_policies where schemaname = 'public' and tablename = ? and policyname = ?",
+            [$table, "{$table}_customer_access"],
+        );
+
+        $this->assertNotNull($policy, "The customer policy of {$table} is missing.");
+        $this->assertSame('SELECT', $policy->cmd);
+        $this->assertNull($policy->with_check);
+        $this->assertSame($expression, preg_replace('/\s+/', ' ', (string) $policy->qual));
+    }
+
+    /**
+     * Tables of an order with the expression that lets their customer read them.
+     *
+     * @return array<string, array{string, string}>
+     */
+    public static function orderTables(): array
+    {
+        $throughOrder = fn (string $table): string => '(EXISTS ( SELECT 1 FROM orders WHERE ((orders.id = '.$table.'.order_id) AND (orders.customer_id = (NULLIF(current_setting(\'app.customer_id\'::text, true), \'\'::text))::uuid))))';
+
+        return [
+            'orders' => ['orders', self::CUSTOMER_EXPRESSION],
+            'order lines' => ['order_lines', $throughOrder('order_lines')],
+            'order status history' => ['order_status_history', $throughOrder('order_status_history')],
+        ];
     }
 
     /** Without a soda in the transaction no row is visible and no update or delete reaches one. */
@@ -169,6 +221,7 @@ final class RowLevelSecurityTest extends TestCase
             'dishes' => [DishModel::class],
             'schedules' => [TimeSlotModel::class],
             'closures' => [ClosureModel::class],
+            'promotions' => [PromotionModel::class],
         ];
     }
 
@@ -189,6 +242,7 @@ final class RowLevelSecurityTest extends TestCase
             ]],
             'schedules' => ['schedules', ['day_of_week' => 2, 'opens_at' => '08:00', 'closes_at' => '12:00']],
             'closures' => ['closures', ['closed_on' => '2026-12-25']],
+            'promotions' => ['promotions', ['weekday' => 4, 'starts_at' => '14:00', 'ends_at' => '15:00', 'percentage' => 20]],
         ];
     }
 

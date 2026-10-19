@@ -22,9 +22,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $dish_name
  * @property int $unit_price
  * @property int $quantity
+ * @property int $preparation_minutes
  */
 #[Table('order_lines')]
-#[Fillable(['id', 'order_id', 'soda_id', 'dish_id', 'dish_name', 'unit_price', 'quantity'])]
+#[Fillable(['id', 'order_id', 'soda_id', 'dish_id', 'dish_name', 'unit_price', 'quantity', 'preparation_minutes'])]
 #[UseFactory(OrderLineFactory::class)]
 #[WithoutTimestamps]
 final class OrderLineModel extends Model
@@ -52,6 +53,7 @@ final class OrderLineModel extends Model
         return [
             'unit_price' => 'integer',
             'quantity' => 'integer',
+            'preparation_minutes' => 'integer',
         ];
     }
 }

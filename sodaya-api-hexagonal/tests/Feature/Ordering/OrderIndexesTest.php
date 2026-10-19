@@ -7,7 +7,11 @@ namespace Tests\Feature\Ordering;
 use Illuminate\Support\Facades\DB;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
+use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
+use Src\Ordering\Orders\Infrastructure\Persistence\Repositories\EloquentOrderRepository;
+use Src\Shared\Domain\ValueObjects\PageRequest;
+use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
 use Tests\Support\Shared\ScopesQueriesToSoda;
@@ -54,6 +58,23 @@ final class OrderIndexesTest extends TestCase
 
         $this->assertContains(self::INDEX, $this->indexesIn($plan));
         $this->assertNotContains('Sort', $this->nodeTypesIn($plan));
+    }
+
+    /** The query the repository really runs for the kitchen list of a status keeps that shape: the index, and no sort. */
+    public function test_repository_page_of_a_status_uses_the_index_without_sorting(): void
+    {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        new EloquentOrderRepository()->pageOfSoda(new SodaId($this->soda->id), OrderStatus::Pending, new PageRequest);
+        DB::disableQueryLog();
+
+        $rows = array_find(DB::getQueryLog(), fn (array $query): bool => str_contains((string) $query['query'], 'order by'));
+        $this->assertNotNull($rows, 'The repository did not read the page of orders.');
+
+        $plan = $this->plan($rows['query'], $rows['bindings']);
+
+        $this->assertContains(self::INDEX, $this->indexesIn($plan));
+        $this->assertSame([], array_filter($this->nodeTypesIn($plan), fn (string $type): bool => str_contains($type, 'Sort')));
     }
 
     /**
@@ -116,24 +137,26 @@ final class OrderIndexesTest extends TestCase
         $this->scopeQueriesTo($soda->id);
 
         DB::insert(<<<'SQL'
-            INSERT INTO orders (soda_id, customer_id, status, cancellation_origin, cancelled_at, payment_status, paid_at, created_at, updated_at)
+            INSERT INTO orders (soda_id, customer_id, status, cancellation_origin, cancelled_at, payment_status, paid_at, pickup_date, pickup_number, created_at, updated_at)
             SELECT ?, ?, s.status,
                    CASE WHEN s.status = 'cancelled' THEN 'kitchen' END,
                    CASE WHEN s.status = 'cancelled' THEN s.at END,
                    CASE WHEN s.status = 'pending' THEN 'pending' ELSE 'approved' END,
                    CASE WHEN s.status = 'pending' THEN NULL ELSE s.at END,
+                   (s.at AT TIME ZONE 'America/Costa_Rica')::date, s.number,
                    s.at, s.at
             FROM (
                 SELECT (ARRAY['delivered', 'delivered', 'delivered', 'delivered', 'delivered', 'delivered',
                               'pending', 'confirmed', 'ready', 'cancelled'])[i % 10 + 1] AS status,
-                       timestamptz '2026-08-01 07:00:00-06' + (i % 80) * interval '1 day' + (i % 600) * interval '1 minute' AS at
+                       timestamptz '2026-08-01 07:00:00-06' + (i % 80) * interval '1 day' + (i % 600) * interval '1 minute' AS at,
+                       i / 80 + 1 AS number
                 FROM generate_series(1, ?) AS i
             ) AS s
             SQL, [$soda->id, $customer->id, $count]);
 
         DB::insert(<<<'SQL'
-            INSERT INTO order_lines (order_id, soda_id, dish_id, dish_name, unit_price, quantity)
-            SELECT o.id, o.soda_id, ?, 'Casado', 2500, 1 FROM orders o WHERE o.soda_id = ?
+            INSERT INTO order_lines (order_id, soda_id, dish_id, dish_name, unit_price, quantity, preparation_minutes)
+            SELECT o.id, o.soda_id, ?, 'Casado', 2500, 1, 15 FROM orders o WHERE o.soda_id = ?
             SQL, [$dish->id, $soda->id]);
     }
 }

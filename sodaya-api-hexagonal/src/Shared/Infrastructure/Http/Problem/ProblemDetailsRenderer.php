@@ -13,6 +13,7 @@ use Src\Shared\Domain\Exceptions\BusinessRuleException;
 use Src\Shared\Domain\Exceptions\DomainException;
 use Src\Shared\Domain\Exceptions\InvalidValueException;
 use Src\Shared\Domain\Exceptions\NotFoundException;
+use Src\Shared\Domain\Exceptions\ServiceUnavailableException;
 use Src\Shared\Infrastructure\Http\Middleware\AssignRequestId;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
@@ -28,6 +29,11 @@ final readonly class ProblemDetailsRenderer
             $exception instanceof ValidationException => $this->respond(
                 ProblemType::InvalidData,
                 extensions: ['errores' => $exception->errors()],
+            ),
+            $exception instanceof ServiceUnavailableException => $this->respond(
+                ProblemType::ServiceUnavailable,
+                __($exception->translationKey(), $exception->parameters()),
+                headers: ['Retry-After' => (string) $exception->retryAfterSeconds()],
             ),
             $exception instanceof DomainException => $this->respond(
                 $this->typeOfDomainException($exception),
@@ -46,7 +52,7 @@ final readonly class ProblemDetailsRenderer
     private function typeOfDomainException(DomainException $exception): ProblemType
     {
         return match (true) {
-            $exception instanceof NotFoundException => ProblemType::NotFound,
+            $exception instanceof NotFoundException => ProblemType::tryFrom($exception->type() ?? '') ?? ProblemType::NotFound,
             $exception instanceof InvalidValueException => ProblemType::InvalidData,
             $exception instanceof AuthenticationFailedException => ProblemType::InvalidCredentials,
             $exception instanceof BusinessRuleException => ProblemType::tryFrom($exception->rule()) ?? ProblemType::Conflict,

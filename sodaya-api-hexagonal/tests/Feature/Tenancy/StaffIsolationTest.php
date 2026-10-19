@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
+use Src\Catalog\Promotions\Infrastructure\Persistence\Models\PromotionModel;
+use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
 use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
@@ -67,6 +69,8 @@ final class StaffIsolationTest extends TestCase
             'list categories' => ['/api/v1/cocina/categorias', 'category'],
             'list opening hours' => ['/api/v1/cocina/horario', 'slot'],
             'list closures' => ['/api/v1/cocina/cierres', 'closure'],
+            'list orders' => ['/api/v1/cocina/pedidos', 'order'],
+            'list promotions' => ['/api/v1/cocina/promociones', 'promotion'],
         ];
     }
 
@@ -120,6 +124,7 @@ final class StaffIsolationTest extends TestCase
             'delete a category' => ['DELETE', '/api/v1/cocina/categorias', 'category', []],
             'delete a time slot' => ['DELETE', '/api/v1/cocina/horario', 'slot', []],
             'delete a closure' => ['DELETE', '/api/v1/cocina/cierres', 'closure', []],
+            'delete a promotion' => ['DELETE', '/api/v1/cocina/promociones', 'promotion', []],
         ];
     }
 
@@ -153,6 +158,7 @@ final class StaffIsolationTest extends TestCase
             'add a time slot' => ['/api/v1/cocina/horario', ['dia' => 1, 'abre' => '08:00', 'cierra' => '12:00'], 'schedules'],
             'register a closure' => ['/api/v1/cocina/cierres', ['fecha' => '2026-10-05'], 'closures'],
             'close for today' => ['/api/v1/cocina/cierres/hoy', ['motivo' => 'Se acabó la comida'], 'closures'],
+            'define a promotion' => ['/api/v1/cocina/promociones', ['dia' => 1, 'inicio' => '14:00', 'fin' => '15:00', 'porcentaje' => 20], 'promotions'],
         ];
     }
 
@@ -196,7 +202,7 @@ final class StaffIsolationTest extends TestCase
         $this->scopeQueriesTo($this->otherSoda->id);
         $rows = [];
 
-        foreach (['categories', 'dishes', 'schedules', 'closures'] as $table) {
+        foreach (['categories', 'dishes', 'schedules', 'closures', 'promotions'] as $table) {
             $rows[$table] = DB::table($table)
                 ->where('soda_id', $this->otherSoda->id)
                 ->orderBy('id')
@@ -209,7 +215,7 @@ final class StaffIsolationTest extends TestCase
     }
 
     /**
-     * Create a category, a dish in it, a time slot and a closure for a soda.
+     * Create a category, a dish in it, a time slot, a closure, an order and a promotion for a soda.
      *
      * @return array<string, Model>
      */
@@ -231,6 +237,8 @@ final class StaffIsolationTest extends TestCase
                 'closes_at' => '12:00',
             ]),
             'closure' => ClosureModel::factory()->create(['soda_id' => $soda->id, 'closed_on' => $closedOn]),
+            'order' => OrderModel::factory()->create(['soda_id' => $soda->id]),
+            'promotion' => PromotionModel::factory()->create(['soda_id' => $soda->id, 'weekday' => $day]),
         ];
     }
 }

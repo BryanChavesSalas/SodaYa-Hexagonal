@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Ordering;
 
+use Illuminate\Support\Str;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 use Src\Ordering\Orders\Application\DTOs\PlaceOrderCommand;
 use Src\Ordering\Orders\Application\UseCases\PlaceOrder;
 use Src\Ordering\Orders\Domain\Entities\Order;
+use Src\Ordering\Orders\Domain\Exceptions\DishNotOfSodaException;
+use Src\Ordering\Orders\Domain\Exceptions\DishUnavailableException;
 use Src\Ordering\Orders\Domain\Exceptions\PortionsSoldOutException;
+use Src\Ordering\Orders\Domain\Exceptions\SodaClosedException;
+use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
 use Tests\Support\Shared\ScopesQueriesToSoda;
@@ -27,24 +32,28 @@ final class PlaceOrderTest extends TestCase
 
     private DishModel $fresco;
 
-    /** A soda with 3 casados and 10 frescos left, and a customer. */
+    /** A soda open on Monday from 6:00 to 14:00, with 3 casados and 10 frescos left, and a customer; it is Monday noon. */
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->travelTo('2026-10-05 12:00:00');
         $this->customer = UserModel::factory()->create();
         $this->soda = SodaModel::factory()->create();
-        $this->casado = DishModel::factory()->create(['soda_id' => $this->soda->id, 'available_portions' => 3, 'price' => 2_800]);
-        $this->fresco = DishModel::factory()->create(['soda_id' => $this->soda->id, 'available_portions' => 10, 'price' => 1_000]);
+        TimeSlotModel::factory()->create(['soda_id' => $this->soda->id, 'day_of_week' => 1, 'opens_at' => '06:00', 'closes_at' => '14:00']);
+        $this->casado = DishModel::factory()->create(['soda_id' => $this->soda->id, 'name' => 'Casado de pollo', 'available_portions' => 3, 'price' => 2_800]);
+        $this->fresco = DishModel::factory()->create(['soda_id' => $this->soda->id, 'name' => 'Fresco de cas', 'available_portions' => 10, 'price' => 1_000]);
     }
 
-    /** The order and its lines are stored, and the portions come off the menu. */
-    public function test_order_is_stored_and_its_portions_taken(): void
+    /** The order and its lines are stored with the name and price of the catalog, and the portions come off the menu. */
+    public function test_order_is_stored_with_the_catalog_prices_and_its_portions_taken(): void
     {
         $order = $this->place([$this->casado->id => 2, $this->fresco->id => 1]);
 
         $this->assertDatabaseHas('orders', ['id' => $order->id->value, 'status' => 'pending', 'customer_id' => $this->customer->id]);
+        $this->assertDatabaseHas('order_lines', ['order_id' => $order->id->value, 'dish_id' => $this->casado->id, 'dish_name' => 'Casado de pollo', 'unit_price' => 2_800, 'quantity' => 2]);
         $this->assertDatabaseCount('order_lines', 2);
+        $this->assertSame(6_600, $order->total());
         $this->assertSame(1, $this->casado->refresh()->available_portions);
         $this->assertSame(9, $this->fresco->refresh()->available_portions);
     }
@@ -76,24 +85,68 @@ final class PlaceOrderTest extends TestCase
         }
     }
 
+    /** Outside the schedule the soda takes no order and keeps its portions. */
+    public function test_closed_soda_takes_no_order(): void
+    {
+        $this->travelTo('2026-10-05 15:00:00');
+
+        try {
+            $this->place([$this->casado->id => 1]);
+            $this->fail('A closed soda took an order.');
+        } catch (SodaClosedException) {
+            $this->assertDatabaseCount('orders', 0);
+            $this->assertSame(3, $this->casado->refresh()->available_portions);
+        }
+    }
+
+    /** A dish of another soda is refused as if the soda did not have it. */
+    public function test_dish_of_another_soda_is_refused(): void
+    {
+        $foreign = DishModel::factory()->create();
+
+        $this->expectException(DishNotOfSodaException::class);
+
+        $this->place([$this->casado->id => 1, $foreign->id => 1]);
+    }
+
+    /** A dish taken off the menu is refused. */
+    public function test_inactive_dish_is_refused(): void
+    {
+        $retired = DishModel::factory()->inactive()->create(['soda_id' => $this->soda->id]);
+
+        $this->expectException(DishUnavailableException::class);
+
+        $this->place([$retired->id => 1]);
+    }
+
+    /** The same request sent again answers the order already stored and takes no portion twice. */
+    public function test_repeated_request_takes_the_portions_once(): void
+    {
+        $first = $this->place([$this->casado->id => 2], 'toque-1');
+        $again = $this->place([$this->casado->id => 2], 'toque-1');
+
+        $this->assertTrue($first->id->equals($again->id));
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertSame(1, $this->casado->refresh()->available_portions);
+    }
+
     /**
-     * Place an order of the customer with the quantities of each dish.
+     * Place an order of the customer with the quantities of each dish, under a key of its own unless one is given.
      *
      * @param  array<string, int>  $quantities
      */
-    private function place(array $quantities): Order
+    private function place(array $quantities, ?string $key = null): Order
     {
         $this->scopeQueriesTo($this->soda->id);
         $lines = [];
 
         foreach ($quantities as $dishId => $quantity) {
-            $dish = DishModel::query()->findOrFail($dishId);
-            $lines[] = ['dish_id' => $dishId, 'dish_name' => $dish->name, 'unit_price' => $dish->price, 'quantity' => $quantity];
+            $lines[] = ['dish_id' => $dishId, 'quantity' => $quantity];
         }
 
         return app(PlaceOrder::class)->execute(
-            new PlaceOrderCommand($this->customer->id, $this->soda->id, $lines),
+            new PlaceOrderCommand($this->customer->id, $this->soda->id, $lines, $key ?? (string) Str::uuid7()),
             now()->toDateTimeImmutable(),
-        );
+        )->order;
     }
 }

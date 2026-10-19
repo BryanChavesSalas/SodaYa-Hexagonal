@@ -10,13 +10,17 @@ use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Entities\OrderLine;
+use Src\Ordering\Orders\Domain\Exceptions\IdempotencyKeyReusedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\DishId;
+use Src\Ordering\Orders\Domain\ValueObjects\IdempotencyKey;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
+use Src\Ordering\Orders\Domain\ValueObjects\PickupNumber;
 use Src\Ordering\Orders\Domain\ValueObjects\Quantity;
 use Src\Ordering\Orders\Infrastructure\Persistence\Repositories\EloquentOrderRepository;
+use Src\Shared\Domain\ValueObjects\PageRequest;
 use Src\Shared\Domain\ValueObjects\SodaId;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\Ordering\Orders;
@@ -105,6 +109,71 @@ final class EloquentOrderRepositoryTest extends TestCase
         $this->assertStringEndsWith('for update', $orderQuery);
     }
 
+    /** An order placed with a key is found again by its customer and key, with the key and the fingerprint it was saved with. */
+    public function test_order_is_found_by_its_idempotency_key(): void
+    {
+        $key = new IdempotencyKey('toque-1', str_repeat('a', 64));
+        $order = $this->placedOrder($key);
+        $this->repository->save($order);
+
+        $found = $this->repository->findByIdempotencyKey($order->customerId, 'toque-1');
+
+        $this->assertEquals($order, $found);
+        $this->assertEquals($key, $found?->idempotencyKey);
+        $this->assertNull($this->repository->findByIdempotencyKey($order->customerId, 'toque-2'));
+        $this->assertNull($this->repository->findByIdempotencyKey(new CustomerId(Orders::CUSTOMER_ID), 'toque-1'));
+    }
+
+    /** A second order of the customer with the same key is refused by the database and nothing of it is stored. */
+    public function test_second_order_with_the_same_key_is_refused(): void
+    {
+        $first = $this->placedOrder(new IdempotencyKey('toque-1', str_repeat('a', 64)));
+        $this->repository->save($first);
+        $second = Order::place($this->repository->nextId(), $this->sodaId, $first->customerId, $first->lines, Orders::at('12:01'), new PickupNumber(2), new IdempotencyKey('toque-1', str_repeat('b', 64)));
+
+        try {
+            $this->repository->save($second);
+            $this->fail('The same key was stored twice.');
+        } catch (IdempotencyKeyReusedException $exception) {
+            $this->assertSame('conflicto', $exception->rule());
+            $this->assertSame(1, DB::table('orders')->count());
+            $this->assertSame(2, DB::table('order_lines')->count());
+        }
+    }
+
+    /** A customer finds their order by its identifier, whatever its soda; another customer does not. */
+    public function test_order_is_found_by_its_customer(): void
+    {
+        $order = $this->placedOrder();
+        $this->repository->save($order);
+        $this->scopeQueriesTo(null);
+        $this->scopeQueriesToCustomer($order->customerId->value);
+
+        $this->assertEquals($order, $this->repository->findOfCustomer($order->id, $order->customerId));
+        $this->assertNull($this->repository->findOfCustomer($order->id, new CustomerId(Orders::CUSTOMER_ID)));
+    }
+
+    /** The orders of a customer are paged newest first, at every soda, and the orders of other customers stay out. */
+    public function test_orders_of_a_customer_are_paged_newest_first(): void
+    {
+        $oldest = $this->placedOrder();
+        $this->repository->save($oldest);
+        $otherSoda = new SodaId(SodaModel::factory()->create()->id);
+        $dish = DishModel::factory()->create(['soda_id' => $otherSoda->value, 'name' => 'Olla de carne', 'price' => 3_500]);
+        $newest = Order::place($this->repository->nextId(), $otherSoda, $oldest->customerId, [new OrderLine(new DishId($dish->id), 'Olla de carne', 3_500, new Quantity(1), 25)], Orders::at('12:30'), new PickupNumber(1));
+        $this->repository->save($newest);
+        $this->scopeQueriesTo($this->sodaId->value);
+        $this->repository->save(Order::place($this->repository->nextId(), $this->sodaId, new CustomerId(UserModel::factory()->create()->id), $oldest->lines, Orders::at('12:45'), new PickupNumber(2)));
+        $this->scopeQueriesTo(null);
+        $this->scopeQueriesToCustomer($oldest->customerId->value);
+
+        $page = $this->repository->pageOfCustomer($oldest->customerId, new PageRequest(1, 1));
+
+        $this->assertSame(2, $page->total);
+        $this->assertEquals([$newest], $page->items);
+        $this->assertEquals([$oldest], $this->repository->pageOfCustomer($oldest->customerId, new PageRequest(2, 1))->items);
+    }
+
     /** Every new identity is a distinct time-ordered UUID. */
     public function test_next_id_returns_uuid_v7_values(): void
     {
@@ -112,8 +181,8 @@ final class EloquentOrderRepositoryTest extends TestCase
         $this->assertNotEquals($this->repository->nextId(), $this->repository->nextId());
     }
 
-    /** Place an order of a customer with two dishes of the soda. */
-    private function placedOrder(): Order
+    /** Place an order of a customer with two dishes of the soda, numbered 1, with the key of its request if there is one. */
+    private function placedOrder(?IdempotencyKey $key = null): Order
     {
         $customer = UserModel::factory()->create();
         $casado = DishModel::factory()->create(['soda_id' => $this->sodaId->value, 'name' => 'Casado de pollo', 'price' => 2_800]);
@@ -125,10 +194,12 @@ final class EloquentOrderRepositoryTest extends TestCase
             $this->sodaId,
             new CustomerId($customer->id),
             [
-                new OrderLine(new DishId($casado->id), 'Casado de pollo', 2_800, new Quantity(2)),
-                new OrderLine(new DishId($fresco->id), 'Fresco de cas', 1_000, new Quantity(1)),
+                new OrderLine(new DishId($casado->id), 'Casado de pollo', 2_800, new Quantity(2), 15),
+                new OrderLine(new DishId($fresco->id), 'Fresco de cas', 1_000, new Quantity(1), 5),
             ],
             Orders::at('12:00'),
+            new PickupNumber(1),
+            $key,
         );
     }
 }

@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Providers\AppServiceProvider;
+use Src\Billing\Payments\Infrastructure\PaymentsServiceProvider;
 use Src\Catalog\Categories\Infrastructure\CategoriesServiceProvider;
 use Src\Catalog\Dishes\Infrastructure\DishesServiceProvider;
 use Src\Catalog\Menu\Infrastructure\MenuServiceProvider;
+use Src\Catalog\Promotions\Infrastructure\PromotionsServiceProvider;
 use Src\Identity\Users\Infrastructure\UsersServiceProvider;
 use Src\Loyalty\Points\Infrastructure\PointsServiceProvider;
 use Src\Ordering\Orders\Infrastructure\OrdersServiceProvider;
@@ -21,6 +23,7 @@ return [
     CategoriesServiceProvider::class,
     DishesServiceProvider::class,
     MenuServiceProvider::class,
+    PromotionsServiceProvider::class,
     ClosuresServiceProvider::class,
     OpeningHoursServiceProvider::class,
     ProfileServiceProvider::class,
@@ -28,4 +31,5 @@ return [
     OrdersServiceProvider::class,
     SalesServiceProvider::class,
     PointsServiceProvider::class,
+    PaymentsServiceProvider::class,
 ];

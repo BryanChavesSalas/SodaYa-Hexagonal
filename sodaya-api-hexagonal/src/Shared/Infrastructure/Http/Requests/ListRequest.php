@@ -7,7 +7,8 @@ namespace Src\Shared\Infrastructure\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Src\Shared\Domain\ValueObjects\PageRequest;
 
-final class ListRequest extends FormRequest
+/** Page of any listing; a listing with filters of its own extends it and adds its rules to these. */
+class ListRequest extends FormRequest
 {
     /**
      * Validation rules for the page of a listing.

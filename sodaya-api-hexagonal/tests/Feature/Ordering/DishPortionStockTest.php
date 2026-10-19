@@ -89,7 +89,7 @@ final class DishPortionStockTest extends TestCase
         $lines = [];
 
         foreach ($quantities as $dishId => $quantity) {
-            $lines[] = new OrderLine(new DishId($dishId), 'Plato', 1_000, new Quantity($quantity));
+            $lines[] = new OrderLine(new DishId($dishId), 'Plato', 1_000, new Quantity($quantity), 15);
         }
 
         return new DishPortionStock()->reserve(new SodaId($this->soda->id), $lines);

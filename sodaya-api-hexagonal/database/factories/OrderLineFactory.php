@@ -20,7 +20,7 @@ final class OrderLineFactory extends Factory
     protected $model = OrderLineModel::class;
 
     /**
-     * Default state of a line: one portion of a new dish of the soda of the order, at its current name and price.
+     * Default state of a line: one portion of a new dish of the soda of the order, at its current name, price and minutes.
      *
      * @return array<string, mixed>
      */
@@ -33,6 +33,7 @@ final class OrderLineFactory extends Factory
             'dish_name' => fn (array $attributes): string => $this->dish($attributes)->name,
             'unit_price' => fn (array $attributes): int => $this->dish($attributes)->price,
             'quantity' => 1,
+            'preparation_minutes' => fn (array $attributes): int => $this->dish($attributes)->preparation_minutes,
         ];
     }
 
