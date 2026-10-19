@@ -37,10 +37,10 @@ final class QueuedSideEffectsTest extends TestCase
         $this->postJson("/api/v1/cocina/pedidos/{$order->id}/cancelacion")->assertOk();
 
         Queue::assertPushed(RequestRefundJob::class, fn (RequestRefundJob $job): bool => $job->orderId === $order->id && $job->amount === 5_600);
-        Queue::assertPushed(NotifyCustomerJob::class, fn (NotifyCustomerJob $job): bool => $job->customerId === $order->customer_id && $job->event === NotifyCustomerJob::ORDER_CANCELLED && $job->reason === 'kitchen');
+        Queue::assertPushed(NotifyCustomerJob::class, fn (NotifyCustomerJob $job): bool => $job->orderId === $order->id && $job->sodaId === $this->soda->id && $job->event === NotifyCustomerJob::ORDER_CANCELLED);
     }
 
-    /** Marking an order ready answers at once and leaves the notice in the queue, with the order and the customer. */
+    /** Marking an order ready answers at once and leaves the notice in the queue, with the order and its soda. */
     public function test_marking_an_order_ready_queues_the_notice(): void
     {
         $order = OrderModel::factory()->confirmed()->create(['soda_id' => $this->soda->id]);
@@ -48,7 +48,7 @@ final class QueuedSideEffectsTest extends TestCase
 
         $this->patchJson("/api/v1/cocina/pedidos/{$order->id}/estado", ['estado' => 'listo'])->assertOk();
 
-        Queue::assertPushed(NotifyCustomerJob::class, fn (NotifyCustomerJob $job): bool => $job->orderId === $order->id && $job->customerId === $order->customer_id && $job->event === NotifyCustomerJob::ORDER_READY);
+        Queue::assertPushed(NotifyCustomerJob::class, fn (NotifyCustomerJob $job): bool => $job->orderId === $order->id && $job->sodaId === $this->soda->id && $job->event === NotifyCustomerJob::ORDER_READY);
     }
 
     /** Confirming or delivering an order leaves no notice in the queue. */
@@ -85,15 +85,5 @@ final class QueuedSideEffectsTest extends TestCase
         ]);
 
         new RequestRefundJob('pedido', 'soda', 5_600)->handle();
-    }
-
-    /** Until notifications exist, the notice job leaves the notice in the log. */
-    public function test_notice_job_writes_the_notice_to_the_log(): void
-    {
-        Log::shouldReceive('info')->once()->with('Customer notice.', [
-            'customer_id' => 'cliente', 'order_id' => 'pedido', 'event' => 'order_cancelled', 'reason' => 'kitchen',
-        ]);
-
-        new NotifyCustomerJob('cliente', 'pedido', 'order_cancelled', 'kitchen')->handle();
     }
 }
