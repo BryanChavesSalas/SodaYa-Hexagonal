@@ -7,9 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+    /** Let the application role use every table and sequence the owner creates from now on. */
     public function up(): void
     {
         $role = $this->applicationRole();
@@ -17,9 +15,7 @@ return new class extends Migration
         DB::statement("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE,SELECT ON SEQUENCES TO {$role} ");
     }
 
-    /**
-     * Reverse the migrations.
-     */
+    /** Stop granting privileges on future objects. */
     public function down(): void
     {
         $role = $this->applicationRole();
@@ -27,6 +23,7 @@ return new class extends Migration
         DB::statement("ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE USAGE,SELECT ON SEQUENCES FROM {$role} ");
     }
 
+    /** Quoted name of the role the application connects with. */
     private function applicationRole(): string
     {
         $name = config('database.connections.pgsql.username');

@@ -11,18 +11,21 @@ use Tests\TestCase;
 
 class LocalizationTest extends TestCase
 {
+    /** Spanish is the default locale with English as fallback. */
     public function test_default_locale_is_spanish(): void
     {
         $this->assertSame('es', app()->getLocale());
         $this->assertSame('en', app()->getFallbackLocale());
     }
 
+    /** Validation failures are reported in Spanish. */
     public function test_validation_messages_are_in_spanish(): void
     {
         $validator = Validator::make(['precio' => null], ['precio' => 'required']);
         $this->assertSame('El campo precio es obligatorio.', $validator->errors()->first('precio'));
     }
 
+    /** Every framework language line has a Spanish translation. */
     #[DataProvider('languageFiles')]
     public function test_spanish_translations_cover_every_framework_line(string $file): void
     {
@@ -31,6 +34,11 @@ class LocalizationTest extends TestCase
         $this->assertSame([], array_keys(array_diff_key($english, $spanish)));
     }
 
+    /**
+     * Language files published by the framework.
+     *
+     * @return array<string, array{string}>
+     */
     public static function languageFiles(): array
     {
         return [

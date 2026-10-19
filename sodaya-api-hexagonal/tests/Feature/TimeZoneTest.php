@@ -11,6 +11,7 @@ class TimeZoneTest extends TestCase
 {
     private const string TIMEZONE = 'America/Costa_Rica';
 
+    /** The application clock runs on Costa Rica time. */
     public function test_application_uses_costa_rica_time(): void
     {
         $this->assertSame(self::TIMEZONE, config('app.timezone'));
@@ -18,6 +19,7 @@ class TimeZoneTest extends TestCase
         $this->assertSame(self::TIMEZONE, now()->timezoneName);
     }
 
+    /** The database session interprets timestamps in Costa Rica time. */
     public function test_database_session_uses_costa_rica_time(): void
     {
         $this->assertSame(self::TIMEZONE, DB::scalar('show timezone'));

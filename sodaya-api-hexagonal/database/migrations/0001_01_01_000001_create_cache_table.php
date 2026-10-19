@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+    /** Create the tables. */
     public function up(): void
     {
         Schema::create('cache', function (Blueprint $table) {
@@ -26,9 +24,7 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
+    /** Drop the tables. */
     public function down(): void
     {
         Schema::dropIfExists('cache');

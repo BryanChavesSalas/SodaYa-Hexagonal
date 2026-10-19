@@ -11,6 +11,7 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /** Apply framework-wide defaults. */
     public function boot(): void
     {
         Date::use(CarbonImmutable::class);
