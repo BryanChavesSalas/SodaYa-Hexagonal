@@ -74,6 +74,10 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Trabajo en cola | `ShouldQueue` | `jobs`, `failed_jobs` | — |
 | Ventas por hora | `HourlySales` | `v_hourly_sales`, `fn_hourly_sales` | `ventas-por-hora`, `horas` |
 | Mínimo de pedidos | `minimumOrders` | `p_min_orders` | `minimo_pedidos` |
+| Ventas diarias | `DailySales`, `GetDailySales` | `mv_daily_sales`, `v_daily_sales` | `ventas-diarias`, `dias` |
+| Rango de fechas del reporte | `from`, `to` | `day` | `desde`, `hasta`, `fecha` |
+| Resumen diario de ventas | `DailySalesSummary`, `RefreshDailySales` | `mv_daily_sales`, `fn_daily_sales_of_every_soda` | — |
+| Último refresco | `refreshedAt` | `materialized_view_refreshes.refreshed_at` | `actualizado_en` |
 | Reserva de porciones | `PortionStock::reserve()` | `fn_reserve_portions` | — |
 | Porciones agotadas | `PortionsSoldOutException` | — | `porciones-agotadas` |
 | Pedido vacío | `OrderEmptyException` | — | `pedido-vacio` |
@@ -144,6 +148,12 @@ Los términos de los contextos que aún no existen (pagos) quedan reservados par
 - Un pedido **entregado** acredita 1 punto por cada ₡1000 completos del total de sus líneas, sin la propina. Un pedido de ₡6600 acredita 6 puntos; uno de ₡999, ninguno.
 - Un pedido acredita sus puntos una sola vez.
 - Un **canje** nunca supera el saldo; si lo supera, la respuesta es **puntos insuficientes**.
+
+## Reportes
+
+- Las **ventas por hora** y las **ventas diarias** cuentan solo los pedidos **entregados**, por la hora o la fecha de Costa Rica en que se crearon, y suman las líneas de cada pedido **sin propinas**.
+- Las ventas diarias salen del **resumen diario de ventas**, una copia precalculada que se recalcula cada 15 minutos. El reporte dice la hora del **último refresco**; mientras no haya habido ninguno, está vacío y lo indica con un valor nulo.
+- El dueño de una soda nunca ve el resumen de otra.
 
 ## Roles
 

@@ -265,6 +265,32 @@ Vista, no tabla: una fila por pedido entregado. La describe la sección «Ventas
 | `sale_hour` | Hora de Costa Rica de `created_at`, de 0 a 23 |
 | `total` | Suma de `unit_price × quantity` de las líneas |
 
+## Tablas de reportes
+
+### mv_daily_sales
+
+Vista materializada: una fila por soda y día de Costa Rica con pedidos entregados, calculada por `fn_daily_sales_of_every_soda()` y refrescada cada 15 minutos. La describe la sección «Resumen diario de ventas» de [database.md](database.md). El rol de la aplicación la consulta a través de `v_daily_sales`, que tiene las mismas columnas y muestra solo la soda de la transacción.
+
+| Columna | Tipo | Origen |
+| --- | --- | --- |
+| `soda_id` | `uuid` | `orders` |
+| `day` | `date` | Fecha de Costa Rica de `created_at` del pedido |
+| `orders` | `bigint` | Cantidad de pedidos entregados ese día |
+| `total` | `bigint` | Suma de `unit_price × quantity` de las líneas de esos pedidos, sin propinas |
+
+Índice único `mv_daily_sales_soda_id_day_unique` sobre `(soda_id, day)`: lo exige `REFRESH MATERIALIZED VIEW CONCURRENTLY` y sirve a la consulta por rango de fechas.
+
+### materialized_view_refreshes
+
+Una fila por vista materializada con el momento de su último refresco. La escribe el rol de mantenimiento en la misma transacción que el refresco; el rol de la aplicación solo la lee.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `view_name` | `varchar(63)` | Llave primaria; nombre de la vista materializada, como `mv_daily_sales` |
+| `refreshed_at` | `timestamptz` | Momento del último refresco |
+
+No tiene `soda_id`: el refresco recalcula todas las sodas a la vez. La llave primaria es el nombre de la vista, un identificador de PostgreSQL de 63 caracteres como máximo, y no un `uuid`: la fila se busca siempre por ese nombre y nunca se referencia desde otra tabla.
+
 ## Tablas de puntos
 
 ### point_movements
@@ -340,6 +366,7 @@ La crea Laravel Sanctum. Cada fila es un token de acceso emitido para un disposi
 | La línea del pedido guarda el nombre, el precio y los minutos del plato | No son datos derivados: son el hecho histórico de a cuánto se vendió y cuánto tardaba. Cambiar el plato no debe alterar pedidos pasados ni su hora estimada de retiro |
 | `orders.pickup_date` repite el día de `created_at` | La llave única por soda, día y número necesita el día de Costa Rica como columna; el repositorio escribe los dos a la vez a partir del mismo momento |
 | `pickup_counters` guarda el último número aunque sea el máximo de `orders` | Es la fila que se bloquea para numerar: sin ella, dos pedidos simultáneos leerían el mismo máximo y chocarían con la llave única |
+| `mv_daily_sales` guarda totales que salen de las líneas | Es un dato derivado a propósito: una copia precalculada que se recalcula entera cada 15 minutos y nunca se edita, y el reporte dice de cuándo es. Ninguna regla del negocio la lee; solo el reporte |
 | `personal_access_tokens.id` es `bigint` y no `uuid` | La tabla pertenece a Sanctum: el token que recibe el cliente tiene la forma `<id>\|<secreto>` y Sanctum busca la fila por ese número. No es un identificador del negocio |
 | `personal_access_tokens` no tiene llave foránea a `users` | Sanctum define una relación polimórfica (`tokenable_type`, `tokenable_id`). Un token cuya cuenta ya no existe no autentica a nadie, porque Sanctum no encuentra a su dueño |
 

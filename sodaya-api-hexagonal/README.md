@@ -86,6 +86,7 @@ COMMIT;
 | `php artisan schedule:work` | Ejecuta las tareas programadas en desarrollo; en producción se usa `schedule:run` desde cron, cada minuto. |
 | `php artisan sodaya:reset-daily-portions` | Devuelve las porciones de cada plato a su cantidad base. Corre sola cada día a las 5:00, hora de Costa Rica. |
 | `php artisan sodaya:expire-orders` | Cancela los pedidos cuyo plazo de pago o de confirmación ya pasó. Corre sola cada minuto. |
+| `php artisan sodaya:refresh-daily-sales` | Recalcula el resumen diario de ventas de todas las sodas, del que sale el reporte de ventas diarias. Corre sola cada 15 minutos. |
 | `php artisan sodaya:register-soda` | Registra una soda y la cuenta de su dueño. Ver [Registrar una soda](#registrar-una-soda). |
 
 Antes de abrir un pull request deben pasar `composer lint`, `composer analyse` y `php artisan test`. Si cambió un endpoint, hay que regenerar el contrato con `composer openapi` y versionarlo.
@@ -140,6 +141,7 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | GET | `/api/v1/puntos` | Cliente | Saldo de puntos del cliente autenticado y sus últimos 20 movimientos. |
 | POST | `/api/v1/puntos/canjes` | Cliente | Canjea puntos del cliente autenticado; responde el movimiento y el `saldo` que queda. |
 | GET | `/api/v1/cocina/reportes/ventas-por-hora` | Dueño | Pedidos entregados y total vendido por hora de una fecha (`fecha`, por defecto hoy), con un mínimo de pedidos por hora (`minimo_pedidos`, por defecto 1). |
+| GET | `/api/v1/cocina/reportes/ventas-diarias` | Dueño | Pedidos entregados y total vendido por día entre dos fechas (`desde` y `hasta`, 366 días como máximo), desde un resumen precalculado; `actualizado_en` dice cuándo se calculó. |
 
 Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 

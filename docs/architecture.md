@@ -218,6 +218,7 @@ Un módulo que necesita una tarea periódica registra su comando de consola y lo
 | --- | --- | --- | --- |
 | Restablecer las porciones | `sodaya:reset-daily-portions` | Cada día a las 5:00, hora de Costa Rica (`DAILY_PORTIONS_RESET_AT`) | `sodaya_maintenance` |
 | Cancelar los pedidos vencidos | `sodaya:expire-orders` | Cada minuto | `sodaya_maintenance` para buscarlos; `sodaya_app` para cancelarlos |
+| Recalcular el resumen diario de ventas | `sodaya:refresh-daily-sales` | Cada 15 minutos | `sodaya_maintenance` |
 
 Toda tarea lleva `withoutOverlapping()`: si una ejecución todavía no termina cuando llega la siguiente, la nueva no arranca. La hora se escribe con `timezone('America/Costa_Rica')` aunque la aplicación ya use esa zona, para que un cambio de `APP_TIMEZONE` no mueva la tarea. En producción, el programador corre con una entrada de cron que ejecuta `php artisan schedule:run` cada minuto; en desarrollo, con `php artisan schedule:work`.
 
@@ -236,6 +237,10 @@ El cliente consulta su saldo y sus últimos 20 movimientos con `GetPointsStateme
 ### Reportes
 
 El contexto `Reporting` solo lee. Su módulo `Reporting/Sales` no tiene dominio propio: el caso de uso `GetHourlySales` pide los datos al puerto de lectura `SalesReport` y devuelve un DTO. El adaptador `PostgresSalesReport` llama a la función `fn_hourly_sales` de la base, que hace la agrupación. No pasa por los modelos de Eloquent de `Ordering`: un reporte agrega miles de filas y conviene que lo haga PostgreSQL, y así el contexto de reportes no depende de las clases de otro contexto.
+
+El reporte de ventas por día, `GET /api/v1/cocina/reportes/ventas-diarias?desde=AAAA-MM-DD&hasta=AAAA-MM-DD`, compara meses, así que no se calcula en cada consulta: `GetDailySales` pide al mismo puerto los días del rango y el momento del último cálculo, y el adaptador los lee de `v_daily_sales`, la vista sobre el resumen precalculado `mv_daily_sales`, y de `materialized_view_refreshes`. La respuesta trae `dias`, con `fecha`, `pedidos` y `total` de cada día que tuvo entregas, y `actualizado_en`, el momento del último refresco en ISO 8601 o `null` si todavía no hubo ninguno: el dueño sabe de cuándo son las cifras. Un día cuenta sus pedidos por la fecha de Costa Rica en que se crearon, la misma regla que el reporte por hora y que el número de retiro, así que las horas de un día suman lo que ese día muestra en el reporte diario. El Form Request valida solo la forma del rango: dos fechas, la final no anterior a la inicial y 366 días como máximo.
+
+El resumen lo mantiene el otro puerto del módulo, `DailySalesSummary`, con un solo método, `refresh($now)`. El caso de uso `RefreshDailySales` lo llama desde el comando `sodaya:refresh-daily-sales`, y el adaptador `MaintenanceDailySalesSummary` refresca la vista materializada con el rol de mantenimiento, sin bloquear las lecturas, y guarda el momento en la misma transacción. El comando corre cada 15 minutos: el día en curso queda a lo sumo un cuarto de hora atrás, al costo de una consulta de agregación cada vez; un reporte que compara meses no necesita más. El seeder `DailySalesSeeder` ejecuta el mismo caso de uso al final de `php artisan db:seed`, para que el reporte muestre los pedidos de demostración sin esperar al programador. Los detalles de la vista materializada, de por qué no aplica la seguridad a nivel de fila y de cómo se aísla cada soda están en «Resumen diario de ventas» de [database.md](database.md).
 
 ### Imágenes
 

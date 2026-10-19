@@ -24,6 +24,8 @@ Por qué importa: en PostgreSQL los superusuarios y los roles con `BYPASSRLS` no
 
 `sodaya_maintenance` es el único rol con `BYPASSRLS`. Lo necesita una tarea que recorre todas las sodas, como el restablecimiento diario de las porciones: con el rol de la aplicación tendría que fijar una soda por transacción y recorrerlas desde PHP. A cambio, no recibe permisos por defecto: cada migración le otorga solo lo que su tarea usa, a veces columna por columna, y la aplicación nunca atiende peticiones con él.
 
+Entre esos permisos está `MAINTAIN`, el privilegio que PostgreSQL 17 agregó para las tareas de mantenimiento de una relación: `VACUUM`, `ANALYZE`, `REINDEX`, `CLUSTER` y `REFRESH MATERIALIZED VIEW`. Antes solo podía refrescar una vista materializada su dueño; con `MAINTAIN` el rol de mantenimiento la refresca sin ser dueño de nada y sin poder leerla ni cambiarla. La sección «Resumen diario de ventas» lo usa.
+
 ## Migraciones
 
 - Se ejecutan siempre con el rol dueño: `php artisan migrate --database=pgsql_admin`.
@@ -38,6 +40,7 @@ Cada consulta frecuente tiene un índice que cubre su filtro y su orden. Una pru
 | Consulta | Índice |
 | --- | --- |
 | Ventas por hora: pedidos entregados de una soda en un rango de `created_at` | `orders_soda_id_status_created_at_index` |
+| Ventas diarias: días de una soda en un rango de fechas, sobre el resumen precalculado | `mv_daily_sales_soda_id_day_unique`, el índice único que además exige el refresco concurrente |
 | Lista de cocina: pedidos de una soda en un estado, del más antiguo al más nuevo | `orders_soda_id_status_created_at_index`, que además entrega las filas ya ordenadas |
 | Platos y categorías de una soda por nombre | Las llaves únicas `(soda_id, name)` |
 | Cierres de una soda desde una fecha | La llave única `(soda_id, closed_on)` |
@@ -68,11 +71,11 @@ Las funciones y los procedimientos se crean con `CREATE OR REPLACE`: `migrate:fr
 
 | Objeto              | Prefijo                  | Regla                                                                                     |
 | ------------------- | ------------------------ | ----------------------------------------------------------------------------------------- |
-| Función             | `fn_`                    | `SECURITY INVOKER` y `search_path` fijo                                                   |
+| Función             | `fn_`                    | `SECURITY INVOKER` y `search_path` fijo; la única `SECURITY DEFINER` es `fn_daily_sales_of_every_soda`, que pertenece al rol de mantenimiento y solo puede ejecutar el dueño del esquema |
 | Procedimiento       | `sp_`                    | Solo para tareas por lotes; se invoca con `CALL` fuera de una transacción                 |
 | Trigger             | `trg_`                   | `BEFORE` por fila para validar o completar; `AFTER` por fila para propagar a otras tablas |
-| Vista               | `v_`                     | `security_invoker = true`, para que apliquen las políticas de quien consulta              |
-| Vista materializada | `mv_`                    | Índice único para refrescar con `CONCURRENTLY`; se consulta a través de una vista         |
+| Vista               | `v_`                     | `security_invoker = true`, para que apliquen las políticas de quien consulta; sobre una vista materializada, que no tiene políticas, `security_barrier = true` y el filtro por la soda de la transacción en la propia vista |
+| Vista materializada | `mv_`                    | Índice único para refrescar con `CONCURRENTLY`; el rol de la aplicación no la lee: consulta su vista `v_`; la refresca el rol de mantenimiento con `MAINTAIN`, y la hora del último refresco queda en `materialized_view_refreshes` |
 | Política            | `<tabla>_soda_isolation` | Una por tabla de una soda, con la misma expresión en `USING` y `WITH CHECK`               |
 | Política de lectura | `<tabla>_customer_access` | Solo en las tablas de un pedido, `FOR SELECT`: el cliente lee lo suyo sin soda          |
 
@@ -137,6 +140,41 @@ La función `fn_hourly_sales(p_soda_id, p_date, p_min_orders)` agrupa esas filas
 `fn_hourly_sales` es la única función sin `search_path` fijo, y por eso nombra su vista como `public.v_hourly_sales`. PostgreSQL puede expandir una función SQL de una sola consulta dentro de la consulta que la llama, como si fuera una vista, pero solo si la función no tiene cláusulas `SET`. Expandida, el planificador ve el filtro por soda y por fecha, y puede elegir un índice; `EXPLAIN` muestra el plan completo y no una caja negra.
 
 La vista también se crea con `CREATE OR REPLACE`. Borrar `orders` con `migrate:fresh` la borra en cascada, porque depende de esa tabla.
+
+### Resumen diario de ventas
+
+El reporte de ventas por día compara meses: sumar las líneas de cada pedido entregado de un año en cada consulta sería caro y siempre daría lo mismo. Por eso la vista materializada `mv_daily_sales` guarda el resultado, una fila por soda y día de Costa Rica con los pedidos entregados y la suma de `unit_price × quantity` de sus líneas, sin propinas, y la consulta del reporte la lee en lugar de calcular. Una prueba inspecciona el plan con `EXPLAIN` y falla si aparece `orders` u `order_lines`.
+
+Una vista materializada es una tabla: no se actualiza sola y no admite políticas de seguridad a nivel de fila. Las dos cosas se resuelven con el rol de mantenimiento y con una vista.
+
+**El refresco.** `sodaya:refresh-daily-sales` ejecuta `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_sales` con `sodaya_maintenance`, al que la migración le otorga `MAINTAIN` sobre la vista. `CONCURRENTLY` calcula el resultado nuevo en una tabla temporal y lo aplica fila por fila, con un bloqueo que no detiene a quien lee; a cambio exige un índice único sin `WHERE` sobre la vista, `mv_daily_sales_soda_id_day_unique`, que además sirve a la consulta del reporte. Una prueba abre un refresco sin confirmarlo y lee el resumen desde otra conexión con `lock_timeout`: sin `CONCURRENTLY`, la lectura esperaría.
+
+PostgreSQL no guarda cuándo se refrescó una vista materializada, y `pg_stat_user_tables` no sirve para eso, así que el adaptador escribe el momento en la tabla `materialized_view_refreshes`, en la misma transacción que el refresco: si el refresco se deshace, la hora también. Solo el rol de mantenimiento puede escribir esa tabla; el rol de la aplicación la lee para responder `actualizado_en`.
+
+**Quién calcula las filas.** `REFRESH MATERIALIZED VIEW` corre con el usuario dueño de la vista, no con el que ordena el refresco, y `sodaya_owner` está sujeto a las políticas forzadas de `orders` y `order_lines`: una vista definida directamente sobre esas tablas quedaba vacía aunque la refrescara el rol de mantenimiento, porque sin soda fijada ninguna política deja pasar una fila. La solución es que las filas las lea el único rol que ve todas las sodas. `fn_daily_sales_of_every_soda()` es una función `SECURITY DEFINER` que pertenece a `sodaya_maintenance`: corre con los permisos de su dueño, con `BYPASSRLS`, y devuelve la agrupación de todas las sodas; la vista materializada es `SELECT ... FROM fn_daily_sales_of_every_soda()`. Una función así es una puerta y se vigila: la migración le quita `EXECUTE` a `PUBLIC` y se lo da solo al dueño del esquema, que es quien ejecuta el refresco por dentro. El rol de la aplicación recibe `42501` si la llama.
+
+Como la función debe pertenecer al rol de mantenimiento, la crea ese rol desde la propia migración, con la conexión `pgsql_maintenance`, después de que el dueño le otorga `CREATE` sobre el esquema por un momento y antes de que se lo quite. Esa migración declara `$withinTransaction = false`: lo que una conexión otorga tiene que estar confirmado para que la otra lo use. El cuerpo de la función va en `BEGIN ATOMIC ... END` en lugar de una cadena `$$ ... $$`, así PostgreSQL registra que depende de `orders` y `order_lines`, y `migrate:fresh`, que borra las tablas en cascada, se lleva la función y la vista materializada con ellas.
+
+**Quién puede leer.** Los privilegios por defecto de la primera migración le darían `SELECT` sobre la vista materializada al rol de la aplicación, y ahí no hay política que filtre, así que la migración se lo revoca: un `SELECT` directo sobre `mv_daily_sales` con `sodaya_app` falla con `42501`. La aplicación consulta `v_daily_sales`, una vista normal del dueño del esquema que lee la materializada y filtra con la misma expresión que las políticas, `soda_id = NULLIF(current_setting('app.soda_id', true), '')::uuid`. No es `security_invoker`, porque entonces correría con el rol de la aplicación, que no puede leer la materializada; es `security_barrier = true`, que obliga al planificador a aplicar el filtro de la vista antes que cualquier condición de quien consulta, para que una función con fugas en el `WHERE` no vea filas de otra soda. El adaptador filtra además por `soda_id`, como todo lector. Con la soda B fijada no se ve ninguna fila de la A, y sin soda no se ve ninguna.
+
+Para revisar el resumen a mano:
+
+```sql
+-- Con sodaya_owner: todas las sodas.
+SELECT * FROM mv_daily_sales ORDER BY soda_id, day;
+SELECT * FROM materialized_view_refreshes;
+
+-- Con sodaya_app: solo la soda de la transacción; el SELECT directo falla con 42501.
+BEGIN;
+SELECT set_config('app.soda_id', '0192f0c4-0000-7000-8000-000000000001', true);
+SELECT day, orders, total FROM v_daily_sales ORDER BY day;
+EXPLAIN SELECT day, orders, total FROM v_daily_sales WHERE day BETWEEN '2026-10-01' AND '2026-10-31';
+SELECT * FROM mv_daily_sales;
+ROLLBACK;
+
+-- Con sodaya_maintenance: el refresco.
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_sales;
+```
 
 ## Extensiones y tipos
 
@@ -238,6 +276,7 @@ Con `soda:order`, la búsqueda del pedido pasa por la política del cliente: un 
 | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `users` | Tiene `soda_id`, pero el ingreso busca a la persona por su correo antes de saber a qué soda pertenece, y un cliente no tiene soda |
 | `sodas` | No tiene `soda_id`: cada fila es una soda, y el menú público la busca por el identificador de la URL                              |
+| `mv_daily_sales` | Una vista materializada no admite políticas. El rol de la aplicación no la puede leer: consulta `v_daily_sales`, que filtra por la soda de la transacción detrás de una barrera de seguridad («Resumen diario de ventas») |
 
 ### Llaves únicas y foráneas
 
@@ -248,7 +287,7 @@ PostgreSQL revisa las llaves únicas, las restricciones de exclusión y las llav
 1. La tabla lleva `soda_id`, y sus llaves únicas y foráneas lo incluyen.
 2. Una migración habilita y fuerza la seguridad a nivel de fila y crea la política `<tabla>_soda_isolation` con la misma expresión en `USING` y `WITH CHECK`; su `down()` deshace los tres pasos.
 3. Las rutas que la usan pasan por el middleware `soda`, y su fábrica usa el trait `CreatesRowsOfASoda`.
-4. `RowLevelSecurityTest` revisa el catálogo de PostgreSQL y falla si una tabla con `soda_id`, salvo `users`, no tiene la seguridad habilitada, forzada y con su política.
+4. `RowLevelSecurityTest` revisa el catálogo de PostgreSQL y falla si una tabla con `soda_id`, salvo `users`, no tiene la seguridad habilitada, forzada y con su política. También revisa cada vista con `soda_id`: debe ser `security_invoker`, salvo las que leen una vista materializada, que deben ser `security_barrier` y filtrar por sí mismas.
 
 ## Reparto de responsabilidades
 

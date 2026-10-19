@@ -14,7 +14,7 @@ Ningún patrón se usa por tenerlo. Cada uno resuelve un problema concreto del p
 | Factory Method | `create()` y `reconstitute()` en cada agregado | Distinguir el nacimiento de un agregado de su lectura desde la base |
 | DTO / Command | `Application/DTOs` | Cruzar capas con datos simples, sin `Request` ni modelos |
 | Inyección de dependencias | Proveedor de servicios de cada módulo | Elegir el adaptador de cada puerto en un solo lugar |
-| Modelo de lectura (CQRS simple) | Módulos de consulta, en `Infrastructure/Persistence/Queries` | Consultas a la medida de la pantalla sin cargar agregados |
+| Modelo de lectura (CQRS simple) | Módulos de consulta, en `Infrastructure/Persistence/Queries`, y el resumen precalculado `mv_daily_sales` | Consultas a la medida de la pantalla sin cargar agregados; un reporte que compara meses se lee ya calculado |
 | Cadena de responsabilidad | Middleware HTTP | Tratar cada petición antes y después del controlador |
 | Estado como enum con transiciones | `OrderStatus`, en `Ordering/Orders` | Impedir un cambio de estado inválido |
 
