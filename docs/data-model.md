@@ -2,7 +2,7 @@
 
 El esquema está en tercera forma normal. Este documento describe las tablas que ya existen con todo su detalle y las entidades previstas a nivel de relación; cada módulo completa las suyas en el pull request que agrega su migración.
 
-Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md). Las tablas `categories`, `dishes`, `schedules`, `closures`, `orders`, `order_lines`, `order_status_history` y `pickup_counters` tienen seguridad a nivel de fila forzada: cada transacción solo alcanza las filas de su soda. El detalle y las excepciones están en la sección «Seguridad a nivel de fila» de ese documento.
+Las convenciones de nombres, llaves, fechas y dinero están en [database.md](database.md). Las tablas `categories`, `dishes`, `schedules`, `closures`, `orders`, `order_lines`, `order_status_history`, `pickup_counters` y `payments` tienen seguridad a nivel de fila forzada: cada transacción solo alcanza las filas de su soda. El detalle y las excepciones están en la sección «Seguridad a nivel de fila» de ese documento.
 
 ## Diagrama
 
@@ -22,8 +22,10 @@ erDiagram
     orders ||--|{ order_lines : "contiene"
     dishes ||--o{ order_lines : "se vende en"
     orders ||--o{ order_status_history : "pasa por"
-    orders ||--o| payments : "se paga con"
     sodas ||--o{ pickup_counters : "numera con"
+    orders ||--o{ payments : "se intenta pagar con"
+    sodas ||--o{ payments : "cobra"
+    users ||--o{ payments : "paga"
 
     sodas {
         uuid id PK
@@ -106,9 +108,19 @@ erDiagram
         varchar to_status
         timestamptz changed_at
     }
+    payments {
+        uuid id PK
+        uuid order_id FK
+        uuid soda_id FK
+        uuid customer_id FK
+        varchar provider
+        varchar reference
+        integer amount
+        varchar status
+        varchar decline_code
+        varchar idempotency_key
+    }
 ```
-
-Las tablas sin columnas en el diagrama están previstas y todavía no existen.
 
 ## Tablas del catálogo
 
@@ -308,6 +320,31 @@ El libro de puntos de cada cliente. Solo se agregan filas: el saldo es la suma d
 
 `point_movements_points_check` exige que el signo coincida con el motivo y que una compra tenga pedido. El índice único parcial `point_movements_purchase_order_unique`, sobre `order_id` solo en las filas de compra, deja un pedido acreditar puntos una sola vez sin impedir que un pedido se pague con puntos. La tabla no tiene `soda_id`: los puntos son del cliente en toda la plataforma.
 
+## Tablas de pagos
+
+### payments
+
+Cada fila es un intento de pagar un pedido. Un pedido puede tener varios intentos rechazados, pero a lo sumo uno pendiente o aprobado.
+
+| Columna | Tipo | Regla |
+| --- | --- | --- |
+| `id` | `uuid` | Llave primaria, `DEFAULT uuidv7()` |
+| `order_id` | `uuid` | Llave foránea compuesta `(order_id, soda_id)` a `orders`, borrado en cascada |
+| `soda_id` | `uuid` | Llave foránea a `sodas`, borrado en cascada |
+| `customer_id` | `uuid` | Llave foránea a `users`; una cuenta con pagos no se puede borrar |
+| `provider` | `varchar(20)` | Proveedor que cobra: `stripe` |
+| `reference` | `varchar(255)` | Opcional; identificador que el proveedor le dio al cobro, como `pi_…`; única por proveedor |
+| `amount` | `integer` | Colones enteros, `CHECK (amount > 0)`; la suma de las líneas del pedido al abrir el intento |
+| `status` | `varchar(20)` | `pending`, `approved` o `rejected`; por defecto `pending` |
+| `decline_code` | `varchar(60)` | Opcional; código del banco, solo en un pago rechazado |
+| `idempotency_key` | `varchar(100)` | Clave enviada al proveedor, `pago-{id}`; única |
+| `settled_at` | `timestamptz` | Momento en que el proveedor decidió; existe exactamente cuando el pago no está pendiente |
+| `created_at`, `updated_at` | `timestamptz` | `created_at` es el momento en que se abrió el intento |
+
+El índice único parcial `payments_live_order_unique`, sobre `order_id` solo en las filas con `status IN ('pending', 'approved')`, es el que impide dos pagos vivos para un pedido: el repositorio inserta el intento y, si el índice lo rechaza, responde el pago que ya existe. Un pago rechazado no entra en el índice, así que el cliente puede volver a intentar. `payments_settled_at_check` exige el momento en todo pago cerrado y lo prohíbe en uno pendiente; `payments_decline_code_check` solo admite el código del banco en un pago rechazado. El índice `(order_id, created_at)` sirve para leer el último intento de un pedido.
+
+La llave foránea compuesta a `orders` impide que un pago apunte al pedido de otra soda aunque el identificador exista, igual que en `order_lines`.
+
 ## Tablas de identidad
 
 ### users
@@ -367,6 +404,8 @@ La crea Laravel Sanctum. Cada fila es un token de acceso emitido para un disposi
 | `orders.pickup_date` repite el día de `created_at` | La llave única por soda, día y número necesita el día de Costa Rica como columna; el repositorio escribe los dos a la vez a partir del mismo momento |
 | `pickup_counters` guarda el último número aunque sea el máximo de `orders` | Es la fila que se bloquea para numerar: sin ella, dos pedidos simultáneos leerían el mismo máximo y chocarían con la llave única |
 | `mv_daily_sales` guarda totales que salen de las líneas | Es un dato derivado a propósito: una copia precalculada que se recalcula entera cada 15 minutos y nunca se edita, y el reporte dice de cuándo es. Ninguna regla del negocio la lee; solo el reporte |
+| `payments.amount` se guarda aunque sea la suma de las líneas del pedido | Es lo que se le pidió cobrar al proveedor en ese momento: si mañana el pedido admitiera propina o descuento, los pagos ya hechos conservan su monto |
+| `payments.idempotency_key` se guarda aunque se derive de `id` | Es la clave que viajó al proveedor, un hecho. Si la derivación cambiara, los intentos ya enviados conservan la clave con que el proveedor los reconoce |
 | `personal_access_tokens.id` es `bigint` y no `uuid` | La tabla pertenece a Sanctum: el token que recibe el cliente tiene la forma `<id>\|<secreto>` y Sanctum busca la fila por ese número. No es un identificador del negocio |
 | `personal_access_tokens` no tiene llave foránea a `users` | Sanctum define una relación polimórfica (`tokenable_type`, `tokenable_id`). Un token cuya cuenta ya no existe no autentica a nadie, porque Sanctum no encuentra a su dueño |
 

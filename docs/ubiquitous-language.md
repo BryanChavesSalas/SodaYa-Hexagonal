@@ -76,6 +76,15 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Referencia del proveedor | `ChargeReference` | `reference` | `referencia` |
 | Monto del pago | `Amount` | `amount` | `monto` |
 | Proveedor no disponible | `GatewayUnavailableException` | — | `servicio-no-disponible` |
+| Intento de pago | `Payment::open()` | fila de `payments` | `pago` |
+| Pago pendiente | `PaymentStatus::Pending` | `pending` | `pendiente` |
+| Pago rechazado | `PaymentStatus::Rejected`, `PaymentRejectedException` | `rejected` | `rechazado`, `pago-rechazado` |
+| Código del rechazo | `declineCode` | `decline_code` | `codigo_rechazo` |
+| Pago vivo | `Payment::isLive()` | índice `payments_live_order_unique` | — |
+| Clave de idempotencia del cobro | `Payment::idempotencyKey` | `payments.idempotency_key` | encabezado `Idempotency-Key` hacia el proveedor |
+| Método de pago | `paymentMethod` | — | `metodo_pago` |
+| Pedido ya pagado | `OrderAlreadyPaidException` | — | `pedido-ya-pagado` |
+| Pedido no pagable | `OrderNotPayableException` | — | `pedido-no-pagable` |
 | Reembolso | `RefundRequests`, `RequestRefundJob` | — | — |
 | Aviso al cliente | `CustomerNotices`, `NotifyCustomerJob` | — | — |
 | Trabajo en cola | `ShouldQueue` | `jobs`, `failed_jobs` | — |
@@ -169,6 +178,11 @@ Los términos de los contextos que aún no existen quedan reservados para que se
 - La **referencia del proveedor** es el identificador que la pasarela le da al cobro, como `pi_…` en Stripe. Con ella se le pregunta después qué pasó.
 - El monto viaja a cada proveedor en su unidad: Stripe quiere céntimos de colón, ₡5600 son 560000. La conversión vive en el adaptador; el resto del sistema sigue en colones enteros.
 - Un **proveedor no disponible** no es un rechazo: la API responde 503 con `Retry-After` y el cliente vuelve a intentar.
+- Un **pago** es un intento de pagar un pedido. Nace **pendiente** y el proveedor lo deja **aprobado** o **rechazado**; un pago cerrado no cambia. El **pago vivo** de un pedido es el pendiente o aprobado: hay a lo sumo uno, así que oprimir «pagar» dos veces devuelve el mismo pago. Un pago rechazado no es vivo: el cliente puede intentar de nuevo mientras el pedido siga pendiente.
+- Solo se paga un pedido **pendiente** y propio. Pagar uno que ya tiene el pago aprobado es un **pedido ya pagado**; pagar uno confirmado, listo, entregado o cancelado es un **pedido no pagable**.
+- El **monto** del pago es la suma de las líneas congeladas del pedido. Lo que el navegador mande se ignora.
+- La **clave de idempotencia del cobro** la deriva el servidor del intento, `pago-{uuid}`, y viaja al proveedor: un reintento con la misma clave recibe el mismo cobro.
+- El **método de pago** es el medio con que paga el cliente; en modo de prueba, `pm_card_visa` aprueba y `pm_card_visa_chargeDeclined` rechaza. Los datos de la tarjeta nunca pasan por SodaYa.
 
 ## Roles
 
