@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Src\Catalog\Categories\Infrastructure\Persistence\Models\CategoryModel;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
+use Src\Catalog\Promotions\Infrastructure\Persistence\Models\PromotionModel;
 use Src\Sodas\Closures\Infrastructure\Persistence\Models\ClosureModel;
 use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
@@ -220,6 +221,7 @@ final class RowLevelSecurityTest extends TestCase
             'dishes' => [DishModel::class],
             'schedules' => [TimeSlotModel::class],
             'closures' => [ClosureModel::class],
+            'promotions' => [PromotionModel::class],
         ];
     }
 
@@ -240,6 +242,7 @@ final class RowLevelSecurityTest extends TestCase
             ]],
             'schedules' => ['schedules', ['day_of_week' => 2, 'opens_at' => '08:00', 'closes_at' => '12:00']],
             'closures' => ['closures', ['closed_on' => '2026-12-25']],
+            'promotions' => ['promotions', ['weekday' => 4, 'starts_at' => '14:00', 'ends_at' => '15:00', 'percentage' => 20]],
         ];
     }
 
