@@ -179,7 +179,7 @@ Un pedido nuevo entra por el caso de uso `PlaceOrder`, desde `POST /api/v1/sodas
 
 Con las líneas armadas, en una sola transacción crea el agregado, que valida sus líneas, pide al puerto `PortionStock` que reserve las porciones y guarda el pedido. Si `reserve()` responde `false`, lanza `PortionsSoldOutException` y la transacción se deshace: no queda ni el pedido ni la reserva.
 
-El dinero del pedido lo decide el servidor. La línea congela el nombre y el precio que el catálogo tenía al pedir, el subtotal es precio por cantidad y el total es la suma de las líneas: ninguno de los dos se guarda, los calcula el agregado en cada lectura. El Form Request solo toma `plato_id` y `cantidad` de cada línea, así que un `precio_unitario`, un `subtotal` o un `total` enviados por el navegador se ignoran, y `FrozenPriceTest` lo comprueba junto con que un cambio posterior del precio no altera los pedidos ya hechos.
+El dinero del pedido lo decide el servidor. La línea congela el nombre y el precio que el catálogo tenía al pedir, con la hora feliz de ese momento ya descontada, el subtotal es precio por cantidad y el total es la suma de las líneas: ninguno de los dos se guarda, los calcula el agregado en cada lectura. El Form Request solo toma `plato_id` y `cantidad` de cada línea, así que un `precio_unitario`, un `subtotal` o un `total` enviados por el navegador se ignoran, y `FrozenPriceTest` lo comprueba junto con que un cambio posterior del precio no altera los pedidos ya hechos.
 
 Un doble toque en «confirmar» no hace dos pedidos. Cada solicitud trae el encabezado `Idempotency-Key`, una clave que el cliente elige para ese pedido; sin ella la API responde 400 `solicitud-invalida`, porque no podría distinguir un pedido nuevo de un reintento. El agregado guarda la clave como el objeto de valor `IdempotencyKey`, junto con una huella de sus líneas: platos y cantidades, ordenados, en SHA-256. Antes de tocar el catálogo, `PlaceOrder` busca por el puerto `OrderRepository` el pedido que el cliente ya hizo con esa clave: si existe y la huella coincide, lo devuelve tal cual, con `PlacedOrder::created` en `false` y sin reservar porciones, y la API responde 200; si la huella difiere, lanza `IdempotencyKeyReusedException`, que la API publica como 409 `conflicto`. Dos solicitudes idénticas en el mismo instante pueden pasar las dos esa búsqueda; la llave única `(customer_id, idempotency_key)` de la tabla rechaza la segunda, la transacción se deshace con sus porciones, y el caso de uso vuelve a buscar y responde el pedido que ganó. La clave es única por cliente, no por soda: un cliente puede reutilizar una clave que usó otro.
 
@@ -287,6 +287,13 @@ La regla de que dos promociones del mismo día no se traslapan vive solo en Post
 
 Las rutas `/api/v1/cocina/promociones` piden la ability `administrar` en las tres operaciones, como el reporte de ventas: la cocina no ve ni cambia los precios de la soda.
 
+El precio vigente es un dato derivado: el precio base con la promoción activa en el momento de la respuesta. No se guarda en `dishes` ni en la caché del menú, porque cambia con el reloj; lo calculan los casos de uso `GetPublicMenu` y `GetPublicDish` después de leer el menú, con `$now` como parámetro, y el menú lo publica como `precio_vigente` junto al `precio` base. Dos piezas lo hacen posible:
+
+- `Money`, en `Shared/Domain/ValueObjects`, aplica el descuento con `intdiv`, sumando medio colón antes de dividir: 995 con 10 % son 896 y 999 con 10 % son 899. Nunca con `float`, cuyo redondeo podría diferir en un colón entre lo que el visitante vio y lo que el cliente pagó.
+- El puerto `ActivePromotion`, en `Catalog/Promotions/Application/Contracts`, responde el porcentaje que aplica a una soda en un momento, en hora de Costa Rica y con el fin de la franja excluido. Su adaptador `EloquentActivePromotion` está enlazado como `scoped`: una instancia por solicitud que recuerda la respuesta por soda y minuto, así un menú de veinte platos consulta `promotions` una sola vez.
+
+Lo que se ve es lo que se paga. `EloquentOrderableDishes`, el adaptador del catálogo que usa `PlaceOrder`, aplica la misma promoción con el mismo reloj al leer los platos, de modo que la línea del pedido nace con el precio ya descontado y lo congela: quien pide a las 14:59 paga el precio de las 14:59 aunque la cocina confirme a las 15:05. El puerto `OrderableDishes` recibe el momento del pedido porque el precio depende de él.
+
 ### Reportes
 
 El contexto `Reporting` solo lee. Su módulo `Reporting/Sales` no tiene dominio propio: el caso de uso `GetHourlySales` pide los datos al puerto de lectura `SalesReport` y devuelve un DTO. El adaptador `PostgresSalesReport` llama a la función `fn_hourly_sales` de la base, que hace la agrupación. No pasa por los modelos de Eloquent de `Ordering`: un reporte agrega miles de filas y conviene que lo haga PostgreSQL, y así el contexto de reportes no depende de las clases de otro contexto.
@@ -378,6 +385,8 @@ Las rutas del personal se agrupan bajo `/api/v1/cocina` y pasan por el middlewar
 | `tests/Unit` | Dominio y casos de uso, sin arrancar el framework. |
 | `tests/Feature` | Endpoints y adaptadores contra PostgreSQL, con el rol de la aplicación. `tests/Feature/Tenancy` reúne las pruebas de aislamiento entre sodas. |
 | `tests/Architecture` | Regla de dependencias entre capas y entre módulos. |
+
+Las pruebas usan la misma caché que producción, `CACHE_STORE=database` en `phpunit.xml`: con la caché `array` una prueba pasaría guardando objetos que la tabla `cache` no sabría reconstruir. Y cada petición de una prueba empieza con las instancias `scoped` nuevas, como hace un servidor entre peticiones: `Tests\TestCase::call()` llama a `forgetScopedInstances()` para que lo que un adaptador recordó durante una petición no se filtre a la siguiente.
 
 ## Convenciones
 

@@ -26,6 +26,9 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Nombre | `DishName`, `CategoryName` | `name` | `nombre` |
 | Descripción | `description` | `description` | `descripcion` |
 | Precio | `Price` | `price` | `precio` |
+| Precio vigente | `MenuDish::currentPrice` | — | `precio_vigente` |
+| Monto en colones | `Money` | `integer` | — |
+| Promoción activa | `ActivePromotion` | — | — |
 | Tiempo de preparación | `PreparationTime` | `preparation_minutes` | `minutos_preparacion` |
 | Porciones disponibles | `Portions` | `available_portions` | `porciones_disponibles` |
 | Porciones base | `basePortions` | `base_portions` | `porciones_base` |
@@ -152,6 +155,8 @@ Los términos de los contextos que aún no existen quedan reservados para que se
 - Una **promoción** u **hora feliz** es un **descuento** de 1 % a 90 % para todos los platos de la soda, en un día de la semana y una **franja** horaria. El inicio pertenece a la franja y el fin no: una promoción de 14:00 a 15:00 aplica a las 14:59 y ya no a las 15:00.
 - Dos promociones de la misma soda y el mismo día no comparten un minuto; si se traslapan, la respuesta es **promoción traslapada**. Otra soda puede tener la misma franja.
 - Solo el dueño define y elimina promociones.
+- El **precio vigente** es el precio base con la promoción activa en el momento de la respuesta. Es un dato derivado: no se guarda ni se pone en caché, se calcula al responder, y sin promoción coincide con el precio.
+- El pedido **congela** el precio vigente del momento en que se hizo: lo que se ve es lo que se paga, aunque la promoción termine antes de que la cocina confirme.
 
 ## Horario y cierres
 
@@ -237,5 +242,6 @@ El rol de cocina recibe únicamente la ability `cocina`, por lo que puede consul
 ## Dinero y fechas
 
 - Los montos son colones enteros. Nunca se usan decimales ni punto flotante.
+- Un descuento se redondea al colón más cercano, con el medio colón hacia arriba, con aritmética de enteros: 995 con 10 % son 896 y 999 con 10 % son 899.
 - Las fechas se guardan con zona horaria y viajan en ISO 8601. La aplicación opera en `America/Costa_Rica`.
 - Las horas del horario viajan como `HH:MM` y las fechas de los cierres como `AAAA-MM-DD`; ambas se leen en hora de Costa Rica.

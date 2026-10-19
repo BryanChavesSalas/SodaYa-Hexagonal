@@ -29,7 +29,7 @@ El dominio no depende de Laravel y una prueba de arquitectura lo verifica en cad
 
 ## Estado
 
-Construido hasta la clase 11 del curso:
+Construido hasta la clase 12 del curso:
 
 | Clase | Entrega |
 | --- | --- |
@@ -43,6 +43,7 @@ Construido hasta la clase 11 del curso:
 | 9 | Foto del plato y logo de la soda, el agregado `Order` con sus estados, el esquema de pedidos con historial por trigger, avance y cancelación desde la cocina, ventas por hora y listados paginados con índices. |
 | 10 | Porciones base y su restablecimiento diario, reserva de porciones sin vender de más, cola de trabajos con reintentos, cancelación automática de los pedidos abandonados y libro de puntos de lealtad. |
 | 11 | Pedidos del cliente con clave de idempotencia, número de retiro y hora estimada, mis pedidos y mi cancelación, lista de la cocina, resumen diario de ventas en una vista materializada, cobro con Stripe detrás de un puerto con sus tres desenlaces, avisos al cliente por canales intercambiables y menú público desde caché. |
+| 12 | Hora feliz: promociones por día y franja con `EXCLUDE`, precio vigente calculado al responder en colones enteros y congelado en el pedido; las pruebas corren con la misma caché que producción. |
 
 El despliegue en una dirección pública está pendiente ([#30](https://github.com/BryanChavesSalas/SodaYa-Hexagonal/issues/30)).
 

@@ -115,7 +115,7 @@ El comando devuelve 0 si registra la soda y 1 si rechaza algún dato, con el mot
 | Método | Ruta | Quién | Descripción |
 | --- | --- | --- | --- |
 | GET | `/api/v1` | Cualquiera | Nombre y versión de la API. |
-| GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda, con el indicador `abierta`. Se sirve desde caché por soda y responde `Cache-Control: public, max-age=60` con un `ETag`. |
+| GET | `/api/v1/sodas/{soda}/platos` | Visitante | Menú público de una soda, con el indicador `abierta` y, en cada plato, el `precio` base y el `precio_vigente` con la hora feliz del momento. Se sirve desde caché por soda y responde `Cache-Control: public, max-age=60` con un `ETag`. |
 | GET | `/api/v1/sodas/{soda}/platos/{plato}` | Visitante | Detalle de un plato del menú. |
 | POST | `/api/v1/tokens` | Cualquiera | Ingresa con correo, contraseña y nombre del dispositivo; devuelve un token Bearer con las abilities del rol. |
 | DELETE | `/api/v1/tokens/actual` | Persona autenticada | Cierra la sesión en este dispositivo: revoca el token de la petición. |
@@ -159,7 +159,7 @@ Con los datos de demostración, el menú de la soda de ejemplo se consulta así:
 curl http://localhost:8000/api/v1/sodas/0192f0c4-0000-7000-8000-000000000001/platos
 ```
 
-La respuesta incluye `abierta`, que se calcula en cada consulta con el horario y los cierres de la soda, en hora de Costa Rica. Los datos de demostración traen un horario de lunes a sábado. El resto del menú sale de la caché: la segunda consulta no lee los platos de la base, y editar un plato, una categoría, el horario o un cierre desde `/api/v1/cocina` lo invalida al instante. Las porciones disponibles se consultan en cada respuesta.
+La respuesta incluye `abierta`, que se calcula en cada consulta con el horario y los cierres de la soda, en hora de Costa Rica. Los datos de demostración traen un horario de lunes a sábado. El resto del menú sale de la caché: la segunda consulta no lee los platos de la base, y editar un plato, una categoría, el horario o un cierre desde `/api/v1/cocina` lo invalida al instante. Las porciones disponibles y el `precio_vigente` se calculan en cada respuesta: los datos de demostración traen una hora feliz del 20 % los miércoles de 14:00 a 15:00 y otra del 10 % los viernes de 17:00 a 18:00, y un pedido hecho en esa franja congela el precio con el descuento.
 
 El token de `POST /api/v1/tokens` se muestra una sola vez y se envía en cada petición en el encabezado `Authorization: Bearer <token>`. Un correo inexistente, una contraseña incorrecta y una cuenta desactivada reciben la misma respuesta 401 `credenciales-invalidas`. Un token revocado, o una petición sin token a una ruta protegida, recibe 401 `no-autenticado`. En `/docs/api` el botón de autorización permite probar las rutas protegidas con el token.
 
