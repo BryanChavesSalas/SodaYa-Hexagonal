@@ -13,4 +13,10 @@ trait ScopesQueriesToSoda
     {
         $this->app->make(SodaTransaction::class)->scope($sodaId);
     }
+
+    /** Make the next queries of the test read the orders of a customer, whatever their soda, until something scopes them again. */
+    protected function scopeQueriesToCustomer(?string $customerId): void
+    {
+        $this->app->make(SodaTransaction::class)->scopeCustomer($customerId);
+    }
 }

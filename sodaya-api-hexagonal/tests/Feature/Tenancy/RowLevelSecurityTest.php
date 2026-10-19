@@ -24,6 +24,15 @@ final class RowLevelSecurityTest extends TestCase
 
     private const string POLICY_EXPRESSION = "(soda_id = (NULLIF(current_setting('app.soda_id'::text, true), ''::text))::uuid)";
 
+    private const string CUSTOMER_EXPRESSION = "(customer_id = (NULLIF(current_setting('app.customer_id'::text, true), ''::text))::uuid)";
+
+    /**
+     * Tables of an order, which the customer who placed it may also read.
+     *
+     * @var list<string>
+     */
+    private const array ORDER_TABLES = ['orders', 'order_lines', 'order_status_history'];
+
     private SodaModel $soda;
 
     private SodaModel $otherSoda;
@@ -65,7 +74,10 @@ final class RowLevelSecurityTest extends TestCase
         $this->assertSame(config('database.connections.pgsql.username'), DB::scalar('select current_user'));
     }
 
-    /** Every table with a soda_id column, except users, has row-level security enabled, forced and one isolation policy. */
+    /**
+     * Every table with a soda_id column, except users, has row-level security enabled, forced and its isolation policy;
+     * only the tables of an order have a second policy, the one that lets its customer read it.
+     */
     public function test_every_table_of_a_soda_is_protected_by_its_policy(): void
     {
         $tables = $this->relationsWithASodaColumn('BASE TABLE');
@@ -86,13 +98,45 @@ final class RowLevelSecurityTest extends TestCase
 
             $this->assertTrue($security->relrowsecurity, "Row-level security is not enabled on {$table}.");
             $this->assertTrue($security->relforcerowsecurity, "Row-level security is not forced on {$table}.");
-            $this->assertEquals([(object) [
+            $this->assertContainsEquals((object) [
                 'policyname' => "{$table}_soda_isolation",
                 'cmd' => 'ALL',
                 'qual' => self::POLICY_EXPRESSION,
                 'with_check' => self::POLICY_EXPRESSION,
-            ]], $policies, "The isolation policy of {$table} is missing or different.");
+            ], $policies, "The isolation policy of {$table} is missing or different.");
+            $this->assertCount(in_array($table, self::ORDER_TABLES, true) ? 2 : 1, $policies, "{$table} has a policy nobody expects.");
         }
+    }
+
+    /** The tables of an order let the customer who placed it read them, and only read them: the policy covers SELECT and nothing else. */
+    #[DataProvider('orderTables')]
+    public function test_tables_of_an_order_let_their_customer_read_them(string $table, string $expression): void
+    {
+        $policy = DB::selectOne(
+            "select cmd, qual, with_check from pg_policies where schemaname = 'public' and tablename = ? and policyname = ?",
+            [$table, "{$table}_customer_access"],
+        );
+
+        $this->assertNotNull($policy, "The customer policy of {$table} is missing.");
+        $this->assertSame('SELECT', $policy->cmd);
+        $this->assertNull($policy->with_check);
+        $this->assertSame($expression, preg_replace('/\s+/', ' ', (string) $policy->qual));
+    }
+
+    /**
+     * Tables of an order with the expression that lets their customer read them.
+     *
+     * @return array<string, array{string, string}>
+     */
+    public static function orderTables(): array
+    {
+        $throughOrder = fn (string $table): string => '(EXISTS ( SELECT 1 FROM orders WHERE ((orders.id = '.$table.'.order_id) AND (orders.customer_id = (NULLIF(current_setting(\'app.customer_id\'::text, true), \'\'::text))::uuid))))';
+
+        return [
+            'orders' => ['orders', self::CUSTOMER_EXPRESSION],
+            'order lines' => ['order_lines', $throughOrder('order_lines')],
+            'order status history' => ['order_status_history', $throughOrder('order_status_history')],
+        ];
     }
 
     /** Without a soda in the transaction no row is visible and no update or delete reaches one. */
