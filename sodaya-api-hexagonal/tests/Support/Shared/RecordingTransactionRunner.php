@@ -15,10 +15,13 @@ final class RecordingTransactionRunner implements TransactionRunner
 
     private int $rolledBack = 0;
 
+    private int $depth = 0;
+
     /** Run the callback and record whether it committed or rolled back. */
     public function run(callable $callback): mixed
     {
         $this->runs++;
+        $this->depth++;
 
         try {
             $result = $callback();
@@ -26,6 +29,8 @@ final class RecordingTransactionRunner implements TransactionRunner
             $this->rolledBack++;
 
             throw $exception;
+        } finally {
+            $this->depth--;
         }
 
         $this->committed++;
@@ -49,5 +54,11 @@ final class RecordingTransactionRunner implements TransactionRunner
     public function rolledBack(): int
     {
         return $this->rolledBack;
+    }
+
+    /** Whether a transaction is open right now. */
+    public function inProgress(): bool
+    {
+        return $this->depth > 0;
     }
 }
