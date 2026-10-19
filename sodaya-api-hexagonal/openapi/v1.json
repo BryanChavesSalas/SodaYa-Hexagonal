@@ -15,6 +15,10 @@
             "name": "General"
         },
         {
+            "name": "Pagos del cliente",
+            "description": "Cobro por adelantado de los pedidos del cliente autenticado, con la pasarela en modo de prueba."
+        },
+        {
             "name": "Categor\u00edas de la soda",
             "description": "Administraci\u00f3n de las categor\u00edas del men\u00fa por el personal de la soda."
         },
@@ -828,6 +832,64 @@
                     }
                 },
                 "security": []
+            }
+        },
+        "/pedidos/{pedido}/pago": {
+            "post": {
+                "operationId": "billing.payments.store",
+                "description": "Cobra un pedido propio que est\u00e9 pendiente con la pasarela en modo de prueba. El monto sale de las l\u00edneas guardadas del pedido: cualquier monto enviado se ignora. Solo se env\u00eda el m\u00e9todo de pago; en modo de prueba, `pm_card_visa` aprueba y `pm_card_visa_chargeDeclined` rechaza. Aprobado responde 201 con el pago y el pedido queda pagado; rechazado responde 402 `pago-rechazado` y el cliente puede reintentar mientras el pedido siga pendiente; si el proveedor no responde, el pago queda pendiente y la respuesta es 503 `servicio-no-disponible` con `Retry-After`. Repetir la solicitud devuelve el mismo pago: un pedido tiene a lo sumo un pago pendiente o aprobado. Un pedido ya pagado responde 409 `pedido-ya-pagado`; uno que no est\u00e1 pendiente, 409 `pedido-no-pagable`; uno ajeno o inexistente, 404.",
+                "summary": "Pagar un pedido",
+                "tags": [
+                    "Pagos del cliente"
+                ],
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PagarPedido"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/InvalidData"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "x-abilities": [
+                    "pedidos"
+                ]
             }
         },
         "/cocina/pedidos": {
@@ -2350,6 +2412,81 @@
                     "creado_en"
                 ],
                 "title": "MovimientoDePuntos"
+            },
+            "PagarPedido": {
+                "type": "object",
+                "properties": {
+                    "metodo_pago": {
+                        "type": "string",
+                        "description": "M\u00e9todo de pago del proveedor en modo de prueba: `pm_card_visa` aprueba y `pm_card_visa_chargeDeclined` rechaza.",
+                        "pattern": "^pm_[A-Za-z0-9_]{1,80}$"
+                    }
+                },
+                "required": [
+                    "metodo_pago"
+                ],
+                "title": "PagarPedido"
+            },
+            "Pago": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "pedido_id": {
+                        "type": "string"
+                    },
+                    "proveedor": {
+                        "type": "string"
+                    },
+                    "referencia": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "monto": {
+                        "type": "integer"
+                    },
+                    "estado": {
+                        "type": "string",
+                        "enum": [
+                            "pendiente",
+                            "aprobado",
+                            "rechazado"
+                        ]
+                    },
+                    "codigo_rechazo": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "creado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cerrado_en": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "pedido_id",
+                    "proveedor",
+                    "referencia",
+                    "monto",
+                    "estado",
+                    "codigo_rechazo",
+                    "creado_en",
+                    "cerrado_en"
+                ],
+                "title": "Pago"
             },
             "Pedido": {
                 "type": "object",
