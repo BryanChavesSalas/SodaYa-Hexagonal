@@ -66,13 +66,14 @@ final readonly class EloquentCategoryRepository implements CategoryRepository
         return EloquentPages::of($query, $page, $this->toDomain(...));
     }
 
-    /** Delete the persisted category. */
+    /** Delete the persisted category through its model, so that the observers of the model see it go. */
     public function delete(Category $category): void
     {
         CategoryModel::query()
             ->where('soda_id', $category->sodaId->value)
             ->whereKey($category->id->value)
-            ->delete();
+            ->first()
+            ?->delete();
     }
 
     /** Rebuild the aggregate from its stored state. */

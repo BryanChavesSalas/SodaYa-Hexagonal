@@ -90,13 +90,14 @@ final readonly class EloquentTimeSlotRepository implements TimeSlotRepository
         return $this->toDomainList($this->orderedSlotsOf($sodaId)->where('day_of_week', $day->value));
     }
 
-    /** Delete the row of the slot. */
+    /** Delete the row of the slot through its model, so that the observers of the model see it go. */
     public function delete(TimeSlot $slot): void
     {
         TimeSlotModel::query()
             ->where('soda_id', $slot->sodaId->value)
             ->whereKey($slot->id->value)
-            ->delete();
+            ->first()
+            ?->delete();
     }
 
     /**

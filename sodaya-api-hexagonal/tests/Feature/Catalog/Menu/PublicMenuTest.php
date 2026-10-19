@@ -121,20 +121,24 @@ final class PublicMenuTest extends TestCase
         ]]);
     }
 
-    /** The menu is served in full with a constant number of queries. */
+    /** The menu is served in full with a constant number of queries: a bigger menu does not run more of them. */
     public function test_menu_is_complete_and_runs_a_constant_number_of_queries(): void
     {
         $categories = CategoryModel::factory()->count(3)->create(['soda_id' => $this->soda->id]);
-        $categories->each(fn (CategoryModel $category) => DishModel::factory()->count(10)->create([
+        $categories->each(fn (CategoryModel $category) => DishModel::factory()->create([
             'soda_id' => $this->soda->id,
             'category_id' => $category->id,
         ]));
+        $withThree = $this->queriesOfTheMenu();
 
-        DB::enableQueryLog();
-        $response = $this->getJson($this->endpoint())->assertOk();
+        $categories->each(fn (CategoryModel $category) => DishModel::factory()->count(9)->create([
+            'soda_id' => $this->soda->id,
+            'category_id' => $category->id,
+        ]));
+        $withThirty = $this->queriesOfTheMenu();
 
-        $this->assertCount(30, $response->json('data.categorias.*.platos.*'));
-        $this->assertCount(6, DB::getQueryLog());
+        $this->assertCount(30, $this->getJson($this->endpoint())->assertOk()->json('data.categorias.*.platos.*'));
+        $this->assertSame($withThree, $withThirty);
     }
 
     /** An unknown soda answers a not-found problem. */
@@ -174,6 +178,17 @@ final class PublicMenuTest extends TestCase
     public function test_malformed_identifier_is_not_found(): void
     {
         $this->getJson('/api/v1/sodas/abc/platos')->assertNotFound();
+    }
+
+    /** Number of queries one reading of the menu runs. */
+    private function queriesOfTheMenu(): int
+    {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->getJson($this->endpoint())->assertOk();
+        DB::disableQueryLog();
+
+        return count(DB::getQueryLog());
     }
 
     /** Build the menu endpoint, optionally for one dish. */

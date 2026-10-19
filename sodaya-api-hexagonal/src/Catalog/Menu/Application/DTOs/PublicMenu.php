@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Src\Catalog\Menu\Application\DTOs;
 
+/**
+ * @phpstan-import-type MenuCategoryRow from MenuCategory
+ *
+ * @phpstan-type PublicMenuRows array{soda_id: string, soda_name: string, soda_logo_path: string|null, categories: list<MenuCategoryRow>}
+ */
 final readonly class PublicMenu
 {
     /**
@@ -19,9 +24,44 @@ final readonly class PublicMenu
         public ?string $sodaLogoPath = null,
     ) {}
 
+    /**
+     * Rebuild the menu from its cached rows with the portions each dish has right now.
+     *
+     * @param  PublicMenuRows  $rows
+     * @param  array<string, int>  $availablePortions  by dish identifier
+     */
+    public static function fromArray(array $rows, array $availablePortions): self
+    {
+        return new self(
+            $rows['soda_id'],
+            $rows['soda_name'],
+            array_map(
+                fn (array $category): MenuCategory => MenuCategory::fromArray($category, $availablePortions),
+                $rows['categories'],
+            ),
+            sodaLogoPath: $rows['soda_logo_path'],
+        );
+    }
+
     /** Return the same menu flagged as open or closed. */
     public function withOpenStatus(bool $open): self
     {
         return new self($this->sodaId, $this->sodaName, $this->categories, $open, $this->sodaLogoPath);
+    }
+
+    /**
+     * Flatten what only changes when the owner edits, as plain arrays a cache can keep: the open flag is
+     * decided on every response and stays out.
+     *
+     * @return PublicMenuRows
+     */
+    public function toArray(): array
+    {
+        return [
+            'soda_id' => $this->sodaId,
+            'soda_name' => $this->sodaName,
+            'soda_logo_path' => $this->sodaLogoPath,
+            'categories' => array_map(fn (MenuCategory $category): array => $category->toArray(), $this->categories),
+        ];
     }
 }

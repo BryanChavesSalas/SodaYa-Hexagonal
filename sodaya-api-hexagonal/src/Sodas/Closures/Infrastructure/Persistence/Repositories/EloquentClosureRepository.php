@@ -80,13 +80,14 @@ final readonly class EloquentClosureRepository implements ClosureRepository
         return EloquentPages::of($query, $page, $this->toDomain(...));
     }
 
-    /** Delete the closure from its soda. */
+    /** Delete the closure from its soda through its model, so that the observers of the model see it go. */
     public function delete(Closure $closure): void
     {
         ClosureModel::query()
             ->where('soda_id', $closure->sodaId->value)
             ->whereKey($closure->id->value)
-            ->delete();
+            ->first()
+            ?->delete();
     }
 
     /** Rebuild the entity from its stored state. */

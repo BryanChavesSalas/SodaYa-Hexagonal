@@ -16,4 +16,11 @@ return [
     */
     'notice_channel' => env('NOTICE_CHANNEL', 'log'),
 
+    /*
+    | Seconds the public menu of a soda stays in the cache. It is a safety net: an edit of the owner
+    | invalidates the menu at once by raising its version, so this only bounds how long a lost
+    | invalidation can serve stale data.
+    */
+    'menu_cache_seconds' => (int) env('MENU_CACHE_SECONDS', 600),
+
 ];
