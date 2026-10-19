@@ -44,7 +44,7 @@ final class FrozenPriceTest extends TestCase
         $response = $this->postJson($this->endpoint(), [
             'lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 2, 'precio_unitario' => 1, 'subtotal' => 1, 'nombre' => 'Langosta']],
             'total' => 1,
-        ]);
+        ], ['Idempotency-Key' => 'toque-1']);
 
         $response
             ->assertCreated()
@@ -59,13 +59,13 @@ final class FrozenPriceTest extends TestCase
     /** A later change of the price in the catalog leaves the orders already placed as they were. */
     public function test_price_change_after_ordering_keeps_the_order_as_it_was(): void
     {
-        $before = $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 2]]])->assertCreated();
+        $before = $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 2]]], ['Idempotency-Key' => 'toque-1'])->assertCreated();
 
         Sanctum::actingAs(UserModel::factory()->create(['role' => Role::Owner->value, 'soda_id' => $this->soda->id]), Role::Owner->abilities());
         $this->patchJson("/api/v1/cocina/platos/{$this->casado->id}", ['precio' => 3_500])->assertOk();
 
         Sanctum::actingAs($this->customer, Role::Customer->abilities());
-        $after = $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 2]]])->assertCreated();
+        $after = $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 2]]], ['Idempotency-Key' => 'toque-2'])->assertCreated();
 
         $this->assertDatabaseHas('order_lines', ['order_id' => $before->json('data.id'), 'unit_price' => 2_800]);
         $this->assertDatabaseHas('order_lines', ['order_id' => $after->json('data.id'), 'unit_price' => 3_500]);

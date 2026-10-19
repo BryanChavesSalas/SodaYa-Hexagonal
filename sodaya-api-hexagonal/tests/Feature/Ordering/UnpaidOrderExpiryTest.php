@@ -91,9 +91,9 @@ final class UnpaidOrderExpiryTest extends TestCase
         $customer = UserModel::factory()->create();
 
         return app(SodaTransaction::class)->run($this->soda->id, fn (): Order => app(PlaceOrder::class)->execute(
-            new PlaceOrderCommand($customer->id, $this->soda->id, [['dish_id' => $this->dish->id, 'quantity' => 1]]),
+            new PlaceOrderCommand($customer->id, $this->soda->id, [['dish_id' => $this->dish->id, 'quantity' => 1]], 'toque-1'),
             now()->toDateTimeImmutable(),
-        ));
+        )->order);
     }
 
     /** Run the next available job of the database queue, without waiting when there is none. */

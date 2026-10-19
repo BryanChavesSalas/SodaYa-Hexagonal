@@ -16,7 +16,7 @@ use Src\Shared\Infrastructure\Tenancy\SodaTransaction;
 
 try {
     app(SodaTransaction::class)->run($sodaId, fn () => app(PlaceOrder::class)->execute(
-        new PlaceOrderCommand($customerId, $sodaId, [['dish_id' => $dishId, 'quantity' => 1]]),
+        new PlaceOrderCommand($customerId, $sodaId, [['dish_id' => $dishId, 'quantity' => 1]], "carrera-{$customerId}"),
         new DateTimeImmutable,
     ));
     echo 'placed';

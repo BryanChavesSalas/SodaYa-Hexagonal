@@ -45,9 +45,9 @@ final class UnconfirmedOrderExpiryTest extends TestCase
         $customer = UserModel::factory()->create();
 
         $this->order = $this->asSoda(fn (): Order => app(PlaceOrder::class)->execute(
-            new PlaceOrderCommand($customer->id, $this->soda->id, [['dish_id' => $this->dish->id, 'quantity' => 2]]),
+            new PlaceOrderCommand($customer->id, $this->soda->id, [['dish_id' => $this->dish->id, 'quantity' => 2]], 'toque-1'),
             now()->toDateTimeImmutable(),
-        ));
+        )->order);
 
         $this->travelTo('2026-10-05 12:04:00');
         $this->asSoda(fn (): Order => app(ApproveOrderPayment::class)->execute(

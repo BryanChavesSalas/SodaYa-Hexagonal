@@ -43,6 +43,59 @@ final class CustomerPlacesOrderTest extends TestCase
         $this->customer = UserModel::factory()->create();
 
         Sanctum::actingAs($this->customer, Role::Customer->abilities());
+        $this->withHeader('Idempotency-Key', 'toque-1');
+    }
+
+    /** Without the key of the request, the order cannot be told apart from a retry and is refused. */
+    #[DataProvider('missingKeys')]
+    public function test_request_without_a_valid_key_is_refused(?string $key): void
+    {
+        $this->flushHeaders();
+        $headers = $key === null ? [] : ['Idempotency-Key' => $key];
+
+        $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 1]]], $headers)
+            ->assertBadRequest()
+            ->assertJsonPath('type', 'http://localhost/problemas/solicitud-invalida');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    /**
+     * Keys that do not identify a request.
+     *
+     * @return array<string, array{string|null}>
+     */
+    public static function missingKeys(): array
+    {
+        return ['no header' => [null], 'blank key' => ['  '], 'key too long' => [str_repeat('k', 101)]];
+    }
+
+    /** The same request sent again answers 200 with the order already created and takes no portion twice. */
+    public function test_repeated_request_answers_the_same_order(): void
+    {
+        $payload = ['lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 2]]];
+
+        $first = $this->postJson($this->endpoint(), $payload)->assertCreated();
+        $again = $this->postJson($this->endpoint(), $payload)->assertOk();
+
+        $this->assertSame($first->json('data.id'), $again->json('data.id'));
+        $this->assertSame($first->headers->get('Location'), $again->headers->get('Location'));
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertSame(1, $this->casado->refresh()->available_portions);
+    }
+
+    /** The same key with other lines is a conflict. */
+    public function test_same_key_with_other_lines_is_a_conflict(): void
+    {
+        $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 2]]])->assertCreated();
+
+        $this->postJson($this->endpoint(), ['lineas' => [['plato_id' => $this->casado->id, 'cantidad' => 1]]])
+            ->assertConflict()
+            ->assertJsonPath('type', 'http://localhost/problemas/conflicto')
+            ->assertJsonPath('detail', 'Ya existe un pedido con esa clave de idempotencia y otro contenido.');
+
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertSame(1, $this->casado->refresh()->available_portions);
     }
 
     /** The order is created pending, identified with a UUID v7 and announced in the Location header. */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Ordering;
 
+use Illuminate\Support\Str;
 use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 use Src\Ordering\Orders\Application\DTOs\PlaceOrderCommand;
@@ -118,12 +119,23 @@ final class PlaceOrderTest extends TestCase
         $this->place([$retired->id => 1]);
     }
 
+    /** The same request sent again answers the order already stored and takes no portion twice. */
+    public function test_repeated_request_takes_the_portions_once(): void
+    {
+        $first = $this->place([$this->casado->id => 2], 'toque-1');
+        $again = $this->place([$this->casado->id => 2], 'toque-1');
+
+        $this->assertTrue($first->id->equals($again->id));
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertSame(1, $this->casado->refresh()->available_portions);
+    }
+
     /**
-     * Place an order of the customer with the quantities of each dish.
+     * Place an order of the customer with the quantities of each dish, under a key of its own unless one is given.
      *
      * @param  array<string, int>  $quantities
      */
-    private function place(array $quantities): Order
+    private function place(array $quantities, ?string $key = null): Order
     {
         $this->scopeQueriesTo($this->soda->id);
         $lines = [];
@@ -133,8 +145,8 @@ final class PlaceOrderTest extends TestCase
         }
 
         return app(PlaceOrder::class)->execute(
-            new PlaceOrderCommand($this->customer->id, $this->soda->id, $lines),
+            new PlaceOrderCommand($this->customer->id, $this->soda->id, $lines, $key ?? (string) Str::uuid7()),
             now()->toDateTimeImmutable(),
-        );
+        )->order;
     }
 }

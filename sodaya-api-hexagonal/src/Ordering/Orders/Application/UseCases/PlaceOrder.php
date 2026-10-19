@@ -9,16 +9,19 @@ use Src\Ordering\Orders\Application\Contracts\OrderableDishes;
 use Src\Ordering\Orders\Application\Contracts\OrderDeadlines;
 use Src\Ordering\Orders\Application\Contracts\PortionStock;
 use Src\Ordering\Orders\Application\Contracts\SodaSchedule;
+use Src\Ordering\Orders\Application\DTOs\PlacedOrder;
 use Src\Ordering\Orders\Application\DTOs\PlaceOrderCommand;
 use Src\Ordering\Orders\Domain\Contracts\OrderRepository;
 use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Entities\OrderLine;
 use Src\Ordering\Orders\Domain\Exceptions\DishNotOfSodaException;
 use Src\Ordering\Orders\Domain\Exceptions\DishUnavailableException;
+use Src\Ordering\Orders\Domain\Exceptions\IdempotencyKeyReusedException;
 use Src\Ordering\Orders\Domain\Exceptions\PortionsSoldOutException;
 use Src\Ordering\Orders\Domain\Exceptions\SodaClosedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\DishId;
+use Src\Ordering\Orders\Domain\ValueObjects\IdempotencyKey;
 use Src\Ordering\Orders\Domain\ValueObjects\Quantity;
 use Src\Shared\Domain\Contracts\TransactionRunner;
 use Src\Shared\Domain\ValueObjects\SodaId;
@@ -38,10 +41,21 @@ final readonly class PlaceOrder
     /**
      * Place a pending order of an open soda, with the name and the price each dish has in the catalog right now,
      * and take its portions in the same transaction; if a dish falls short, nothing is saved.
+     * The same request sent again, with the same key and the same lines, answers the order already placed
+     * without taking portions again; the same key with other lines is refused.
      * The order gets checked again at its payment deadline.
      */
-    public function execute(PlaceOrderCommand $command, DateTimeImmutable $now): Order
+    public function execute(PlaceOrderCommand $command, DateTimeImmutable $now): PlacedOrder
     {
+        $customerId = new CustomerId($command->customerId);
+        $key = new IdempotencyKey($command->idempotencyKey, IdempotencyKey::fingerprintOf($command->lines));
+
+        $previous = $this->orders->findByIdempotencyKey($customerId, $key->value);
+
+        if ($previous !== null) {
+            return $this->replay($previous, $key);
+        }
+
         $sodaId = new SodaId($command->sodaId);
 
         if (! $this->schedule->isOpenAt($sodaId, $now)) {
@@ -50,18 +64,37 @@ final readonly class PlaceOrder
 
         $lines = $this->linesOf($sodaId, $command->lines);
 
-        return $this->transaction->run(function () use ($command, $sodaId, $lines, $now): Order {
-            $order = Order::place($this->orders->nextId(), $sodaId, new CustomerId($command->customerId), $lines, $now);
+        try {
+            $order = $this->transaction->run(function () use ($customerId, $sodaId, $lines, $now, $key): Order {
+                $order = Order::place($this->orders->nextId(), $sodaId, $customerId, $lines, $now, $key);
 
-            if (! $this->portions->reserve($sodaId, $order->lines)) {
-                throw PortionsSoldOutException::create();
-            }
+                if (! $this->portions->reserve($sodaId, $order->lines)) {
+                    throw PortionsSoldOutException::create();
+                }
 
-            $this->orders->save($order);
-            $this->deadlines->checkAt($order->id, $sodaId, $order->paymentDeadline());
+                $this->orders->save($order);
+                $this->deadlines->checkAt($order->id, $sodaId, $order->paymentDeadline());
 
-            return $order;
-        });
+                return $order;
+            });
+        } catch (IdempotencyKeyReusedException $exception) {
+            // Another request with the same key won the race: the transaction rolled back and the winner is answered instead.
+            $winner = $this->orders->findByIdempotencyKey($customerId, $key->value) ?? throw $exception;
+
+            return $this->replay($winner, $key);
+        }
+
+        return new PlacedOrder($order, true);
+    }
+
+    /** Answer the order a key already produced, as long as the request asks for the same lines. */
+    private function replay(Order $previous, IdempotencyKey $key): PlacedOrder
+    {
+        if ($previous->idempotencyKey === null || ! $previous->idempotencyKey->repeats($key)) {
+            throw IdempotencyKeyReusedException::create();
+        }
+
+        return new PlacedOrder($previous, false);
     }
 
     /**
