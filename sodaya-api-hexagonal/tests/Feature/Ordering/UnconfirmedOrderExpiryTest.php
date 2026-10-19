@@ -16,6 +16,7 @@ use Src\Ordering\Orders\Application\UseCases\PlaceOrder;
 use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Infrastructure\Persistence\Models\OrderModel;
 use Src\Shared\Infrastructure\Tenancy\SodaTransaction;
+use Src\Sodas\OpeningHours\Infrastructure\Persistence\Models\TimeSlotModel;
 use Src\Sodas\Profile\Infrastructure\Persistence\Models\SodaModel;
 use Tests\Support\RefreshDatabaseAsOwner;
 use Tests\Support\Shared\ScopesQueriesToSoda;
@@ -39,13 +40,12 @@ final class UnconfirmedOrderExpiryTest extends TestCase
         config(['queue.default' => 'database']);
         $this->travelTo('2026-10-05 12:00:00');
         $this->soda = SodaModel::factory()->create();
+        TimeSlotModel::factory()->create(['soda_id' => $this->soda->id, 'day_of_week' => 1, 'opens_at' => '06:00', 'closes_at' => '14:00']);
         $this->dish = DishModel::factory()->create(['soda_id' => $this->soda->id, 'available_portions' => 5, 'price' => 2_800]);
         $customer = UserModel::factory()->create();
 
         $this->order = $this->asSoda(fn (): Order => app(PlaceOrder::class)->execute(
-            new PlaceOrderCommand($customer->id, $this->soda->id, [
-                ['dish_id' => $this->dish->id, 'dish_name' => $this->dish->name, 'unit_price' => 2_800, 'quantity' => 2],
-            ]),
+            new PlaceOrderCommand($customer->id, $this->soda->id, [['dish_id' => $this->dish->id, 'quantity' => 2]]),
             now()->toDateTimeImmutable(),
         ));
 
