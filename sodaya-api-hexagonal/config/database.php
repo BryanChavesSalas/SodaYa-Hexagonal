@@ -13,7 +13,7 @@ return [
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'sodaya_hexagonal'),
-            'username' => env('DB_USERNAME', 'sodaya_owner'),
+            'username' => env('DB_USERNAME', 'sodaya_app'),
             'password' => env('DB_PASSWORD', ''),
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
