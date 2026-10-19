@@ -55,8 +55,12 @@ Las rutas y los atributos JSON son parte de lo que ve quien consume la API, por 
 | Plazo de confirmación | `confirmationDeadline()` | — | — |
 | Cantidad | `Quantity` | `quantity` | `cantidad` |
 | Precio unitario, congelado al pedir | `unitPrice` | `unit_price` | `precio_unitario` |
+| Minutos de preparación, congelados al pedir | `preparationMinutes` | `order_lines.preparation_minutes` | — |
 | Subtotal de la línea | `subtotal()` | — | `subtotal` |
 | Total del pedido | `total()` | — | `total` |
+| Número de retiro | `PickupNumber` | `pickup_number`, `pickup_date` | `numero_retiro` |
+| Contador de números de retiro | `PickupNumbers`, `CounterPickupNumbers` | `pickup_counters` | — |
+| Hora estimada de retiro | `estimatedPickupAt()` | — | `retiro_estimado` |
 | Pago | `Payment` | `payments` | `pago` |
 | Estado del pago | `PaymentStatus` | `payment_status` | `pago.estado` |
 | Pago aprobado | `PaymentStatus::Approved` | `approved` | `aprobado` |
@@ -115,7 +119,9 @@ Los términos de los contextos que aún no existen (pagos) quedan reservados par
 - Un **pedido** pertenece a una soda y a un cliente, y tiene de 1 a 20 líneas, una por plato, con cantidades de 1 a 20. Sin líneas es un **pedido vacío**; con una cantidad fuera del rango, una **cantidad inválida**.
 - Solo se pide en una soda **abierta** y solo platos **activos** de esa soda: un plato de otra soda se trata como un plato que no existe.
 - Cada solicitud de pedido lleva una **clave de idempotencia** elegida por el cliente. Repetirla con las mismas líneas devuelve el pedido ya hecho; repetirla con otras líneas es un **conflicto**.
-- La **línea** congela el nombre y el precio que tenía el plato al pedirlo: un cambio posterior del menú no altera un pedido hecho.
+- La **línea** congela el nombre, el precio y los **minutos de preparación** que tenía el plato al pedirlo: un cambio posterior del menú no altera un pedido hecho ni su hora estimada.
+- Cada pedido recibe un **número de retiro**: un número corto, de 1 a 9999, que el mostrador dice en voz alta para entregarlo. Es consecutivo por soda y por día de Costa Rica: el primer pedido de cada día es el 1. Lo entrega el **contador** de la soda y el día; el identificador largo del pedido sigue siendo el UUID.
+- La **hora estimada de retiro** es el momento en que se hizo el pedido más el mayor tiempo de preparación de sus platos. No se guarda: se calcula a partir de las líneas congeladas.
 - El pedido avanza en un solo sentido: **pendiente**, **confirmado**, **listo** y **entregado**. Se puede **cancelar** mientras está pendiente o confirmado, y la cancelación registra quién la originó: el cliente, la cocina, la falta de pago o la falta de confirmación.
 - Entregado y cancelado son estados finales.
 - Un pedido tiene 10 minutos para que se apruebe su **pago**. Si al cumplirse el **plazo de pago** sigue pendiente y sin pago, se cancela por **falta de pago**: sus porciones vuelven al menú y el cliente recibe un aviso.

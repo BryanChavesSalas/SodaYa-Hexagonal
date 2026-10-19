@@ -103,6 +103,22 @@ Es un trigger `BEFORE` porque impide el cambio de la propia fila; el del histori
 
 La migración `let_the_maintenance_role_find_expired_orders` le da a `sodaya_maintenance` permiso de leer `orders` y nada más, y crea el índice parcial `orders_pending_created_at_index` sobre `created_at` de los pedidos pendientes. El comando que corre cada minuto busca solo pedidos pendientes, que son pocos; un índice parcial guarda solo esas filas y se mantiene pequeño aunque la tabla tenga años de pedidos entregados.
 
+### Contador de números de retiro
+
+`pickup_counters` tiene una fila por soda y día con el último número entregado. `CounterPickupNumbers` la avanza con una sola instrucción:
+
+```sql
+INSERT INTO pickup_counters (soda_id, pickup_date, last_number)
+VALUES (?, ?, 1)
+ON CONFLICT (soda_id, pickup_date)
+DO UPDATE SET last_number = pickup_counters.last_number + 1
+RETURNING last_number
+```
+
+Si la fila no existe, la crea en 1; si existe, la suma. Como el `UPDATE` bloquea la fila hasta el final de la transacción, dos pedidos de la misma soda en el mismo instante se ordenan: el segundo espera y recibe el número siguiente. Una secuencia de PostgreSQL no serviría, porque no se reinicia por soda ni por día y no se deshace con la transacción; el contador sí, así que un pedido que no se llega a crear no gasta número. La tabla es de una soda, con su política de seguridad a nivel de fila, igual que `orders`.
+
+La migración que la creó numeró los pedidos que ya existían con `row_number()` por soda y día de Costa Rica, ordenados por su creación, y dejó cada contador en el máximo de su día. Para ese relleno quitó y volvió a poner `FORCE ROW LEVEL SECURITY` dentro de su transacción, como hizo la de `base_portions`.
+
 ### Reserva de porciones
 
 `fn_reserve_portions(p_soda_id, p_dish_ids, p_quantities)` descuenta las porciones de todas las líneas de un pedido o de ninguna, y responde si reservó. Primero bloquea con `SELECT ... FOR UPDATE` los platos del pedido en el orden de sus identificadores; después revisa que todos existan en la soda, estén activos y tengan porciones suficientes; solo entonces descuenta. Si algo falta, devuelve `false` sin haber cambiado nada.
@@ -154,7 +170,7 @@ Es la segunda barrera del aislamiento entre sodas. La primera está en el códig
 
 ### Qué protege
 
-`categories`, `dishes`, `schedules` y `closures` tienen la seguridad a nivel de fila habilitada y forzada, con una política por tabla:
+`categories`, `dishes`, `schedules`, `closures`, `orders`, `order_lines`, `order_status_history` y `pickup_counters` tienen la seguridad a nivel de fila habilitada y forzada, con una política por tabla:
 
 ```sql
 ALTER TABLE dishes ENABLE ROW LEVEL SECURITY;

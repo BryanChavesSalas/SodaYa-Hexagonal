@@ -138,6 +138,14 @@ Un doble toque en «confirmar» no hace dos pedidos. Cada solicitud trae el enca
 
 Las reglas del pedido que el cliente puede romper tienen su propio tipo de problema: un pedido sin líneas responde 422 `pedido-vacio` y una cantidad fuera de 1 a 20, 422 `cantidad-invalida`. El Form Request solo valida la forma de los datos, que `lineas` sea una lista de platos con cantidad; los rangos los decide el dominio, en el mismo lugar que los decide para cualquier otro llamador.
 
+### Número de retiro y hora estimada
+
+El mostrador no entrega un pedido leyendo un UUID: lo llama por su **número de retiro**, el objeto de valor `PickupNumber`, de 1 a 9999, consecutivo por soda y por día de Costa Rica. El agregado no lo inventa: `Order::place()` lo recibe, y es `PlaceOrder` quien lo pide al puerto `PickupNumbers` dentro de la misma transacción que reserva las porciones y guarda el pedido. Si la reserva falla, la transacción se deshace y el número vuelve al contador: dos pedidos de un mismo día nunca comparten número y la numeración no tiene huecos por pedidos que no se crearon.
+
+El adaptador `CounterPickupNumbers` avanza una fila de `pickup_counters` por soda y día con una sola instrucción, `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`: la primera vez crea la fila en 1 y las siguientes suman 1. El bloqueo de fila del `UPDATE` ordena dos pedidos del mismo instante; el segundo espera al primero y recibe el número siguiente. El día se decide en la zona de Costa Rica antes de tocar la base, porque a las 23:30 de Costa Rica ya es mañana en UTC. La llave única `(soda_id, pickup_date, pickup_number)` de `orders` es la última barrera.
+
+La **hora estimada de retiro** la calcula el agregado: `estimatedPickupAt()` es el momento en que se hizo el pedido más el mayor tiempo de preparación de sus líneas. Para eso cada `OrderLine` congela también los `preparationMinutes` que el plato tenía al pedir, de 1 a 120, igual que congela el nombre y el precio: si la soda cambia después los minutos de un plato, la estimación de los pedidos ya hechos no se mueve. Ni el número ni la hora los envía el navegador; el recurso los expone como `numero_retiro` y `retiro_estimado`, ISO 8601 en la zona de Costa Rica, al cliente y a la cocina.
+
 Cuando la cancelación ya quedó confirmada en la base y el pedido estaba pagado, `CancelOrder` solicita el reembolso por el puerto `RefundRequests`. Se solicita después de la transacción para no reembolsar una cancelación que terminó deshaciéndose. Si la cancelación no la hizo el cliente, también le avisa por el puerto `CustomerNotices`. Los dos adaptadores despachan un trabajo a la cola; la sección «Trabajos en cola» los describe.
 
 ### Plazos del pedido
