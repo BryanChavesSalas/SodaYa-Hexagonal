@@ -33,6 +33,9 @@ final class RowLevelSecurityTest extends TestCase
      */
     private const array ORDER_TABLES = ['orders', 'order_lines', 'order_status_history'];
 
+    /** Views over mv_daily_sales: a materialized view cannot have policies, so they filter by the soda of the transaction themselves. */
+    private const array BARRIER_VIEWS = ['v_daily_sales'];
+
     private SodaModel $soda;
 
     private SodaModel $otherSoda;
@@ -52,18 +55,22 @@ final class RowLevelSecurityTest extends TestCase
         }
     }
 
-    /** Every view with a soda_id column runs with the permissions of whoever queries it, so the policies of its tables apply. */
-    public function test_every_view_of_a_soda_is_security_invoker(): void
+    /**
+     * Every view with a soda_id column runs with the permissions of whoever queries it, so the policies of its tables
+     * apply; the views over a materialized view, which has no policies, filter by the soda themselves behind a security barrier.
+     */
+    public function test_every_view_of_a_soda_runs_as_its_caller_or_filters_behind_a_security_barrier(): void
     {
         $views = $this->relationsWithASodaColumn('VIEW');
 
         $this->assertContains('v_hourly_sales', $views);
+        $this->assertContains('v_daily_sales', $views);
 
         foreach ($views as $view) {
             $this->assertSame(
-                'security_invoker=true',
+                in_array($view, self::BARRIER_VIEWS, true) ? 'security_barrier=true' : 'security_invoker=true',
                 DB::scalar("select array_to_string(reloptions, ',') from pg_class where oid = ?::regclass", [$view]),
-                "The view {$view} is not security_invoker.",
+                "The view {$view} does not have the security option it needs.",
             );
         }
     }
