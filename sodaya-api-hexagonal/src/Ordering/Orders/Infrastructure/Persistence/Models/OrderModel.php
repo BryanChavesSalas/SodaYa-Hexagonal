@@ -27,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $cancelled_at
  * @property string $payment_status
  * @property CarbonImmutable|null $paid_at
+ * @property string|null $idempotency_key
+ * @property string|null $request_fingerprint
  * @property CarbonImmutable $created_at
  * @property-read Collection<int, OrderLineModel> $lines
  */
@@ -43,6 +45,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'cancelled_at',
     'payment_status',
     'paid_at',
+    'idempotency_key',
+    'request_fingerprint',
     'created_at',
 ])]
 #[UseFactory(OrderFactory::class)]

@@ -10,9 +10,11 @@ use Src\Catalog\Dishes\Infrastructure\Persistence\Models\DishModel;
 use Src\Identity\Users\Infrastructure\Persistence\Models\UserModel;
 use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Entities\OrderLine;
+use Src\Ordering\Orders\Domain\Exceptions\IdempotencyKeyReusedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\DishId;
+use Src\Ordering\Orders\Domain\ValueObjects\IdempotencyKey;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\Quantity;
@@ -105,6 +107,38 @@ final class EloquentOrderRepositoryTest extends TestCase
         $this->assertStringEndsWith('for update', $orderQuery);
     }
 
+    /** An order placed with a key is found again by its customer and key, with the key and the fingerprint it was saved with. */
+    public function test_order_is_found_by_its_idempotency_key(): void
+    {
+        $key = new IdempotencyKey('toque-1', str_repeat('a', 64));
+        $order = $this->placedOrder($key);
+        $this->repository->save($order);
+
+        $found = $this->repository->findByIdempotencyKey($order->customerId, 'toque-1');
+
+        $this->assertEquals($order, $found);
+        $this->assertEquals($key, $found?->idempotencyKey);
+        $this->assertNull($this->repository->findByIdempotencyKey($order->customerId, 'toque-2'));
+        $this->assertNull($this->repository->findByIdempotencyKey(new CustomerId(Orders::CUSTOMER_ID), 'toque-1'));
+    }
+
+    /** A second order of the customer with the same key is refused by the database and nothing of it is stored. */
+    public function test_second_order_with_the_same_key_is_refused(): void
+    {
+        $first = $this->placedOrder(new IdempotencyKey('toque-1', str_repeat('a', 64)));
+        $this->repository->save($first);
+        $second = Order::place($this->repository->nextId(), $this->sodaId, $first->customerId, $first->lines, Orders::at('12:01'), new IdempotencyKey('toque-1', str_repeat('b', 64)));
+
+        try {
+            $this->repository->save($second);
+            $this->fail('The same key was stored twice.');
+        } catch (IdempotencyKeyReusedException $exception) {
+            $this->assertSame('conflicto', $exception->rule());
+            $this->assertSame(1, DB::table('orders')->count());
+            $this->assertSame(2, DB::table('order_lines')->count());
+        }
+    }
+
     /** Every new identity is a distinct time-ordered UUID. */
     public function test_next_id_returns_uuid_v7_values(): void
     {
@@ -112,8 +146,8 @@ final class EloquentOrderRepositoryTest extends TestCase
         $this->assertNotEquals($this->repository->nextId(), $this->repository->nextId());
     }
 
-    /** Place an order of a customer with two dishes of the soda. */
-    private function placedOrder(): Order
+    /** Place an order of a customer with two dishes of the soda, with the key of its request if there is one. */
+    private function placedOrder(?IdempotencyKey $key = null): Order
     {
         $customer = UserModel::factory()->create();
         $casado = DishModel::factory()->create(['soda_id' => $this->sodaId->value, 'name' => 'Casado de pollo', 'price' => 2_800]);
@@ -129,6 +163,7 @@ final class EloquentOrderRepositoryTest extends TestCase
                 new OrderLine(new DishId($fresco->id), 'Fresco de cas', 1_000, new Quantity(1)),
             ],
             Orders::at('12:00'),
+            $key,
         );
     }
 }

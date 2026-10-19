@@ -8,6 +8,8 @@ return [
     'dish_not_of_soda' => 'Un plato del pedido no pertenece a la soda.',
     'dish_repeated' => 'Un plato solo puede aparecer en una línea del pedido.',
     'dish_unavailable' => 'Un plato del pedido no está disponible.',
+    'idempotency_key_invalid' => 'La clave de idempotencia es obligatoria y no puede superar los :max caracteres.',
+    'idempotency_key_reused' => 'Ya existe un pedido con esa clave de idempotencia y otro contenido.',
     'expire_orders_description' => 'Cancela los pedidos de todas las sodas cuyo plazo de pago o de confirmación ya pasó.',
     'lines_out_of_range' => 'El pedido debe tener entre :min y :max líneas.',
     'order_empty' => 'El pedido debe tener al menos una línea.',

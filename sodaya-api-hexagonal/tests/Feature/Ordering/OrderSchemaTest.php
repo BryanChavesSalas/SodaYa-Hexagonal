@@ -100,6 +100,28 @@ final class OrderSchemaTest extends TestCase
         $this->insertLine($orderId, $foreignDishId);
     }
 
+    /** A customer uses a key once; another customer may use the same key, and the fingerprint always goes with the key. */
+    public function test_idempotency_key_is_unique_per_customer(): void
+    {
+        $fingerprint = str_repeat('a', 64);
+        $this->insertOrder(['idempotency_key' => 'toque-1', 'request_fingerprint' => $fingerprint]);
+        $this->insertOrder(['customer_id' => $this->insertCustomer(), 'idempotency_key' => 'toque-1', 'request_fingerprint' => $fingerprint]);
+
+        $this->assertSame(2, DB::table('orders')->where('idempotency_key', 'toque-1')->count());
+
+        try {
+            DB::transaction(fn (): string => $this->insertOrder(['idempotency_key' => 'toque-2']));
+            $this->fail('A key was stored without its fingerprint.');
+        } catch (QueryException $exception) {
+            $this->assertSame('23514', $exception->getCode());
+        }
+
+        $this->expectException(QueryException::class);
+        $this->expectExceptionCode('23505');
+
+        $this->insertOrder(['idempotency_key' => 'toque-1', 'request_fingerprint' => $fingerprint]);
+    }
+
     /** A dish appears once per order. */
     public function test_dish_appears_once_per_order(): void
     {

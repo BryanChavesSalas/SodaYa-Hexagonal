@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace Src\Ordering\Orders\Infrastructure\Persistence\Repositories;
 
 use DateTimeImmutable;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Src\Ordering\Orders\Domain\Contracts\OrderRepository;
 use Src\Ordering\Orders\Domain\Entities\Order;
 use Src\Ordering\Orders\Domain\Entities\OrderLine;
+use Src\Ordering\Orders\Domain\Exceptions\IdempotencyKeyReusedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
 use Src\Ordering\Orders\Domain\ValueObjects\DishId;
+use Src\Ordering\Orders\Domain\ValueObjects\IdempotencyKey;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
@@ -41,20 +44,39 @@ final readonly class EloquentOrderRepository implements OrderRepository
         return new OrderId((string) Str::uuid7());
     }
 
-    /** Insert the order and its lines once; afterwards only its status, its payment and their moments change. */
+    /**
+     * Insert the order and its lines once; afterwards only its status, its payment and their moments change.
+     * The unique key per customer turns a second order with the same key into a domain exception.
+     */
     public function save(Order $order): void
     {
-        DB::transaction(function () use ($order): void {
-            $model = OrderModel::query()->find($order->id->value);
+        try {
+            DB::transaction(function () use ($order): void {
+                $model = OrderModel::query()->find($order->id->value);
 
-            if ($model === null) {
-                $this->insert($order);
+                if ($model === null) {
+                    $this->insert($order);
 
-                return;
-            }
+                    return;
+                }
 
-            $model->update($this->statusColumns($order));
-        });
+                $model->update($this->statusColumns($order));
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw IdempotencyKeyReusedException::create();
+        }
+    }
+
+    /** Find the order the customer placed with the key; the lines come with it. */
+    public function findByIdempotencyKey(CustomerId $customerId, string $key): ?Order
+    {
+        $model = OrderModel::query()
+            ->with('lines')
+            ->where('customer_id', $customerId->value)
+            ->where('idempotency_key', $key)
+            ->first();
+
+        return $model === null ? null : $this->toDomain($model);
     }
 
     /** Find the order scoped to its soda. */
@@ -87,6 +109,8 @@ final readonly class EloquentOrderRepository implements OrderRepository
             'id' => $order->id->value,
             'soda_id' => $order->sodaId->value,
             'customer_id' => $order->customerId->value,
+            'idempotency_key' => $order->idempotencyKey?->value,
+            'request_fingerprint' => $order->idempotencyKey?->fingerprint,
             'created_at' => $order->placedAt,
             ...$this->statusColumns($order),
         ]);
@@ -153,6 +177,9 @@ final readonly class EloquentOrderRepository implements OrderRepository
             $model->cancellation_origin === null ? null : CancellationOrigin::from($model->cancellation_origin),
             PaymentStatus::from($model->payment_status),
             $model->paid_at?->toDateTimeImmutable(),
+            $model->idempotency_key === null || $model->request_fingerprint === null
+                ? null
+                : new IdempotencyKey($model->idempotency_key, $model->request_fingerprint),
         );
     }
 }

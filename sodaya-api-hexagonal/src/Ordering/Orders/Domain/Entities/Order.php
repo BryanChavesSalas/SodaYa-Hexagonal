@@ -10,6 +10,7 @@ use Src\Ordering\Orders\Domain\Exceptions\OrderNotPaidException;
 use Src\Ordering\Orders\Domain\Exceptions\TransitionNotAllowedException;
 use Src\Ordering\Orders\Domain\ValueObjects\CancellationOrigin;
 use Src\Ordering\Orders\Domain\ValueObjects\CustomerId;
+use Src\Ordering\Orders\Domain\ValueObjects\IdempotencyKey;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderId;
 use Src\Ordering\Orders\Domain\ValueObjects\OrderStatus;
 use Src\Ordering\Orders\Domain\ValueObjects\PaymentStatus;
@@ -45,10 +46,12 @@ final class Order
         public private(set) ?CancellationOrigin $cancellationOrigin,
         public private(set) PaymentStatus $paymentStatus,
         public private(set) ?DateTimeImmutable $paidAt,
+        public readonly ?IdempotencyKey $idempotencyKey,
     ) {}
 
     /**
      * Place a new order: it starts pending, with at least one line, at most 20, and one line per dish.
+     * The key of the request, when there is one, lets the same request be recognized if it arrives again.
      *
      * @param  list<OrderLine>  $lines
      */
@@ -58,6 +61,7 @@ final class Order
         CustomerId $customerId,
         array $lines,
         DateTimeImmutable $placedAt,
+        ?IdempotencyKey $idempotencyKey = null,
     ): self {
         if (count($lines) < self::MIN_LINES) {
             throw OrderEmptyException::create();
@@ -73,7 +77,7 @@ final class Order
             throw new InvalidValueException('ordering.dish_repeated');
         }
 
-        return new self($id, $sodaId, $customerId, $lines, OrderStatus::Pending, $placedAt, [], null, PaymentStatus::Pending, null);
+        return new self($id, $sodaId, $customerId, $lines, OrderStatus::Pending, $placedAt, [], null, PaymentStatus::Pending, null, $idempotencyKey);
     }
 
     /**
@@ -93,8 +97,9 @@ final class Order
         ?CancellationOrigin $cancellationOrigin,
         PaymentStatus $paymentStatus = PaymentStatus::Pending,
         ?DateTimeImmutable $paidAt = null,
+        ?IdempotencyKey $idempotencyKey = null,
     ): self {
-        return new self($id, $sodaId, $customerId, $lines, $status, $placedAt, $statusChanges, $cancellationOrigin, $paymentStatus, $paidAt);
+        return new self($id, $sodaId, $customerId, $lines, $status, $placedAt, $statusChanges, $cancellationOrigin, $paymentStatus, $paidAt, $idempotencyKey);
     }
 
     /** Record that the payment of the order was approved; approving it again keeps the first moment and answers false. */
